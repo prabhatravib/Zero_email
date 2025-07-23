@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: zero-email-static
+    env: node
+    buildCommand: cd apps/mail && pnpm install && pnpm run build
+    startCommand: cd apps/mail && pnpm run start:static
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    healthCheckPath: /
+    autoDeploy: true 
