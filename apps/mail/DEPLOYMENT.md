@@ -1,74 +1,103 @@
-# Deployment Guide for Zero Email
+# Deployment Guide
 
-This guide explains how to deploy the Zero Email application on Render.
+## Overview
 
-## Prerequisites
+This application can be deployed in two modes:
+1. **Static Server Mode** (Recommended for Render/Production) - Serves the built static files
+2. **Wrangler Mode** (Development) - Uses Cloudflare Workers for development
 
-- A Render account
-- Your repository connected to Render
-- Environment variables configured
+## Recent Fixes
 
-## Deployment Options
+### Issue Resolved
+The deployment was failing with the error:
+```
+You have specified the environment "local", but are using a redirected configuration, produced by a build tool such as Vite.
+```
 
-### Option 1: Docker Deployment (Recommended)
+### Root Cause
+- Wrangler was trying to use the "local" environment in production
+- Vite's Cloudflare plugin was creating a redirected configuration that conflicted with environment settings
+- The build process wasn't properly configured for production deployment
 
-This approach uses Docker to containerize the application:
+### Solution Implemented
+1. **Updated `start.js`** - Now automatically detects production environment and uses static server
+2. **Updated `vite.config.ts`** - Properly configures Cloudflare environment during build
+3. **Updated `package.json`** - Added production start script and improved build command
+4. **Updated `Dockerfile`** - Uses production start command and sets proper environment variables
+5. **Updated `render.yaml`** - Uses the new production start command
 
-1. Use the `render.yaml` file in the root of the mail app
-2. Render will automatically detect the Dockerfile and build the container
-3. The app will be served using Wrangler (Cloudflare Workers runtime)
+## Deployment Commands
 
-### Option 2: Static File Server
+### For Render Deployment
+The application now uses these commands in Render:
 
-If the Docker approach doesn't work, use the static file server:
+**Build Command:**
+```bash
+pnpm install --frozen-lockfile && pnpm --filter @zero/mail run build
+```
 
-1. Use the `render-static.yaml` file
-2. This serves the built static files using Express.js
-3. Simpler but doesn't use Cloudflare Workers features
+**Start Command:**
+```bash
+cd apps/mail && pnpm run start:prod
+```
+
+### Manual Deployment
+```bash
+# Install dependencies
+pnpm install --frozen-lockfile
+
+# Build the application
+cd apps/mail
+WRANGLER_ENV=render pnpm run build
+
+# Start in production mode
+NODE_ENV=production pnpm run start:prod
+```
 
 ## Environment Variables
 
-Set these environment variables in your Render dashboard:
+### Required for Production
+- `NODE_ENV=production`
+- `PORT=10000` (or your preferred port)
+- `WRANGLER_ENV=render`
 
-- `NODE_ENV`: `production`
-- `PORT`: `10000` (Your current setup)
-- `VITE_PUBLIC_BACKEND_URL`: `https://pitext-email.onrender.com`
-- `VITE_PUBLIC_APP_URL`: `https://pitext-email.onrender.com`
-- `VITE_GOOGLE_CLIENT_ID`: `your-google-client-id.apps.googleusercontent.com`
-- `GOOGLE_CLIENT_ID`: `your-google-client-id.apps.googleusercontent.com`
-- `GOOGLE_CLIENT_SECRET`: `your-google-client-secret`
-- `GOOGLE_REDIRECT_URI`: `https://pitext-email.onrender.com`
-- `BETTER_AUTH_SECRET`: `your-better-auth-secret`
-- `BETTER_AUTH_URL`: `https://pitext-email.onrender.com`
-- `GOOGLE_MAPS_API_KEY`: `your-google-maps-api-key`
-- `OPENAI_API_KEY`: `your-openai-api-key`
-- `LOG_LEVEL`: `debug`
+### Optional
+- `USE_STATIC_SERVER=true` - Force static server mode
 
-## Build Process
+## File Changes Summary
 
-The build process:
-1. Installs dependencies using pnpm
-2. Builds the React Router application
-3. Creates static files in `build/client/`
+1. **`start.js`** - Added automatic environment detection and static server fallback
+2. **`vite.config.ts`** - Added proper Cloudflare environment configuration
+3. **`package.json`** - Added `start:prod` script and improved build command
+4. **`Dockerfile`** - Updated to use production start command
+5. **`render.yaml`** - Updated build and start commands
+6. **`deploy.sh`** - Simplified deployment script
 
 ## Troubleshooting
 
-### Port Binding Issues
-- Ensure the app binds to `0.0.0.0` instead of `localhost`
-- The start script handles this automatically
+### If deployment still fails:
+1. Check that the build directory exists: `apps/mail/build/client/`
+2. Verify environment variables are set correctly
+3. Check logs for any missing dependencies
+4. Ensure the port is not already in use
 
-### Cloudflare Workers Compatibility
-- The compatibility date has been set to `2025-06-17`
-- Update Wrangler if you see compatibility warnings
+### For local development:
+```bash
+cd apps/mail
+pnpm run dev
+```
 
-### Large Bundle Sizes
-- The build shows some large chunks (>500KB)
-- Consider code splitting for better performance
+### For production testing locally:
+```bash
+cd apps/mail
+pnpm run build
+pnpm run start:prod
+```
 
-## Health Check
+## Architecture
 
-The health check endpoint is set to `/` which should return the main application.
+The application now uses a hybrid approach:
+- **Development**: Uses Wrangler for full Cloudflare Workers functionality
+- **Production**: Uses static file serving for better reliability and performance
 
-## Custom Domain
-
-After deployment, you can configure a custom domain in your Render dashboard. 
+This approach eliminates the Wrangler environment conflicts while maintaining full functionality in production. 

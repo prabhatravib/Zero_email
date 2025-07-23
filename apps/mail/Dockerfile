@@ -18,7 +18,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Build the application
-RUN cd apps/mail && pnpm run build
+RUN cd apps/mail && WRANGLER_ENV=render pnpm run build
 
 # Expose port
 EXPOSE 10000
@@ -26,6 +26,7 @@ EXPOSE 10000
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=10000
+ENV WRANGLER_ENV=render
 
 # Start the application
 WORKDIR /app/apps/mail

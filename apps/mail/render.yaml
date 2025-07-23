@@ -13,3 +13,5 @@ services:
         value: render
     healthCheckPath: /
     autoDeploy: true
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @zero/mail run build
+    startCommand: cd apps/mail && NODE_ENV=production pnpm run start

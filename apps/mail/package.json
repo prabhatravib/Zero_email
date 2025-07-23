@@ -8,6 +8,7 @@
     "build": "react-router build",
     "start": "node start.js",
     "start:static": "node server.js",
+    "start:prod": "NODE_ENV=production node start.js",
     "types": "wrangler types",
     "deploy": "wrangler deploy",
     "lint": "eslint .",
