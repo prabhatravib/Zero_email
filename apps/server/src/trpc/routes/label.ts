@@ -7,7 +7,7 @@ export const labelsRouter = router({
   list: activeDriverProcedure
     .use(
       createRateLimiterMiddleware({
-        generatePrefix: ({ sessionUser }) => `ratelimit:get-labels-${sessionUser?.id}`,
+        generatePrefix: ({ sessionUser }) => `ratelimit:get-labels-${sessionUser?.id || 'anonymous'}`,
         limiter: Ratelimit.slidingWindow(120, '1m'),
       }),
     )
@@ -34,7 +34,7 @@ export const labelsRouter = router({
   create: activeDriverProcedure
     .use(
       createRateLimiterMiddleware({
-        generatePrefix: ({ sessionUser }) => `ratelimit:labels-post-${sessionUser?.id}`,
+        generatePrefix: ({ sessionUser }) => `ratelimit:labels-post-${sessionUser?.id || 'anonymous'}`,
         limiter: Ratelimit.slidingWindow(60, '1m'),
       }),
     )
@@ -64,7 +64,7 @@ export const labelsRouter = router({
   update: activeDriverProcedure
     .use(
       createRateLimiterMiddleware({
-        generatePrefix: ({ sessionUser }) => `ratelimit:labels-patch-${sessionUser?.id}`,
+        generatePrefix: ({ sessionUser }) => `ratelimit:labels-patch-${sessionUser?.id || 'anonymous'}`,
         limiter: Ratelimit.slidingWindow(60, '1m'),
       }),
     )
@@ -90,7 +90,7 @@ export const labelsRouter = router({
   delete: activeDriverProcedure
     .use(
       createRateLimiterMiddleware({
-        generatePrefix: ({ sessionUser }) => `ratelimit:labels-delete-${sessionUser?.id}`,
+        generatePrefix: ({ sessionUser }) => `ratelimit:labels-delete-${sessionUser?.id || 'anonymous'}`,
         limiter: Ratelimit.slidingWindow(60, '1m'),
       }),
     )

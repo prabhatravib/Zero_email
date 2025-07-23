@@ -193,7 +193,9 @@ export const createAuth = () => {
           const connections = await db.findManyConnections();
           const context = getContext<HonoContext>();
           try {
-            await context.var.autumn.customers.delete(user.id);
+            if (context.var.autumn) {
+              await context.var.autumn.customers.delete(user.id);
+            }
           } catch (error) {
             console.error('Failed to delete Autumn customer:', error);
             // Continue with deletion process despite Autumn failure

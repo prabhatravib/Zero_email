@@ -523,17 +523,16 @@ export default class extends WorkerEntrypoint<typeof env> {
         }
       }
 
-      const autumn = new Autumn({ secretKey: env.AUTUMN_SECRET_KEY });
+      const autumn = env.AUTUMN_SECRET_KEY ? new Autumn({ secretKey: env.AUTUMN_SECRET_KEY }) : null;
       c.set('autumn', autumn);
 
       await next();
 
-      c.set('sessionUser', undefined);
       c.set('autumn', undefined as any);
       c.set('auth', undefined as any);
     })
     .route('/ai', aiRouter)
-    .route('/autumn', autumnApi)
+    .route('/api/autumn', autumnApi)
     .route('/public', publicRouter)
     .on(['GET', 'POST', 'OPTIONS'], '/auth/*', (c) => {
       return c.var.auth.handler(c.req.raw);

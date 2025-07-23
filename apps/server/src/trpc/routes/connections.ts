@@ -10,7 +10,7 @@ export const connectionsRouter = router({
     .use(
       createRateLimiterMiddleware({
         limiter: Ratelimit.slidingWindow(120, '1m'),
-        generatePrefix: ({ sessionUser }) => `ratelimit:get-connections-${sessionUser?.id}`,
+        generatePrefix: ({ sessionUser }) => `ratelimit:get-connections-${sessionUser?.id || 'anonymous'}`,
       }),
     )
     .query(async ({ ctx }) => {

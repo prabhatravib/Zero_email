@@ -43,6 +43,7 @@ export const autumnApi = new Hono<AutumnContext>()
   .post('/customers', async (c) => {
     const { autumn, customerData } = c.var;
     const body = await c.req.json();
+    if (!autumn) return c.json({ error: 'Autumn service not configured' }, 503);
     if (!customerData) return c.json({ error: 'No customer ID found' }, 401);
 
     return c.json(
@@ -59,6 +60,7 @@ export const autumnApi = new Hono<AutumnContext>()
     const { autumn, customerData } = c.var;
     const body = await c.req.json();
     const sanitizedBody = sanitizeCustomerBody(body);
+    if (!autumn) return c.json({ error: 'Autumn service not configured' }, 503);
     if (!customerData) return c.json({ error: 'No customer ID found' }, 401);
 
     return c.json(
@@ -75,6 +77,7 @@ export const autumnApi = new Hono<AutumnContext>()
     const { autumn, customerData } = c.var;
     const body = await c.req.json();
     const sanitizedBody = sanitizeCustomerBody(body);
+    if (!autumn) return c.json({ error: 'Autumn service not configured' }, 503);
     if (!customerData) return c.json({ error: 'No customer ID found' }, 401);
 
     return c.json(
@@ -90,6 +93,7 @@ export const autumnApi = new Hono<AutumnContext>()
     const { autumn, customerData } = c.var;
     const body = await c.req.json();
     const sanitizedBody = sanitizeCustomerBody(body);
+    if (!autumn) return c.json({ error: 'Autumn service not configured' }, 503);
     if (!customerData) return c.json({ error: 'No customer ID found' }, 401);
 
     return c.json(
@@ -106,6 +110,7 @@ export const autumnApi = new Hono<AutumnContext>()
     const { autumn, customerData } = c.var;
     const body = await c.req.json();
     const sanitizedBody = sanitizeCustomerBody(body);
+    if (!autumn) return c.json({ error: 'Autumn service not configured' }, 503);
     if (!customerData) return c.json({ error: 'No customer ID found' }, 401);
 
     return c.json(
@@ -121,6 +126,7 @@ export const autumnApi = new Hono<AutumnContext>()
   .post('/billing_portal', async (c) => {
     const { autumn, customerData } = c.var;
     const body = await c.req.json();
+    if (!autumn) return c.json({ error: 'Autumn service not configured' }, 503);
     if (!customerData) return c.json({ error: 'No customer ID found' }, 401);
 
     return c.json(
@@ -130,6 +136,7 @@ export const autumnApi = new Hono<AutumnContext>()
   .post('/openBillingPortal', async (c) => {
     const { autumn, customerData } = c.var;
     const body = await c.req.json();
+    if (!autumn) return c.json({ error: 'Autumn service not configured' }, 503);
     if (!customerData) return c.json({ error: 'No customer ID found' }, 401);
 
     return c.json(
@@ -144,6 +151,7 @@ export const autumnApi = new Hono<AutumnContext>()
   .post('/entities', async (c) => {
     const { autumn, customerData } = c.var;
     const body = await c.req.json();
+    if (!autumn) return c.json({ error: 'Autumn service not configured' }, 503);
     if (!customerData) return c.json({ error: 'No customer ID found' }, 401);
 
     return c.json(
@@ -152,6 +160,7 @@ export const autumnApi = new Hono<AutumnContext>()
   })
   .get('/entities/:entityId', async (c) => {
     const { autumn, customerData } = c.var;
+    if (!autumn) return c.json({ error: 'Autumn service not configured' }, 503);
     if (!customerData) return c.json({ error: 'No customer ID found' }, 401);
 
     const entityId = c.req.param('entityId');
@@ -175,6 +184,7 @@ export const autumnApi = new Hono<AutumnContext>()
   })
   .delete('/entities/:entityId', async (c) => {
     const { autumn, customerData } = c.var;
+    if (!autumn) return c.json({ error: 'Autumn service not configured' }, 503);
     if (!customerData) return c.json({ error: 'No customer ID found' }, 401);
 
     const entityId = c.req.param('entityId');
@@ -195,6 +205,8 @@ export const autumnApi = new Hono<AutumnContext>()
   })
   .get('/components/pricing_table', async (c) => {
     const { autumn, customerData } = c.var;
+    
+    if (!autumn) return c.json({ error: 'Autumn service not configured' }, 503);
 
     return c.json(
       await fetchPricingTable({
