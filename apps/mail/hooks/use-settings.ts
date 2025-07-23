@@ -3,12 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { useSession } from '@/lib/auth-client';
 
 export function useSettings() {
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
   const trpc = useTRPC();
 
   const settingsQuery = useQuery(
     trpc.settings.get.queryOptions(void 0, {
-      enabled: !!session?.user.id,
+      enabled: !isPending && !!session?.user?.id,
       staleTime: Infinity,
     }),
   );

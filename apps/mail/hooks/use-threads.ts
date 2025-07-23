@@ -63,7 +63,7 @@ export const useThreads = () => {
 };
 
 export const useThread = (threadId: string | null) => {
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
   const [_threadId] = useQueryState('threadId');
   const id = threadId ? threadId : _threadId;
   const trpc = useTRPC();
@@ -76,7 +76,7 @@ export const useThread = (threadId: string | null) => {
         id: id!,
       },
       {
-        enabled: !!id && !!session?.user.id,
+        enabled: !!id && !isPending && !!session?.user?.id,
         staleTime: 1000 * 60 * 60, // 1 minute
       },
     ),
