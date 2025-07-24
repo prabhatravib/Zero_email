@@ -49,4 +49,42 @@ publicRouter.get('/providers', async (c) => {
   });
 });
 
+// Add configuration check endpoint
+publicRouter.get('/config-check', async (c) => {
+  const env = c.env as unknown as Record<string, string>;
+  
+  const configStatus = {
+    environment: env.NODE_ENV || 'development',
+    backendUrl: env.VITE_PUBLIC_BACKEND_URL,
+    cookieDomain: env.COOKIE_DOMAIN,
+    betterAuthSecret: !!env.BETTER_AUTH_SECRET,
+    betterAuthUrl: env.BETTER_AUTH_URL,
+    googleClientId: {
+      set: !!env.GOOGLE_CLIENT_ID,
+      value: env.GOOGLE_CLIENT_ID?.startsWith('REPLACE_WITH_') ? 'PLACEHOLDER' : 'SET',
+    },
+    googleClientSecret: {
+      set: !!env.GOOGLE_CLIENT_SECRET,
+      value: env.GOOGLE_CLIENT_SECRET?.startsWith('REPLACE_WITH_') ? 'PLACEHOLDER' : 'SET',
+    },
+    googleRedirectUri: env.GOOGLE_REDIRECT_URI,
+    issues: [] as string[],
+  };
+
+  // Check for configuration issues
+  if (!env.GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID.startsWith('REPLACE_WITH_')) {
+    configStatus.issues.push('Google Client ID is not configured');
+  }
+  
+  if (!env.GOOGLE_CLIENT_SECRET || env.GOOGLE_CLIENT_SECRET.startsWith('REPLACE_WITH_')) {
+    configStatus.issues.push('Google Client Secret is not configured');
+  }
+  
+  if (!env.BETTER_AUTH_SECRET) {
+    configStatus.issues.push('Better Auth Secret is not configured');
+  }
+
+  return c.json(configStatus);
+});
+
 export { publicRouter };

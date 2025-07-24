@@ -541,8 +541,23 @@ export default class extends WorkerEntrypoint<typeof env> {
     .route('/ai', aiRouter)
     .route('/api/autumn', autumnApi)
     .route('/public', publicRouter)
-    .on(['GET', 'POST', 'OPTIONS'], '/auth/*', (c) => {
-      return c.var.auth.handler(c.req.raw);
+    .on(['GET', 'POST', 'OPTIONS'], '/auth/*', async (c) => {
+      try {
+        console.log(`[AUTH] Handling request to: ${c.req.path}`);
+        const response = await c.var.auth.handler(c.req.raw);
+        console.log(`[AUTH] Response status: ${response.status}`);
+        return response;
+      } catch (error) {
+        console.error('[AUTH] Error in auth handler:', error);
+        return c.json(
+          {
+            error: 'Authentication Error',
+            message: error instanceof Error ? error.message : 'Unknown authentication error',
+            path: c.req.path,
+          },
+          500,
+        );
+      }
     })
     .use(
       trpcServer({
