@@ -2,7 +2,6 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { contextStorage } from 'hono/context-storage';
 import { aiRouter } from './routes/ai';
-import { autumnApi } from './routes/autumn';
 import { env, WorkerEntrypoint } from 'cloudflare:workers';
 
 // Simple Durable Objects for Google OAuth only
@@ -49,7 +48,6 @@ export default class extends WorkerEntrypoint<typeof env> {
     .use(contextStorage())
     .get('/test', (c) => c.json({ message: 'Server is working!' }))
     .route('/ai', aiRouter)
-    .route('/api/autumn', autumnApi)
     .get('/auth/sign-in/social/google', async (c) => {
       // Simple Google OAuth redirect
       const clientId = env.GOOGLE_CLIENT_ID;
