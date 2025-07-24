@@ -62,7 +62,7 @@ export default class extends WorkerEntrypoint<typeof env> {
         return null;
       },
       credentials: true,
-      allowHeaders: ['Content-Type', 'Authorization'],
+      allowHeaders: ['Content-Type', 'Authorization', 'X-Session-Token'],
       exposeHeaders: ['X-Zero-Redirect'],
     }))
     .use(contextStorage())
@@ -205,8 +205,9 @@ export default class extends WorkerEntrypoint<typeof env> {
         const redirectUrl = `${env.VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&session=${encodeURIComponent(sessionToken)}`;
         
         const response = c.redirect(redirectUrl);
-        // Set cookie without domain restriction for cross-domain access
-        response.headers.set('Set-Cookie', `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${24 * 60 * 60}`);
+        // For cross-domain setup, we need to set the cookie on the frontend domain
+        // The session token is passed in the URL and will be set by the frontend
+        // No server-side cookie setting here since it won't be accessible to the frontend
         
         return response;
         
@@ -230,20 +231,22 @@ export default class extends WorkerEntrypoint<typeof env> {
       return c.json({ error: 'Unsupported provider' }, 400);
     })
     .get('/api/auth/get-session', async (c) => {
-      // Get session from cookie
-      const sessionCookie = c.req.header('Cookie')?.split(';')
-        .find(cookie => cookie.trim().startsWith('session='))
-        ?.split('=')[1];
+      // Get session from custom header (for cross-domain setup) or cookie
+      const sessionToken = c.req.header('X-Session-Token') || 
+        c.req.header('Cookie')?.split(';')
+          .find(cookie => cookie.trim().startsWith('session='))
+          ?.split('=')[1];
       
+      console.log('Session check - X-Session-Token header:', c.req.header('X-Session-Token') ? 'found' : 'not found');
       console.log('Session check - Cookie header:', c.req.header('Cookie'));
-      console.log('Session check - Extracted session:', sessionCookie ? 'found' : 'not found');
+      console.log('Session check - Extracted session:', sessionToken ? 'found' : 'not found');
       
-      if (!sessionCookie) {
+      if (!sessionToken) {
         return c.json({ user: null });
       }
       
       try {
-        const sessionData = JSON.parse(atob(sessionCookie));
+        const sessionData = JSON.parse(atob(sessionToken));
         console.log('Session check - Parsed session data:', { 
           userId: sessionData.userId, 
           email: sessionData.email,
@@ -340,8 +343,9 @@ export default class extends WorkerEntrypoint<typeof env> {
           refresh_token: tokenData.refresh_token,
         });
         
-        // Set session cookie for cross-domain access
-        response.headers.set('Set-Cookie', `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${24 * 60 * 60}`);
+        // For cross-domain setup, we need to set the cookie on the frontend domain
+        // The session token is returned in the response and will be set by the frontend
+        // No server-side cookie setting here since it won't be accessible to the frontend
         
         return response;
         
@@ -369,7 +373,7 @@ export default class extends WorkerEntrypoint<typeof env> {
     .post('/api/auth/sign-out', async (c) => {
       // Handle sign out by clearing session cookie
       const response = c.json({ success: true });
-      response.headers.set('Set-Cookie', 'session=; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=0');
+      response.headers.set('Set-Cookie', 'session=; Path=/; HttpOnly; Max-Age=0');
       return response;
     });
 

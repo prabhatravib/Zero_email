@@ -29,10 +29,17 @@ export default function AuthCallback() {
         // If we have a session token in the URL, set it as a cookie
         if (sessionToken) {
           console.log('Session token found in URL, setting cookie');
-          document.cookie = `session=${sessionToken}; path=/; secure; samesite=none; max-age=${24 * 60 * 60}`;
+          // Set cookie on the frontend domain (pitext-email.onrender.com)
+          document.cookie = `session=${sessionToken}; path=/; max-age=${24 * 60 * 60}`;
           
-          // Wait a moment for cookie to be set, then redirect
+          // Verify the cookie was set
           setTimeout(() => {
+            const cookies = document.cookie;
+            const sessionCookie = cookies.split(';')
+              .find(cookie => cookie.trim().startsWith('session='));
+            console.log('Cookie verification - All cookies:', cookies);
+            console.log('Cookie verification - Session cookie:', sessionCookie ? 'found' : 'not found');
+            
             console.log('Redirecting to /mail/inbox after setting session cookie');
             navigate('/mail/inbox');
           }, 1000);
