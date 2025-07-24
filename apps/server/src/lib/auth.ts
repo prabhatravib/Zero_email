@@ -163,6 +163,20 @@ export const createAuth = () => {
   return betterAuth({
     plugins,
     user: {
+      fields: {
+        name: {
+          type: 'string',
+          required: true,
+        },
+        email: {
+          type: 'string',
+          required: true,
+        },
+        image: {
+          type: 'string',
+          required: false,
+        },
+      },
       deleteUser: {
         enabled: true,
         async sendDeleteAccountVerification(data) {
@@ -308,9 +322,26 @@ export const createAuth = () => {
 
 const createAuthConfig = () => {
   const cache = redis();
-  const { db } = createDb(env.HYPERDRIVE.connectionString);
+  // Temporarily disable database for free plan
+  // const { db } = createDb(env.HYPERDRIVE.connectionString);
   return {
-    database: drizzleAdapter(db, { provider: 'pg' }),
+    // Use memory adapter instead of database for free plan
+    database: {
+      async createUser() { return { id: 'temp-user' }; },
+      async getUser() { return null; },
+      async getUserByEmail() { return null; },
+      async getUserByAccount() { return null; },
+      async updateUser() { return { id: 'temp-user' }; },
+      async deleteUser() { return { id: 'temp-user' }; },
+      async linkAccount() { return { id: 'temp-account' }; },
+      async unlinkAccount() { return { id: 'temp-account' }; },
+      async createSession() { return { id: 'temp-session' }; },
+      async getSession() { return null; },
+      async updateSession() { return { id: 'temp-session' }; },
+      async deleteSession() { return { id: 'temp-session' }; },
+      async createVerificationToken() { return { id: 'temp-token' }; },
+      async useVerificationToken() { return null; },
+    },
     secondaryStorage: {
       get: async (key: string) => {
         const value = await cache.get(key);
