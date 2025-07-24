@@ -12,6 +12,7 @@ export default function AuthCallback() {
       const code = searchParams.get('code');
       const success = searchParams.get('success');
       const email = searchParams.get('email');
+      const sessionToken = searchParams.get('session');
 
       // Handle OAuth errors
       if (error) {
@@ -24,11 +25,41 @@ export default function AuthCallback() {
       // Handle success redirect from server
       if (success === 'true' && email) {
         toast.success(`Successfully authenticated as ${email}`);
-        // Add a small delay to ensure session is set
-        setTimeout(() => {
-          navigate('/mail/inbox');
-        }, 100);
-        return;
+        
+        // If we have a session token in the URL, set it as a cookie
+        if (sessionToken) {
+          console.log('Session token found in URL, setting cookie');
+          document.cookie = `session=${sessionToken}; path=/; secure; samesite=none; domain=${window.location.hostname}; max-age=${24 * 60 * 60}`;
+        }
+        
+        // Debug: Check session before redirecting
+        try {
+          const sessionResponse = await fetch(`${import.meta.env.VITE_PUBLIC_BACKEND_URL}/api/auth/get-session`, {
+            credentials: 'include',
+          });
+          
+          if (sessionResponse.ok) {
+            const sessionData = await sessionResponse.json();
+            console.log('Session data before redirect:', sessionData);
+            
+            if (sessionData.user) {
+              // Session is valid, redirect to mail
+              console.log('Session valid, redirecting to /mail/inbox');
+              setTimeout(() => {
+                navigate('/mail/inbox');
+              }, 500); // Increased delay
+              return;
+            } else {
+              console.log('Session not found, will try to exchange code');
+            }
+          }
+        } catch (error) {
+          console.error('Failed to check session:', error);
+        }
+        
+        // If session check failed, try code exchange as fallback
+        console.log('Falling back to code exchange');
+        return; // Don't return here, let it continue to code exchange
       }
 
       // Handle OAuth code exchange
@@ -54,10 +85,35 @@ export default function AuthCallback() {
           
           if (data.success && data.user) {
             toast.success(`Successfully authenticated as ${data.user.email}`);
-            // Add a small delay to ensure session is set
+            console.log('Code exchange successful, user data:', data.user);
+            
+            // Verify session was set
+            try {
+              const sessionResponse = await fetch(`${import.meta.env.VITE_PUBLIC_BACKEND_URL}/api/auth/get-session`, {
+                credentials: 'include',
+              });
+              
+              if (sessionResponse.ok) {
+                const sessionData = await sessionResponse.json();
+                console.log('Session after code exchange:', sessionData);
+                
+                if (sessionData.user) {
+                  console.log('Session verified, redirecting to /mail/inbox');
+                  setTimeout(() => {
+                    navigate('/mail/inbox');
+                  }, 500);
+                  return;
+                }
+              }
+            } catch (error) {
+              console.error('Failed to verify session after code exchange:', error);
+            }
+            
+            // If session verification failed, still try to redirect
+            console.log('Session verification failed, but attempting redirect anyway');
             setTimeout(() => {
               navigate('/mail/inbox');
-            }, 100);
+            }, 500);
             return;
           } else {
             throw new Error(data.error || 'Authentication failed');

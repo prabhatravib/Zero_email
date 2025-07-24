@@ -202,10 +202,11 @@ export default class extends WorkerEntrypoint<typeof env> {
         }));
         
         // Set session cookie and redirect to success
-        const redirectUrl = `${env.VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}`;
+        const redirectUrl = `${env.VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&session=${encodeURIComponent(sessionToken)}`;
         
         const response = c.redirect(redirectUrl);
-        response.headers.set('Set-Cookie', `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${24 * 60 * 60}`);
+        // Set cookie for cross-domain access - use the frontend domain
+        response.headers.set('Set-Cookie', `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=None; Domain=${env.COOKIE_DOMAIN}; Max-Age=${24 * 60 * 60}`);
         
         return response;
         
@@ -328,8 +329,8 @@ export default class extends WorkerEntrypoint<typeof env> {
           refresh_token: tokenData.refresh_token,
         });
         
-        // Set session cookie
-        response.headers.set('Set-Cookie', `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${24 * 60 * 60}`);
+        // Set session cookie for cross-domain access
+        response.headers.set('Set-Cookie', `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=None; Domain=${env.COOKIE_DOMAIN}; Max-Age=${24 * 60 * 60}`);
         
         return response;
         
@@ -357,7 +358,7 @@ export default class extends WorkerEntrypoint<typeof env> {
     .post('/api/auth/sign-out', async (c) => {
       // Handle sign out by clearing session cookie
       const response = c.json({ success: true });
-      response.headers.set('Set-Cookie', 'session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
+      response.headers.set('Set-Cookie', `session=; Path=/; HttpOnly; Secure; SameSite=None; Domain=${env.COOKIE_DOMAIN}; Max-Age=0`);
       return response;
     });
 
