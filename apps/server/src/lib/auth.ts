@@ -7,7 +7,7 @@ import {
   SuperSearchEmail,
   WelcomeEmail,
 } from './react-emails/email-sequences';
-import { createAuthMiddleware, phoneNumber, jwt, bearer, mcp } from 'better-auth/plugins';
+import { createAuthMiddleware, jwt, bearer, mcp } from 'better-auth/plugins';
 import { type Account, betterAuth, type BetterAuthOptions } from 'better-auth';
 import { getBrowserTimezone, isValidTimezone } from './timezones';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
@@ -157,34 +157,8 @@ export const createAuth = () => {
     bearer(),
   ];
 
-  // Only add phone number plugin if calls are not disabled
-  // Use a try-catch to handle cases where env might not be available during startup
-  try {
-    console.log('[AUTH] DISABLE_CALLS value:', env.DISABLE_CALLS);
-    if (env.DISABLE_CALLS !== 'true') {
-      console.log('[AUTH] Adding phone number plugin');
-      plugins.push(
-        phoneNumber({
-          sendOTP: async ({ code, phoneNumber }) => {
-            const { twilio } = await import('./services');
-            const twilioClient = twilio();
-            await twilioClient.messages
-              .send(phoneNumber, `Your verification code is: ${code}, do not share it with anyone.`)
-              .catch((error) => {
-                console.error('Failed to send OTP', error);
-                throw new APIError('INTERNAL_SERVER_ERROR', {
-                  message: `Failed to send OTP, ${error.message}`,
-                });
-              });
-          },
-        })
-      );
-    } else {
-      console.log('[AUTH] Skipping phone number plugin - calls disabled');
-    }
-  } catch (error) {
-    console.log('Skipping phone number plugin due to environment unavailability');
-  }
+  // Phone number functionality is disabled for render environment
+  console.log('[AUTH] Phone number plugin disabled for render environment');
 
   return betterAuth({
     plugins,

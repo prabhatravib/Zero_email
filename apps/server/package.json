@@ -74,7 +74,6 @@
     "sanitize-html": "^2.16.0",
     "string-strip-html": "^13.4.12",
     "superjson": "catalog:",
-    "twilio": "5.7.0",
     "uuid": "11.1.0",
     "wrangler": "catalog:",
     "zod": "catalog:"

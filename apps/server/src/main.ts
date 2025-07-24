@@ -581,9 +581,11 @@ export default class extends WorkerEntrypoint<typeof env> {
           } catch {
             return null;
           }
-          const cookieDomain = env.COOKIE_DOMAIN;
-          if (!cookieDomain) return null;
-          if (hostname === cookieDomain || hostname.endsWith('.' + cookieDomain)) {
+          // Allow Render domains and localhost for development
+          if (hostname === 'pitext-email.onrender.com' || 
+              hostname.endsWith('.onrender.com') || 
+              hostname === 'localhost' || 
+              hostname === '127.0.0.1') {
             return origin;
           }
           return null;
