@@ -123,7 +123,7 @@ export default class extends WorkerEntrypoint<typeof env> {
     .get('/auth/sign-in/social/google', async (c) => {
       // Simple Google OAuth redirect
       const clientId = env.GOOGLE_CLIENT_ID;
-      const redirectUri = `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`;
+      const redirectUri = env.GOOGLE_REDIRECT_URI || `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`;
       const scope = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
@@ -133,7 +133,7 @@ export default class extends WorkerEntrypoint<typeof env> {
     .get('/api/auth/sign-in/social/google', async (c) => {
       // Simple Google OAuth redirect
       const clientId = env.GOOGLE_CLIENT_ID;
-      const redirectUri = `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`;
+      const redirectUri = env.GOOGLE_REDIRECT_URI || `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`;
       const scope = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
@@ -165,7 +165,7 @@ export default class extends WorkerEntrypoint<typeof env> {
             client_secret: env.GOOGLE_CLIENT_SECRET,
             code: code,
             grant_type: 'authorization_code',
-            redirect_uri: `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`,
+            redirect_uri: env.GOOGLE_REDIRECT_URI || `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`,
           }),
         });
         
@@ -190,9 +190,24 @@ export default class extends WorkerEntrypoint<typeof env> {
         
         const userData = await userResponse.json() as GoogleUserInfo;
         
-        // For now, just redirect to the auth callback with success
-        // In a real implementation, you'd create a session here
-        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}`);
+        // Create a simple session token (in production, use proper JWT)
+        const sessionToken = btoa(JSON.stringify({
+          userId: userData.id,
+          email: userData.email,
+          name: userData.name,
+          picture: userData.picture,
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token,
+          exp: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
+        }));
+        
+        // Set session cookie and redirect to success
+        const redirectUrl = `${env.VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}`;
+        
+        const response = c.redirect(redirectUrl);
+        response.headers.set('Set-Cookie', `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${24 * 60 * 60}`);
+        
+        return response;
         
       } catch (error) {
         console.error('OAuth callback error:', error);
@@ -204,7 +219,7 @@ export default class extends WorkerEntrypoint<typeof env> {
       const body = await c.req.json();
       if (body.provider === 'google') {
         const clientId = env.GOOGLE_CLIENT_ID;
-        const redirectUri = `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`;
+        const redirectUri = env.GOOGLE_REDIRECT_URI || `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`;
         const scope = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
         
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
@@ -214,8 +229,35 @@ export default class extends WorkerEntrypoint<typeof env> {
       return c.json({ error: 'Unsupported provider' }, 400);
     })
     .get('/api/auth/get-session', async (c) => {
-      // Simple session check - return null for now
-      return c.json({ user: null });
+      // Get session from cookie
+      const sessionCookie = c.req.header('Cookie')?.split(';')
+        .find(cookie => cookie.trim().startsWith('session='))
+        ?.split('=')[1];
+      
+      if (!sessionCookie) {
+        return c.json({ user: null });
+      }
+      
+      try {
+        const sessionData = JSON.parse(atob(sessionCookie));
+        
+        // Check if session is expired
+        if (sessionData.exp && Date.now() > sessionData.exp) {
+          return c.json({ user: null });
+        }
+        
+        return c.json({ 
+          user: {
+            id: sessionData.userId,
+            email: sessionData.email,
+            name: sessionData.name,
+            picture: sessionData.picture,
+          }
+        });
+      } catch (error) {
+        console.error('Session parsing error:', error);
+        return c.json({ user: null });
+      }
     })
     .post('/api/auth/exchange-code', async (c) => {
       // Handle OAuth code exchange
@@ -238,7 +280,7 @@ export default class extends WorkerEntrypoint<typeof env> {
             client_secret: env.GOOGLE_CLIENT_SECRET,
             code: code,
             grant_type: 'authorization_code',
-            redirect_uri: `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`,
+            redirect_uri: env.GOOGLE_REDIRECT_URI || `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`,
           }),
         });
         
@@ -263,9 +305,18 @@ export default class extends WorkerEntrypoint<typeof env> {
         
         const userData = await userResponse.json() as GoogleUserInfo;
         
-        // For now, just return success with user data
-        // In a real implementation, you'd create a session here
-        return c.json({ 
+        // Create a simple session token (in production, use proper JWT)
+        const sessionToken = btoa(JSON.stringify({
+          userId: userData.id,
+          email: userData.email,
+          name: userData.name,
+          picture: userData.picture,
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token,
+          exp: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
+        }));
+        
+        const response = c.json({ 
           success: true, 
           user: {
             id: userData.id,
@@ -276,6 +327,11 @@ export default class extends WorkerEntrypoint<typeof env> {
           access_token: tokenData.access_token,
           refresh_token: tokenData.refresh_token,
         });
+        
+        // Set session cookie
+        response.headers.set('Set-Cookie', `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${24 * 60 * 60}`);
+        
+        return response;
         
       } catch (error) {
         console.error('OAuth code exchange error:', error);
@@ -297,6 +353,12 @@ export default class extends WorkerEntrypoint<typeof env> {
           },
         ],
       });
+    })
+    .post('/api/auth/sign-out', async (c) => {
+      // Handle sign out by clearing session cookie
+      const response = c.json({ success: true });
+      response.headers.set('Set-Cookie', 'session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
+      return response;
     });
 
   async fetch(request: Request): Promise<Response> {

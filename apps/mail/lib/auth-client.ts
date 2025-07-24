@@ -119,8 +119,20 @@ export const handleAuthError = (error: any) => {
 
 export const signUp = signIn; // For compatibility
 export const signOut = async () => {
-  // Simple sign out - clear any stored data
-  console.log('Sign out called');
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/auth/sign-out`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    
+    if (response.ok) {
+      console.log('Sign out successful');
+    } else {
+      console.error('Sign out failed:', response.statusText);
+    }
+  } catch (error) {
+    console.error('Sign out error:', error);
+  }
 };
 
 export const $fetch = fetch; // For compatibility

@@ -24,7 +24,10 @@ export default function AuthCallback() {
       // Handle success redirect from server
       if (success === 'true' && email) {
         toast.success(`Successfully authenticated as ${email}`);
-        navigate('/mail/inbox');
+        // Add a small delay to ensure session is set
+        setTimeout(() => {
+          navigate('/mail/inbox');
+        }, 100);
         return;
       }
 
@@ -51,7 +54,10 @@ export default function AuthCallback() {
           
           if (data.success && data.user) {
             toast.success(`Successfully authenticated as ${data.user.email}`);
-            navigate('/mail/inbox');
+            // Add a small delay to ensure session is set
+            setTimeout(() => {
+              navigate('/mail/inbox');
+            }, 100);
             return;
           } else {
             throw new Error(data.error || 'Authentication failed');
@@ -74,7 +80,10 @@ export default function AuthCallback() {
           const data = await response.json();
           if (data.user) {
             toast.success('Successfully authenticated!');
-            navigate('/mail/inbox');
+            // Add a small delay to ensure session is set
+            setTimeout(() => {
+              navigate('/mail/inbox');
+            }, 100);
             return;
           }
         }
