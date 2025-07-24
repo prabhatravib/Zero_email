@@ -89,4 +89,5 @@ app.listen(port, () => {
   console.log(`Combined server listening on port ${port}`);
   console.log(`Proxying /api/* -> https://pitext-mail.prabhatravib.workers.dev/api/*`);
   console.log(`Serving frontend from: ${buildDir}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 }); 
