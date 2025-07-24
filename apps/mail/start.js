@@ -25,8 +25,8 @@ if (useStaticServer) {
     process.exit(1);
   }
   
-  // Start static server
-  const server = spawn('node', ['server.js'], {
+  // Start combined server (frontend + proxy)
+  const server = spawn('node', ['combined-server.js'], {
     stdio: 'inherit',
     cwd: __dirname,
     env: {
