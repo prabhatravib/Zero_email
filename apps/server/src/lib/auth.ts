@@ -54,7 +54,7 @@ IMPORTANT: Do NOT add credentials to wrangler.jsonc as they will be committed to
         image: 'string',
       },
     },
-    // Simple memory-based database for Google OAuth only - NO PERSISTENCE
+    // Minimal database - just return basic objects
     database: {
       async createUser() { return { id: 'temp-user-' + Date.now() }; },
       async getUser() { return null; },
@@ -71,86 +71,19 @@ IMPORTANT: Do NOT add credentials to wrangler.jsonc as they will be committed to
       async createVerificationToken() { return { id: 'temp-token' }; },
       async useVerificationToken() { return null; },
     },
-    // No secondary storage - everything in memory only
+    // Minimal configuration
     advanced: {
       ipAddress: {
         disableIpTracking: true,
       },
-      cookiePrefix: env.NODE_ENV === 'development' ? 'better-auth-dev' : 'better-auth',
+      cookiePrefix: 'better-auth',
       crossSubDomainCookies: {
-        enabled: true,
-        domain: env.COOKIE_DOMAIN,
+        enabled: false,
       },
     },
     baseURL: env.VITE_PUBLIC_BACKEND_URL,
     trustedOrigins: [
-      'https://app.0.email',
-      'https://sapi.0.email',
-      'https://staging.0.email',
-      'https://0.email',
-      'http://localhost:3000',
-    ],
-    session: {
-      expiresIn: 60 * 60 * 24 * 30, // 30 days
-      updateAge: 60 * 60 * 24 * 3, // 3 days
-    },
-    socialProviders: getSocialProviders(env as unknown as Record<string, string>),
-    account: {
-      accountLinking: {
-        enabled: false, // Disable account linking for simplicity
-      },
-    },
-    onAPIError: {
-      onError: (error) => {
-        console.error('API Error', error);
-      },
-      errorURL: `${env.VITE_PUBLIC_APP_URL}/login`,
-      throw: true,
-    },
-  } satisfies BetterAuthOptions);
-};
-
-export const createSimpleAuth = () => {
-  return betterAuth({
-    user: {
-      fields: {
-        name: 'string',
-        email: 'string',
-        image: 'string',
-      },
-    },
-    database: {
-      async createUser() { return { id: 'temp-user-' + Date.now() }; },
-      async getUser() { return null; },
-      async getUserByEmail() { return null; },
-      async getUserByAccount() { return null; },
-      async updateUser() { return { id: 'temp-user' }; },
-      async deleteUser() { return { id: 'temp-user' }; },
-      async linkAccount() { return { id: 'temp-account' }; },
-      async unlinkAccount() { return { id: 'temp-account' }; },
-      async createSession() { return { id: 'temp-session' }; },
-      async getSession() { return null; },
-      async updateSession() { return { id: 'temp-session' }; },
-      async deleteSession() { return { id: 'temp-session' }; },
-      async createVerificationToken() { return { id: 'temp-token' }; },
-      async useVerificationToken() { return null; },
-    },
-    advanced: {
-      ipAddress: {
-        disableIpTracking: true,
-      },
-      cookiePrefix: env.NODE_ENV === 'development' ? 'better-auth-dev' : 'better-auth',
-      crossSubDomainCookies: {
-        enabled: true,
-        domain: env.COOKIE_DOMAIN,
-      },
-    },
-    baseURL: env.VITE_PUBLIC_BACKEND_URL,
-    trustedOrigins: [
-      'https://app.0.email',
-      'https://sapi.0.email',
-      'https://staging.0.email',
-      'https://0.email',
+      'https://pitext-email.onrender.com',
       'http://localhost:3000',
     ],
     session: {
@@ -168,10 +101,9 @@ export const createSimpleAuth = () => {
         console.error('API Error', error);
       },
       errorURL: `${env.VITE_PUBLIC_APP_URL}/login`,
-      throw: true,
+      throw: false, // Don't throw, just log
     },
   } satisfies BetterAuthOptions);
 };
 
 export type Auth = ReturnType<typeof createAuth>;
-export type SimpleAuth = ReturnType<typeof createSimpleAuth>;

@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { contextStorage } from 'hono/context-storage';
-import { createAuth } from './lib/auth';
 import { aiRouter } from './routes/ai';
 import { autumnApi } from './routes/autumn';
 import { env, WorkerEntrypoint } from 'cloudflare:workers';
@@ -48,83 +47,46 @@ export default class extends WorkerEntrypoint<typeof env> {
       exposeHeaders: ['X-Zero-Redirect'],
     }))
     .use(contextStorage())
-    .use('*', async (c, next) => {
-      // Create auth lazily only when needed
-      let auth: any = null;
-      let session: any = null;
-      
-      // Only create auth if we need session or auth endpoints
-      if (c.req.path.startsWith('/auth') || c.req.path.startsWith('/api/auth') || (c.req.header('Cookie') && !c.req.path.startsWith('/public')) || c.req.header('Authorization')) {
-        auth = createAuth();
-        c.set('auth', auth);
-        session = await auth.api.getSession({ headers: c.req.raw.headers });
-        c.set('sessionUser', session?.user);
-      }
-
-      await next();
-
-      c.set('auth', undefined as any);
-    })
     .get('/test', (c) => c.json({ message: 'Server is working!' }))
     .route('/ai', aiRouter)
     .route('/api/autumn', autumnApi)
-    .on(['GET', 'POST', 'OPTIONS'], '/auth/*', async (c) => {
-      try {
-        console.log(`[AUTH] Handling request to: ${c.req.path}`);
-        if (!c.var.auth) {
-          console.error('[AUTH] Auth not initialized for path:', c.req.path);
-          return c.json(
-            {
-              error: 'Authentication Error',
-              message: 'Auth service not properly initialized',
-              path: c.req.path,
-            },
-            500,
-          );
-        }
-        const response = await c.var.auth.handler(c.req.raw);
-        console.log(`[AUTH] Response status: ${response.status}`);
-        return response;
-      } catch (error) {
-        console.error('[AUTH] Error in auth handler:', error);
-        return c.json(
-          {
-            error: 'Authentication Error',
-            message: error instanceof Error ? error.message : 'Unknown authentication error',
-            path: c.req.path,
-          },
-          500,
-        );
-      }
+    .get('/auth/sign-in/social/google', async (c) => {
+      // Simple Google OAuth redirect
+      const clientId = env.GOOGLE_CLIENT_ID;
+      const redirectUri = `${env.VITE_PUBLIC_BACKEND_URL}/auth/callback/google`;
+      const scope = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
+      
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
+      
+      return c.redirect(authUrl);
     })
-    .on(['GET', 'POST', 'OPTIONS'], '/api/auth/*', async (c) => {
-      try {
-        console.log(`[AUTH] Handling API request to: ${c.req.path}`);
-        if (!c.var.auth) {
-          console.error('[AUTH] Auth not initialized for API path:', c.req.path);
-          return c.json(
-            {
-              error: 'Authentication Error',
-              message: 'Auth service not properly initialized',
-              path: c.req.path,
-            },
-            500,
-          );
-        }
-        const response = await c.var.auth.handler(c.req.raw);
-        console.log(`[AUTH] API Response status: ${response.status}`);
-        return response;
-      } catch (error) {
-        console.error('[AUTH] Error in API auth handler:', error);
-        return c.json(
-          {
-            error: 'Authentication Error',
-            message: error instanceof Error ? error.message : 'Unknown authentication error',
-            path: c.req.path,
-          },
-          500,
-        );
+    .get('/api/auth/sign-in/social/google', async (c) => {
+      // Simple Google OAuth redirect
+      const clientId = env.GOOGLE_CLIENT_ID;
+      const redirectUri = `${env.VITE_PUBLIC_BACKEND_URL}/auth/callback/google`;
+      const scope = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
+      
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
+      
+      return c.redirect(authUrl);
+    })
+    .post('/api/auth/sign-in/social', async (c) => {
+      // Handle social sign-in request
+      const body = await c.req.json();
+      if (body.provider === 'google') {
+        const clientId = env.GOOGLE_CLIENT_ID;
+        const redirectUri = `${env.VITE_PUBLIC_BACKEND_URL}/auth/callback/google`;
+        const scope = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
+        
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
+        
+        return c.json({ url: authUrl });
       }
+      return c.json({ error: 'Unsupported provider' }, 400);
+    })
+    .get('/api/auth/get-session', async (c) => {
+      // Simple session check - return null for now
+      return c.json({ user: null });
     });
 
   async fetch(request: Request): Promise<Response> {
