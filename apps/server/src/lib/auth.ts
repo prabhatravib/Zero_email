@@ -144,6 +144,34 @@ const connectionHandlerHook = async (account: Account) => {
 };
 
 export const createAuth = () => {
+  // Fail hard if Google OAuth credentials are not properly configured
+  const requiredEnvVars = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'];
+  const missingVars = requiredEnvVars.filter(varName => {
+    const value = env[varName as keyof typeof env];
+    return !value || value === '' || value.startsWith('REPLACE_WITH_');
+  });
+
+  if (missingVars.length > 0) {
+    const errorMessage = `CRITICAL: Google OAuth credentials not configured. Missing or invalid: ${missingVars.join(', ')}. 
+    
+To fix this:
+1. Go to Google Cloud Console (https://console.cloud.google.com)
+2. Create a new project or select existing project
+3. Enable Gmail API and Google+ API
+4. Create OAuth 2.0 credentials
+5. Set the authorized redirect URI to: https://pitext-mail.prabhatravib.workers.dev/auth/callback/google
+6. Update your environment variables with the actual credentials
+
+Current configuration:
+- GOOGLE_CLIENT_ID: ${env.GOOGLE_CLIENT_ID || 'NOT SET'}
+- GOOGLE_CLIENT_SECRET: ${env.GOOGLE_CLIENT_SECRET ? 'SET (but may be invalid)' : 'NOT SET'}`;
+
+    console.error(errorMessage);
+    throw new Error(`OAuth Configuration Error: ${missingVars.join(', ')} not properly configured`);
+  }
+
+  console.log('✅ Google OAuth credentials validated successfully');
+
   const dub = new Dub();
 
   const plugins = [
