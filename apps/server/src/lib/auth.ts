@@ -54,9 +54,9 @@ IMPORTANT: Do NOT add credentials to wrangler.jsonc as they will be committed to
         image: 'string',
       },
     },
-    // Simple memory-based database for Google OAuth only
+    // Simple memory-based database for Google OAuth only - NO PERSISTENCE
     database: {
-      async createUser() { return { id: 'temp-user' }; },
+      async createUser() { return { id: 'temp-user-' + Date.now() }; },
       async getUser() { return null; },
       async getUserByEmail() { return null; },
       async getUserByAccount() { return null; },
@@ -71,7 +71,7 @@ IMPORTANT: Do NOT add credentials to wrangler.jsonc as they will be committed to
       async createVerificationToken() { return { id: 'temp-token' }; },
       async useVerificationToken() { return null; },
     },
-    // No secondary storage needed for simple Google OAuth
+    // No secondary storage - everything in memory only
     advanced: {
       ipAddress: {
         disableIpTracking: true,
@@ -120,7 +120,7 @@ export const createSimpleAuth = () => {
       },
     },
     database: {
-      async createUser() { return { id: 'temp-user' }; },
+      async createUser() { return { id: 'temp-user-' + Date.now() }; },
       async getUser() { return null; },
       async getUserByEmail() { return null; },
       async getUserByAccount() { return null; },
