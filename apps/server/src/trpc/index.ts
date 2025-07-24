@@ -14,7 +14,7 @@ import { mailRouter } from './routes/mail';
 import { bimiRouter } from './routes/bimi';
 import type { HonoContext } from '../ctx';
 import { aiRouter } from './routes/ai';
-import { router, publicProcedure } from './trpc';
+import { router } from './trpc';
 
 export const appRouter = router({
   ai: aiRouter,
@@ -30,9 +30,6 @@ export const appRouter = router({
   shortcut: shortcutRouter,
   settings: settingsRouter,
   user: userRouter,
-  test: router({
-    hello: publicProcedure.query(() => ({ message: 'Hello from tRPC!' })),
-  }),
 });
 
 export type AppRouter = typeof appRouter;

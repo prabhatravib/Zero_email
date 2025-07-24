@@ -1,16 +1,19 @@
+import { shortcutSchema } from '../../lib/shortcuts';
+import { getZeroDB } from '../../lib/server-utils';
 import { privateProcedure, router } from '../trpc';
 import { z } from 'zod';
 
-// Simplified shortcut router that returns mock data
 export const shortcutRouter = router({
   update: privateProcedure
     .input(
       z.object({
-        shortcuts: z.array(z.any()),
+        shortcuts: z.array(shortcutSchema),
       }),
     )
-    .mutation(async ({ input }) => {
-      // Return mock success
-      return { success: true };
+    .mutation(async ({ ctx, input }) => {
+      const { sessionUser } = ctx;
+      const { shortcuts } = input;
+      const db = await getZeroDB(sessionUser.id);
+      await db.insertUserHotkeys(shortcuts as any);
     }),
 });

@@ -7,8 +7,6 @@
   "ai": {
     "binding": "AI",
   },
-
-
   "durable_objects": {
     "bindings": [
       {
@@ -61,7 +59,5 @@
     "OPENAI_API_KEY": "your-openai-api-key-here",
     "GOOGLE_CLIENT_ID": "363401296279-vo7al766jmct0gcat24rrn2grv2jh1p5.apps.googleusercontent.com",
     "GOOGLE_CLIENT_SECRET": "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",
-    "REDIS_URL": "https://your-redis-url.upstash.io",
-    "REDIS_TOKEN": "your-redis-token"
   },
 }
