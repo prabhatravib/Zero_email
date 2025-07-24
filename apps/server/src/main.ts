@@ -205,8 +205,8 @@ export default class extends WorkerEntrypoint<typeof env> {
         const redirectUrl = `${env.VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&session=${encodeURIComponent(sessionToken)}`;
         
         const response = c.redirect(redirectUrl);
-        // Set cookie for cross-domain access - use the frontend domain
-        response.headers.set('Set-Cookie', `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=None; Domain=${env.COOKIE_DOMAIN}; Max-Age=${24 * 60 * 60}`);
+        // Set cookie without domain restriction for cross-domain access
+        response.headers.set('Set-Cookie', `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${24 * 60 * 60}`);
         
         return response;
         
@@ -235,18 +235,29 @@ export default class extends WorkerEntrypoint<typeof env> {
         .find(cookie => cookie.trim().startsWith('session='))
         ?.split('=')[1];
       
+      console.log('Session check - Cookie header:', c.req.header('Cookie'));
+      console.log('Session check - Extracted session:', sessionCookie ? 'found' : 'not found');
+      
       if (!sessionCookie) {
         return c.json({ user: null });
       }
       
       try {
         const sessionData = JSON.parse(atob(sessionCookie));
+        console.log('Session check - Parsed session data:', { 
+          userId: sessionData.userId, 
+          email: sessionData.email,
+          exp: sessionData.exp,
+          currentTime: Date.now()
+        });
         
         // Check if session is expired
         if (sessionData.exp && Date.now() > sessionData.exp) {
+          console.log('Session check - Session expired');
           return c.json({ user: null });
         }
         
+        console.log('Session check - Valid session found');
         return c.json({ 
           user: {
             id: sessionData.userId,
@@ -330,7 +341,7 @@ export default class extends WorkerEntrypoint<typeof env> {
         });
         
         // Set session cookie for cross-domain access
-        response.headers.set('Set-Cookie', `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=None; Domain=${env.COOKIE_DOMAIN}; Max-Age=${24 * 60 * 60}`);
+        response.headers.set('Set-Cookie', `session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${24 * 60 * 60}`);
         
         return response;
         
@@ -358,7 +369,7 @@ export default class extends WorkerEntrypoint<typeof env> {
     .post('/api/auth/sign-out', async (c) => {
       // Handle sign out by clearing session cookie
       const response = c.json({ success: true });
-      response.headers.set('Set-Cookie', `session=; Path=/; HttpOnly; Secure; SameSite=None; Domain=${env.COOKIE_DOMAIN}; Max-Age=0`);
+      response.headers.set('Set-Cookie', 'session=; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=0');
       return response;
     });
 
