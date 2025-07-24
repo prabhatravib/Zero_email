@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { contextStorage } from 'hono/context-storage';
 import { createAuth } from './lib/auth';
 import { aiRouter } from './routes/ai';
@@ -24,6 +25,28 @@ class ZeroDriver {
 
 export default class extends WorkerEntrypoint<typeof env> {
   private app = new Hono()
+    .use('*', cors({
+      origin: (origin) => {
+        if (!origin) return null;
+        let hostname: string;
+        try {
+          hostname = new URL(origin).hostname;
+        } catch {
+          return null;
+        }
+        // Allow Render domains and localhost for development
+        if (hostname === 'pitext-email.onrender.com' || 
+            hostname.endsWith('.onrender.com') || 
+            hostname === 'localhost' || 
+            hostname === '127.0.0.1') {
+          return origin;
+        }
+        return null;
+      },
+      credentials: true,
+      allowHeaders: ['Content-Type', 'Authorization'],
+      exposeHeaders: ['X-Zero-Redirect'],
+    }))
     .use(contextStorage())
     .use('*', async (c, next) => {
       // Create auth lazily only when needed
