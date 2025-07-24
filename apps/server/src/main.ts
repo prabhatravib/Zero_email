@@ -632,13 +632,10 @@ export default class extends WorkerEntrypoint<typeof env> {
             name: userData.name,
             picture: userData.picture,
           },
+          sessionToken: sessionToken, // Return session token for frontend to set as cookie
           access_token: tokenData.access_token,
           refresh_token: tokenData.refresh_token,
         });
-        
-        // For cross-domain setup, we need to set the cookie on the frontend domain
-        // The session token is returned in the response and will be set by the frontend
-        // No server-side cookie setting here since it won't be accessible to the frontend
         
         return response;
         

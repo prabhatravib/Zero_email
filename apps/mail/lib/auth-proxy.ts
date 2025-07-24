@@ -11,10 +11,15 @@ export const authProxy = {
         const cookies = document.cookie;
         console.log('Auth proxy - Frontend cookies:', cookies);
         
-        const sessionCookie = cookies.split(';')
-          .find(cookie => cookie.trim().startsWith('session='))
-          ?.split('=')[1];
+        // Get the first session cookie (avoid duplicates)
+        const sessionCookies = cookies.split(';')
+          .filter(cookie => cookie.trim().startsWith('session='));
         
+        const sessionCookie = sessionCookies.length > 0 
+          ? sessionCookies[0].split('=')[1] 
+          : null;
+        
+        console.log('Auth proxy - Session cookies found:', sessionCookies.length);
         console.log('Auth proxy - Session cookie from frontend:', sessionCookie ? 'found' : 'not found');
         
         // Create headers with the session token

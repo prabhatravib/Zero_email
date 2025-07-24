@@ -93,13 +93,32 @@ export const trpcClient = createTRPCClient<AppRouter>({
       url: getUrl(),
       methodOverride: 'POST',
       maxItems: 1,
-      fetch: (url, options) =>
-        fetch(url, { ...options, credentials: 'include' }).then((res) => {
+      fetch: (url, options) => {
+        // Get session token from cookies
+        const cookies = document.cookie;
+        const sessionCookies = cookies.split(';')
+          .filter(cookie => cookie.trim().startsWith('session='));
+        const sessionToken = sessionCookies.length > 0 
+          ? sessionCookies[0].split('=')[1] 
+          : null;
+        
+        // Add session token to headers if available
+        const headers = new Headers(options.headers);
+        if (sessionToken) {
+          headers.set('X-Session-Token', sessionToken);
+        }
+        
+        return fetch(url, { 
+          ...options, 
+          headers,
+          credentials: 'include' 
+        }).then((res) => {
           const currentPath = new URL(window.location.href).pathname;
           const redirectPath = res.headers.get('X-Zero-Redirect');
           if (!!redirectPath && redirectPath !== currentPath) window.location.href = redirectPath;
           return res;
-        }),
+        });
+      },
     }),
   ],
 });

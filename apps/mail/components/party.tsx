@@ -31,12 +31,16 @@ export const NotificationProvider = () => {
   const [searchValue] = useSearchValue();
   const { labels } = useSearchLabels();
 
+  // Only connect to WebSocket if we have an active connection (user is authenticated)
+  const shouldConnect = activeConnection?.id && activeConnection.accessToken;
+
   usePartySocket({
     party: 'zero-agent',
     room: activeConnection?.id ? String(activeConnection.id) : 'general',
     prefix: 'agents',
     maxRetries: 3,
     host: import.meta.env.VITE_PUBLIC_BACKEND_URL!,
+    enabled: shouldConnect, // Only enable WebSocket when authenticated
     onMessage: async (message: MessageEvent<string>) => {
       try {
         const { type } = JSON.parse(message.data);

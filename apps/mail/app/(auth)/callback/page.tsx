@@ -29,19 +29,32 @@ export default function AuthCallback() {
         // If we have a session token in the URL, set it as a cookie
         if (sessionToken) {
           console.log('Session token found in URL, setting cookie');
-          // Set cookie on the frontend domain (pitext-email.onrender.com)
-          document.cookie = `session=${sessionToken}; path=/; max-age=${24 * 60 * 60}`;
+          
+          // Clear any existing session cookies first
+          document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+          
+          // Set the new session cookie with proper attributes
+          const cookieValue = `session=${sessionToken}; path=/; max-age=${24 * 60 * 60}; SameSite=Lax`;
+          document.cookie = cookieValue;
           
           // Verify the cookie was set
           setTimeout(() => {
             const cookies = document.cookie;
-            const sessionCookie = cookies.split(';')
-              .find(cookie => cookie.trim().startsWith('session='));
-            console.log('Cookie verification - All cookies:', cookies);
-            console.log('Cookie verification - Session cookie:', sessionCookie ? 'found' : 'not found');
+            const sessionCookies = cookies.split(';')
+              .filter(cookie => cookie.trim().startsWith('session='));
             
-            console.log('Redirecting to /mail/inbox after setting session cookie');
-            navigate('/mail/inbox');
+            console.log('Cookie verification - All cookies:', cookies);
+            console.log('Cookie verification - Session cookies found:', sessionCookies.length);
+            
+            if (sessionCookies.length === 1) {
+              console.log('Cookie verification - Single session cookie set successfully');
+              console.log('Redirecting to /mail/inbox after setting session cookie');
+              navigate('/mail/inbox');
+            } else {
+              console.error('Cookie verification - Multiple or no session cookies found');
+              // Try to redirect anyway
+              navigate('/mail/inbox');
+            }
           }, 1000);
           return;
         }
@@ -78,6 +91,16 @@ export default function AuthCallback() {
           if (data.success && data.user) {
             toast.success(`Successfully authenticated as ${data.user.email}`);
             console.log('Code exchange successful, user data:', data.user);
+            
+            // Set session cookie if provided
+            if (data.sessionToken) {
+              // Clear any existing session cookies first
+              document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+              
+              // Set the new session cookie
+              const cookieValue = `session=${data.sessionToken}; path=/; max-age=${24 * 60 * 60}; SameSite=Lax`;
+              document.cookie = cookieValue;
+            }
             
             // Redirect immediately after successful code exchange
             console.log('Redirecting to /mail/inbox after code exchange');
