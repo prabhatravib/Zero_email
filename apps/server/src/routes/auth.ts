@@ -87,4 +87,22 @@ publicRouter.get('/config-check', async (c) => {
   return c.json(configStatus);
 });
 
+// Add debug endpoint to show callback URLs
+publicRouter.get('/debug-callbacks', async (c) => {
+  const env = c.env as unknown as Record<string, string>;
+  const baseURL = env.VITE_PUBLIC_BACKEND_URL;
+  
+  const callbackUrls = {
+    baseURL,
+    googleCallbacks: [
+      `${baseURL}/auth/callback/google`,
+      `${baseURL}/api/auth/callback/google`,
+      `${baseURL}/auth/sign-in/social/google`,
+    ],
+    note: 'Check which URL matches your Google Cloud Console configuration'
+  };
+
+  return c.json(callbackUrls);
+});
+
 export { publicRouter };
