@@ -21,6 +21,26 @@ class ZeroDriver {
   constructor() {}
 }
 
+// Type definitions for Google OAuth responses
+interface GoogleTokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  refresh_token?: string;
+  scope: string;
+}
+
+interface GoogleUserInfo {
+  id: string;
+  email: string;
+  verified_email: boolean;
+  name: string;
+  given_name: string;
+  family_name: string;
+  picture: string;
+  locale: string;
+}
+
 export default class extends WorkerEntrypoint<typeof env> {
   private app = new Hono()
     .use('*', cors({
@@ -51,7 +71,7 @@ export default class extends WorkerEntrypoint<typeof env> {
     .get('/auth/sign-in/social/google', async (c) => {
       // Simple Google OAuth redirect
       const clientId = env.GOOGLE_CLIENT_ID;
-      const redirectUri = `${env.VITE_PUBLIC_BACKEND_URL}/auth/callback/google`;
+      const redirectUri = `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`;
       const scope = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
@@ -61,19 +81,78 @@ export default class extends WorkerEntrypoint<typeof env> {
     .get('/api/auth/sign-in/social/google', async (c) => {
       // Simple Google OAuth redirect
       const clientId = env.GOOGLE_CLIENT_ID;
-      const redirectUri = `${env.VITE_PUBLIC_BACKEND_URL}/auth/callback/google`;
+      const redirectUri = `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`;
       const scope = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
       
       return c.redirect(authUrl);
     })
+    .get('/auth/callback/google', async (c) => {
+      // Handle Google OAuth callback
+      const code = c.req.query('code');
+      const error = c.req.query('error');
+      
+      if (error) {
+        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/login?error=${encodeURIComponent(error)}`);
+      }
+      
+      if (!code) {
+        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/login?error=no_code`);
+      }
+      
+      try {
+        // Exchange code for tokens
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            client_id: env.GOOGLE_CLIENT_ID,
+            client_secret: env.GOOGLE_CLIENT_SECRET,
+            code: code,
+            grant_type: 'authorization_code',
+            redirect_uri: `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`,
+          }),
+        });
+        
+        if (!tokenResponse.ok) {
+          console.error('Token exchange failed:', await tokenResponse.text());
+          return c.redirect(`${env.VITE_PUBLIC_APP_URL}/login?error=token_exchange_failed`);
+        }
+        
+        const tokenData = await tokenResponse.json() as GoogleTokenResponse;
+        
+        // Get user info
+        const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: {
+            'Authorization': `Bearer ${tokenData.access_token}`,
+          },
+        });
+        
+        if (!userResponse.ok) {
+          console.error('User info fetch failed:', await userResponse.text());
+          return c.redirect(`${env.VITE_PUBLIC_APP_URL}/login?error=user_info_failed`);
+        }
+        
+        const userData = await userResponse.json() as GoogleUserInfo;
+        
+        // For now, just redirect to the app with success
+        // In a real implementation, you'd create a session here
+        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/mail/inbox?success=true&email=${encodeURIComponent(userData.email)}`);
+        
+      } catch (error) {
+        console.error('OAuth callback error:', error);
+        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/login?error=callback_error`);
+      }
+    })
     .post('/api/auth/sign-in/social', async (c) => {
       // Handle social sign-in request
       const body = await c.req.json();
       if (body.provider === 'google') {
         const clientId = env.GOOGLE_CLIENT_ID;
-        const redirectUri = `${env.VITE_PUBLIC_BACKEND_URL}/auth/callback/google`;
+        const redirectUri = `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`;
         const scope = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
         
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
