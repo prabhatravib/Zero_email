@@ -94,11 +94,11 @@ export default class extends WorkerEntrypoint<typeof env> {
       const error = c.req.query('error');
       
       if (error) {
-        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/login?error=${encodeURIComponent(error)}`);
+        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=${encodeURIComponent(error)}`);
       }
       
       if (!code) {
-        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/login?error=no_code`);
+        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=no_code`);
       }
       
       try {
@@ -119,7 +119,7 @@ export default class extends WorkerEntrypoint<typeof env> {
         
         if (!tokenResponse.ok) {
           console.error('Token exchange failed:', await tokenResponse.text());
-          return c.redirect(`${env.VITE_PUBLIC_APP_URL}/login?error=token_exchange_failed`);
+          return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=token_exchange_failed`);
         }
         
         const tokenData = await tokenResponse.json() as GoogleTokenResponse;
@@ -133,18 +133,18 @@ export default class extends WorkerEntrypoint<typeof env> {
         
         if (!userResponse.ok) {
           console.error('User info fetch failed:', await userResponse.text());
-          return c.redirect(`${env.VITE_PUBLIC_APP_URL}/login?error=user_info_failed`);
+          return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=user_info_failed`);
         }
         
         const userData = await userResponse.json() as GoogleUserInfo;
         
-        // For now, just redirect to the app with success
+        // For now, just redirect to the auth callback with success
         // In a real implementation, you'd create a session here
-        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/mail/inbox?success=true&email=${encodeURIComponent(userData.email)}`);
+        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}`);
         
       } catch (error) {
         console.error('OAuth callback error:', error);
-        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/login?error=callback_error`);
+        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=callback_error`);
       }
     })
     .post('/api/auth/sign-in/social', async (c) => {
@@ -164,6 +164,71 @@ export default class extends WorkerEntrypoint<typeof env> {
     .get('/api/auth/get-session', async (c) => {
       // Simple session check - return null for now
       return c.json({ user: null });
+    })
+    .post('/api/auth/exchange-code', async (c) => {
+      // Handle OAuth code exchange
+      const body = await c.req.json();
+      const { code } = body;
+      
+      if (!code) {
+        return c.json({ success: false, error: 'No authorization code provided' }, 400);
+      }
+      
+      try {
+        // Exchange code for tokens
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            client_id: env.GOOGLE_CLIENT_ID,
+            client_secret: env.GOOGLE_CLIENT_SECRET,
+            code: code,
+            grant_type: 'authorization_code',
+            redirect_uri: `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`,
+          }),
+        });
+        
+        if (!tokenResponse.ok) {
+          console.error('Token exchange failed:', await tokenResponse.text());
+          return c.json({ success: false, error: 'Token exchange failed' }, 400);
+        }
+        
+        const tokenData = await tokenResponse.json() as GoogleTokenResponse;
+        
+        // Get user info
+        const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: {
+            'Authorization': `Bearer ${tokenData.access_token}`,
+          },
+        });
+        
+        if (!userResponse.ok) {
+          console.error('User info fetch failed:', await userResponse.text());
+          return c.json({ success: false, error: 'Failed to get user info' }, 400);
+        }
+        
+        const userData = await userResponse.json() as GoogleUserInfo;
+        
+        // For now, just return success with user data
+        // In a real implementation, you'd create a session here
+        return c.json({ 
+          success: true, 
+          user: {
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            picture: userData.picture,
+          },
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token,
+        });
+        
+      } catch (error) {
+        console.error('OAuth code exchange error:', error);
+        return c.json({ success: false, error: 'Code exchange failed' }, 500);
+      }
     });
 
   async fetch(request: Request): Promise<Response> {
