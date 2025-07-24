@@ -68,6 +68,24 @@ export default class extends WorkerEntrypoint<typeof env> {
     .use(contextStorage())
     .get('/test', (c) => c.json({ message: 'Server is working!' }))
     .route('/ai', aiRouter)
+    .get('/api/public/providers', async (c) => {
+      // Return available authentication providers
+      return c.json({
+        providers: [
+          {
+            id: 'google',
+            name: 'Google',
+            type: 'oauth',
+            scopes: ['https://www.googleapis.com/auth/gmail.modify', 'https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email']
+          }
+        ]
+      });
+    })
+    .post('/monitoring/sentry', async (c) => {
+      // Handle Sentry monitoring data
+      // For now, just return success to prevent 404 errors
+      return c.json({ success: true });
+    })
     .get('/auth/sign-in/social/google', async (c) => {
       // Simple Google OAuth redirect
       const clientId = env.GOOGLE_CLIENT_ID;
@@ -229,6 +247,22 @@ export default class extends WorkerEntrypoint<typeof env> {
         console.error('OAuth code exchange error:', error);
         return c.json({ success: false, error: 'Code exchange failed' }, 500);
       }
+    })
+    .get('/api/public/providers', async (c) => {
+      // Return available authentication providers
+      return c.json({
+        providers: [
+          {
+            id: 'google',
+            name: 'Google',
+            type: 'oauth',
+            style: {
+              backgroundColor: '#4285f4',
+              color: '#ffffff',
+            },
+          },
+        ],
+      });
     });
 
   async fetch(request: Request): Promise<Response> {
