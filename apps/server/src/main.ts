@@ -3,6 +3,10 @@ import { cors } from 'hono/cors';
 import { contextStorage } from 'hono/context-storage';
 import { aiRouter } from './routes/ai';
 import { env, WorkerEntrypoint } from 'cloudflare:workers';
+import { appRouter } from './trpc';
+import { createAuth } from './lib/auth';
+import type { HonoContext, HonoVariables } from './ctx';
+// import { trpcServer } from '@hono/trpc-server';
 
 // Simple Durable Objects for Google OAuth only
 class ZeroAgent {
@@ -42,7 +46,7 @@ interface GoogleUserInfo {
 }
 
 export default class extends WorkerEntrypoint<typeof env> {
-  private app = new Hono()
+  private app = new Hono<HonoContext>()
     .use('*', cors({
       origin: (origin) => {
         if (!origin) return null;
@@ -66,6 +70,37 @@ export default class extends WorkerEntrypoint<typeof env> {
       exposeHeaders: ['X-Zero-Redirect'],
     }))
     .use(contextStorage())
+    .use('*', async (c, next) => {
+      // Set up context variables
+      c.set('auth', createAuth());
+      
+      // Get session from cookie or header
+      const sessionToken = c.req.header('X-Session-Token') || 
+        c.req.header('Cookie')?.split(';')
+          .find(cookie => cookie.trim().startsWith('session='))
+          ?.split('=')[1];
+      
+      if (sessionToken) {
+        try {
+          const sessionData = JSON.parse(atob(sessionToken));
+          if (sessionData.exp && Date.now() <= sessionData.exp) {
+            c.set('sessionUser', {
+              id: sessionData.userId,
+              email: sessionData.email,
+              name: sessionData.name,
+              image: sessionData.picture,
+              emailVerified: true,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+          }
+        } catch (error) {
+          console.error('Session parsing error:', error);
+        }
+      }
+      
+      await next();
+    })
     .get('/test', (c) => c.json({ message: 'Server is working!' }))
     .route('/ai', aiRouter)
     .get('/api/public/providers', async (c) => {
@@ -375,6 +410,49 @@ export default class extends WorkerEntrypoint<typeof env> {
       const response = c.json({ success: true });
       response.headers.set('Set-Cookie', 'session=; Path=/; HttpOnly; Max-Age=0');
       return response;
+    })
+    .get('/api/trpc/test', (c) => c.json({ message: 'tRPC endpoint is working!' }))
+    .all('/api/trpc/:path*', async (c) => {
+      // Handle tRPC requests
+      const path = c.req.param('path');
+      
+      if (!path) {
+        return c.json({ error: 'No tRPC procedure specified' }, 400);
+      }
+      
+      try {
+        // Create context for tRPC
+        const ctx = {
+          c,
+          sessionUser: c.var.sessionUser,
+          auth: c.var.auth,
+        };
+        
+        // Parse the procedure path (e.g., "mail.listThreads" -> ["mail", "listThreads"])
+        const [routerName, procedureName] = path.split('.');
+        
+        if (!routerName || !procedureName) {
+          return c.json({ error: 'Invalid tRPC procedure path' }, 400);
+        }
+        
+        // Create caller and call the procedure
+        const caller = appRouter.createCaller(ctx);
+        const result = await caller[routerName as keyof typeof caller][procedureName as any]();
+        return c.json(result);
+        
+      } catch (error: any) {
+        console.error('tRPC error:', error);
+        
+        if (error.code === 'UNAUTHORIZED') {
+          return c.json({ error: 'Unauthorized' }, 401);
+        }
+        
+        if (error.code === 'BAD_REQUEST') {
+          return c.json({ error: error.message || 'Bad request' }, 400);
+        }
+        
+        return c.json({ error: 'Internal server error' }, 500);
+      }
     });
 
   async fetch(request: Request): Promise<Response> {
