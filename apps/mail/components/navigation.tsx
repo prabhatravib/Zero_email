@@ -192,19 +192,24 @@ export function Navigation() {
             </a>
             <Button
               className="h-8 bg-white text-black hover:bg-white hover:text-black"
-              onClick={() => {
+              onClick={async () => {
                 if (session) {
                   navigate('/mail/inbox');
                 } else {
-                  toast.promise(
-                    signIn.social({
+                  try {
+                    await signIn.social({
                       provider: 'google',
                       callbackURL: `${window.location.origin}/mail`,
-                    }),
-                    {
-                      error: 'Login redirect failed',
-                    },
-                  );
+                    });
+                  } catch (error) {
+                    console.error('Authentication failed:', error);
+                    toast.error('Authentication service is currently unavailable. Please try again later or contact support.');
+                    
+                    // Fallback: redirect to contact form
+                    setTimeout(() => {
+                      window.open('https://cal.com/team/0', '_blank');
+                    }, 2000);
+                  }
                 }
               }}
             >

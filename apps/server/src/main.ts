@@ -506,7 +506,7 @@ export default class extends WorkerEntrypoint<typeof env> {
       let session: any = null;
       
       // Only create auth if we need session or auth endpoints
-      if (c.req.path.startsWith('/auth') || (c.req.header('Cookie') && !c.req.path.startsWith('/public')) || c.req.header('Authorization')) {
+      if (c.req.path.startsWith('/auth') || c.req.path.startsWith('/api/auth') || (c.req.header('Cookie') && !c.req.path.startsWith('/public')) || c.req.header('Authorization')) {
         auth = createAuth();
         c.set('auth', auth);
         session = await auth.api.getSession({ headers: c.req.raw.headers });
@@ -544,11 +544,51 @@ export default class extends WorkerEntrypoint<typeof env> {
     .on(['GET', 'POST', 'OPTIONS'], '/auth/*', async (c) => {
       try {
         console.log(`[AUTH] Handling request to: ${c.req.path}`);
+        if (!c.var.auth) {
+          console.error('[AUTH] Auth not initialized for path:', c.req.path);
+          return c.json(
+            {
+              error: 'Authentication Error',
+              message: 'Auth service not properly initialized',
+              path: c.req.path,
+            },
+            500,
+          );
+        }
         const response = await c.var.auth.handler(c.req.raw);
         console.log(`[AUTH] Response status: ${response.status}`);
         return response;
       } catch (error) {
         console.error('[AUTH] Error in auth handler:', error);
+        return c.json(
+          {
+            error: 'Authentication Error',
+            message: error instanceof Error ? error.message : 'Unknown authentication error',
+            path: c.req.path,
+          },
+          500,
+        );
+      }
+    })
+    .on(['GET', 'POST', 'OPTIONS'], '/api/auth/*', async (c) => {
+      try {
+        console.log(`[AUTH] Handling API request to: ${c.req.path}`);
+        if (!c.var.auth) {
+          console.error('[AUTH] Auth not initialized for API path:', c.req.path);
+          return c.json(
+            {
+              error: 'Authentication Error',
+              message: 'Auth service not properly initialized',
+              path: c.req.path,
+            },
+            500,
+          );
+        }
+        const response = await c.var.auth.handler(c.req.raw);
+        console.log(`[AUTH] API Response status: ${response.status}`);
+        return response;
+      } catch (error) {
+        console.error('[AUTH] Error in API auth handler:', error);
         return c.json(
           {
             error: 'Authentication Error',
