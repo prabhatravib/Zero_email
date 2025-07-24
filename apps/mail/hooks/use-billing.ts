@@ -1,4 +1,3 @@
-import { useAutumn, useCustomer } from 'autumn-js/react';
 import { signOut } from '@/lib/auth-client';
 import { useEffect, useMemo } from 'react';
 
@@ -21,34 +20,34 @@ type Features = {
 
 const DEFAULT_FEATURES: Features = {
   chatMessages: {
-    total: 0,
-    remaining: 0,
-    unlimited: false,
-    enabled: false,
+    total: 100,
+    remaining: 100,
+    unlimited: true,
+    enabled: true,
     usage: 0,
     nextResetAt: null,
     interval: '',
-    included_usage: 0,
+    included_usage: 100,
   },
   connections: {
-    total: 0,
-    remaining: 0,
-    unlimited: false,
-    enabled: false,
+    total: 5,
+    remaining: 5,
+    unlimited: true,
+    enabled: true,
     usage: 0,
     nextResetAt: null,
     interval: '',
-    included_usage: 0,
+    included_usage: 5,
   },
   brainActivity: {
-    total: 0,
-    remaining: 0,
-    unlimited: false,
-    enabled: false,
+    total: 50,
+    remaining: 50,
+    unlimited: true,
+    enabled: true,
     usage: 0,
     nextResetAt: null,
     interval: '',
-    included_usage: 0,
+    included_usage: 50,
   },
 };
 
@@ -61,20 +60,48 @@ const FEATURE_IDS = {
 const PRO_PLANS = ['pro-example', 'pro_annual', 'team', 'enterprise'] as const;
 
 export const useBilling = () => {
-  const { customer, refetch, isLoading, error } = useCustomer();
-  const { attach, track, openBillingPortal } = useAutumn();
+  // Mock customer data - all features enabled for development
+  const customer = {
+    id: 'mock-customer',
+    email: 'user@example.com',
+    features: {
+      [FEATURE_IDS.CHAT]: {
+        included_usage: 100,
+        balance: 100,
+        unlimited: true,
+        usage: 0,
+        next_reset_at: null,
+        interval: 'monthly',
+      },
+      [FEATURE_IDS.CONNECTIONS]: {
+        included_usage: 5,
+        balance: 5,
+        unlimited: true,
+        usage: 0,
+        next_reset_at: null,
+        interval: 'monthly',
+      },
+      [FEATURE_IDS.BRAIN]: {
+        included_usage: 50,
+        balance: 50,
+        unlimited: true,
+        usage: 0,
+        next_reset_at: null,
+        interval: 'monthly',
+      },
+    },
+    products: [{ id: 'pro-example', name: 'Pro Plan' }],
+  };
+
+  const isLoading = false;
+  const error = null;
 
   useEffect(() => {
     if (error) signOut();
   }, [error]);
 
   const { isPro, ...customerFeatures } = useMemo(() => {
-    const isPro =
-      customer?.products && Array.isArray(customer.products)
-        ? customer.products.some((product) =>
-            PRO_PLANS.some((plan) => product.id?.includes(plan) || product.name?.includes(plan)),
-          )
-        : false;
+    const isPro = true; // Mock as pro user for development
 
     if (!customer?.features) return { isPro, ...DEFAULT_FEATURES };
 
@@ -124,6 +151,12 @@ export const useBilling = () => {
 
     return { isPro, ...features };
   }, [customer]);
+
+  // Mock functions that do nothing
+  const refetch = () => Promise.resolve();
+  const attach = () => Promise.resolve();
+  const track = () => Promise.resolve();
+  const openBillingPortal = () => Promise.resolve();
 
   return {
     isLoading,
