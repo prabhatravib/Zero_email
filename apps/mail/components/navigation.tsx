@@ -83,8 +83,8 @@ interface GitHubApiResponse {
 export function Navigation() {
   const [open, setOpen] = useState(false);
   const [stars, setStars] = useState(0); // Default fallback value
-  const { data: session } = useSession();
   const navigate = useNavigate();
+  const { session } = useSession();
 
   const { data: githubData } = useQuery({
     queryKey: ['githubStars'],

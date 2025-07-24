@@ -159,14 +159,8 @@ export default function PricingCard() {
           </div>
           <button
             onClick={() => {
-              if (session) {
-                navigate('/mail/inbox');
-              } else {
-                handleGoogleSignIn(`${window.location.origin}/mail`, {
-                  loading: undefined,
-                  success: undefined,
-                });
-              }
+              // Simple redirect to contact form
+              window.open('https://cal.com/team/0', '_blank');
             }}
             className="z-30 mt-auto inline-flex h-10 items-center justify-center gap-2.5 self-stretch overflow-hidden rounded-lg bg-[#2D2D2D] p-3 shadow shadow-black/30 outline outline-1 outline-offset-[-1px] outline-[#434343]"
           >
