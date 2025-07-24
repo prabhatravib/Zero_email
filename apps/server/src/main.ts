@@ -201,10 +201,65 @@ class ZeroDB {
     await this.updateUser({ defaultConnectionId: undefined });
   }
 
-  // RPC methods for Durable Object communication
-  async setMetaData(userId: string) {
-    await this.state.storage.put('userId', userId);
-    return this;
+  // Handle fetch requests for Durable Object communication
+  async fetch(request: Request): Promise<Response> {
+    try {
+      const url = new URL(request.url);
+      const path = url.pathname;
+      
+      if (request.method === 'POST' && path === '/') {
+        // Handle initialization
+        const body = await request.json();
+        if (body.action === 'init') {
+          await this.state.storage.put('userId', body.userId);
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      }
+      
+      // Handle RPC calls
+      if (path === '/rpc') {
+        const body = await request.json();
+        const { method, params } = body;
+        
+        if (typeof this[method] === 'function') {
+          try {
+            const result = await this[method](...params);
+            return new Response(JSON.stringify({ success: true, result }), {
+              headers: { 'Content-Type': 'application/json' }
+            });
+          } catch (error) {
+            return new Response(JSON.stringify({ 
+              success: false, 
+              error: error instanceof Error ? error.message : 'Unknown error' 
+            }), {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+        } else {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: `Method ${method} not found` 
+          }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      }
+      
+      return new Response('Not found', { status: 404 });
+    } catch (error) {
+      console.error('ZeroDB fetch error:', error);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
   }
 }
 
@@ -412,51 +467,11 @@ export default class extends WorkerEntrypoint<typeof env> {
         
         const userData = await userResponse.json() as GoogleUserInfo;
         
-        // Create or update user and connection in database using Durable Objects
-        try {
-          const db = await getZeroDB(userData.id);
-          
-          // Create or update user
-          await db.createUser({
-            id: userData.id,
-            email: userData.email,
-            name: userData.name,
-            picture: userData.picture,
-            emailVerified: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-          
-          // Create or update connection
-          const connectionId = `${userData.id}_${userData.email}`;
-          await db.createConnection({
-            id: connectionId,
-            userId: userData.id,
-            email: userData.email,
-            name: userData.name,
-            picture: userData.picture,
-            accessToken: tokenData.access_token,
-            refreshToken: tokenData.refresh_token,
-            scope: tokenData.scope,
-            providerId: 'google',
-            expiresAt: new Date(Date.now() + (tokenData.expires_in * 1000)),
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-          
-          // Set as default connection if user doesn't have one
-          const userDataFromDB = await db.findUser();
-          if (!userDataFromDB?.defaultConnectionId) {
-            await db.updateUser({ defaultConnectionId: connectionId });
-          }
-          
-          console.log('Successfully created/updated user and connection using Durable Objects:', { userId: userData.id, connectionId });
-        } catch (dbError) {
-          console.error('Durable Object database error during OAuth callback:', dbError);
-          // Continue with the flow even if database operations fail
-        }
+        // Store connection data in session token (simpler approach)
+        console.log('Storing connection data in session token for user:', userData.id);
         
-        // Create a simple session token (in production, use proper JWT)
+        // Create a session token with connection data included
+        const connectionId = `${userData.id}_${userData.email}`;
         const sessionToken = btoa(JSON.stringify({
           userId: userData.id,
           email: userData.email,
@@ -464,6 +479,10 @@ export default class extends WorkerEntrypoint<typeof env> {
           picture: userData.picture,
           access_token: tokenData.access_token,
           refresh_token: tokenData.refresh_token,
+          connectionId: connectionId,
+          providerId: 'google',
+          scope: tokenData.scope,
+          expiresAt: Date.now() + (tokenData.expires_in * 1000),
           exp: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
         }));
         
@@ -586,51 +605,11 @@ export default class extends WorkerEntrypoint<typeof env> {
         
         const userData = await userResponse.json() as GoogleUserInfo;
         
-        // Create or update user and connection in database using Durable Objects
-        try {
-          const db = await getZeroDB(userData.id);
-          
-          // Create or update user
-          await db.createUser({
-            id: userData.id,
-            email: userData.email,
-            name: userData.name,
-            picture: userData.picture,
-            emailVerified: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-          
-          // Create or update connection
-          const connectionId = `${userData.id}_${userData.email}`;
-          await db.createConnection({
-            id: connectionId,
-            userId: userData.id,
-            email: userData.email,
-            name: userData.name,
-            picture: userData.picture,
-            accessToken: tokenData.access_token,
-            refreshToken: tokenData.refresh_token,
-            scope: tokenData.scope,
-            providerId: 'google',
-            expiresAt: new Date(Date.now() + (tokenData.expires_in * 1000)),
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-          
-          // Set as default connection if user doesn't have one
-          const userDataFromDB = await db.findUser();
-          if (!userDataFromDB?.defaultConnectionId) {
-            await db.updateUser({ defaultConnectionId: connectionId });
-          }
-          
-          console.log('Successfully created/updated user and connection using Durable Objects:', { userId: userData.id, connectionId });
-        } catch (dbError) {
-          console.error('Durable Object database error during OAuth code exchange:', dbError);
-          // Continue with the flow even if database operations fail
-        }
+        // Store connection data in session token (simpler approach)
+        console.log('Storing connection data in session token for user:', userData.id);
         
-        // Create a simple session token (in production, use proper JWT)
+        // Create a session token with connection data included
+        const connectionId = `${userData.id}_${userData.email}`;
         const sessionToken = btoa(JSON.stringify({
           userId: userData.id,
           email: userData.email,
@@ -638,6 +617,10 @@ export default class extends WorkerEntrypoint<typeof env> {
           picture: userData.picture,
           access_token: tokenData.access_token,
           refresh_token: tokenData.refresh_token,
+          connectionId: connectionId,
+          providerId: 'google',
+          scope: tokenData.scope,
+          expiresAt: Date.now() + (tokenData.expires_in * 1000),
           exp: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
         }));
         
@@ -717,6 +700,31 @@ export default class extends WorkerEntrypoint<typeof env> {
         return c.json({ 
           success: false, 
           message: 'Durable Objects test failed',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, 500);
+      }
+    })
+    .get('/api/test-connection/:userId', async (c) => {
+      // Test connection retrieval for a specific user
+      try {
+        const userId = c.req.param('userId');
+        console.log('Testing connection for user:', userId);
+        
+        const db = await getZeroDB(userId);
+        const user = await db.findUser();
+        const connections = await db.findManyConnections();
+        
+        return c.json({ 
+          success: true, 
+          user: user ? { id: user.id, email: user.email, name: user.name, defaultConnectionId: user.defaultConnectionId } : null,
+          connections: connections.map(c => ({ id: c.id, email: c.email, name: c.name, providerId: c.providerId })),
+          connectionCount: connections.length
+        });
+      } catch (error) {
+        console.error('Connection test error:', error);
+        return c.json({ 
+          success: false, 
+          message: 'Connection test failed',
           error: error instanceof Error ? error.message : 'Unknown error'
         }, 500);
       }

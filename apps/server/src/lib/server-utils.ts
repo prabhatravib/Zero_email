@@ -6,8 +6,9 @@ import { createDriver } from './driver';
 
 export const getZeroDB = async (userId: string) => {
   const stub = env.ZERO_DB.get(env.ZERO_DB.idFromName(userId));
-  const rpcTarget = await stub.setMetaData(userId);
-  return rpcTarget;
+  // Initialize the Durable Object with the userId
+  await stub.fetch('', { method: 'POST', body: JSON.stringify({ action: 'init', userId }) });
+  return stub;
 };
 
 // Helper function to get connection data from Durable Objects
@@ -37,22 +38,59 @@ export const getActiveConnection = async () => {
   const { sessionUser } = c.var;
   if (!sessionUser) throw new Error('Session Not Found');
 
-  const db = await getZeroDB(sessionUser.id);
+  console.log('getActiveConnection - Session user:', { id: sessionUser.id, email: sessionUser.email });
 
-  const userData = await db.findUser();
+  try {
+    // Get session token from cookie or header
+    const sessionToken = c.req.header('X-Session-Token') || 
+      c.req.header('Cookie')?.split(';')
+        .find(cookie => cookie.trim().startsWith('session='))
+        ?.split('=')[1];
 
-  if (userData?.defaultConnectionId) {
-    const activeConnection = await db.findUserConnection(userData.defaultConnectionId);
-    if (activeConnection) return activeConnection;
+    if (!sessionToken) {
+      throw new Error('No session token found');
+    }
+
+    const sessionData = JSON.parse(atob(sessionToken));
+    console.log('getActiveConnection - Session data:', { 
+      userId: sessionData.userId, 
+      email: sessionData.email,
+      connectionId: sessionData.connectionId,
+      hasAccessToken: !!sessionData.access_token
+    });
+
+    // Check if session is expired
+    if (sessionData.exp && Date.now() > sessionData.exp) {
+      throw new Error('Session expired');
+    }
+
+    // Check if access token is expired
+    if (sessionData.expiresAt && Date.now() > sessionData.expiresAt) {
+      throw new Error('Access token expired');
+    }
+
+    // Create connection object from session data
+    const connection = {
+      id: sessionData.connectionId,
+      userId: sessionData.userId,
+      email: sessionData.email,
+      name: sessionData.name,
+      picture: sessionData.picture,
+      accessToken: sessionData.access_token,
+      refreshToken: sessionData.refresh_token,
+      scope: sessionData.scope,
+      providerId: sessionData.providerId,
+      expiresAt: new Date(sessionData.expiresAt),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    console.log('getActiveConnection - Created connection from session:', { id: connection.id, email: connection.email });
+    return connection;
+  } catch (error) {
+    console.error('getActiveConnection - Error:', error);
+    throw error;
   }
-
-  const firstConnection = await db.findFirstConnection();
-  if (!firstConnection) {
-    console.error(`No connections found for user ${sessionUser.id}`);
-    throw new Error('No connections found for user');
-  }
-
-  return firstConnection;
 };
 
 export const connectionToDriver = (activeConnection: typeof connection.$inferSelect) => {
