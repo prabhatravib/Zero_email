@@ -501,24 +501,31 @@ export default class extends WorkerEntrypoint<typeof env> {
   private api = new Hono<HonoContext>()
     .use(contextStorage())
     .use('*', async (c, next) => {
-      const auth = createAuth();
-      c.set('auth', auth);
-      const session = await auth.api.getSession({ headers: c.req.raw.headers });
-      c.set('sessionUser', session?.user);
+      // Create auth lazily only when needed
+      let auth: any = null;
+      let session: any = null;
+      
+      // Only create auth if we need session or auth endpoints
+      if (c.req.path.startsWith('/auth') || (c.req.header('Cookie') && !c.req.path.startsWith('/public')) || c.req.header('Authorization')) {
+        auth = createAuth();
+        c.set('auth', auth);
+        session = await auth.api.getSession({ headers: c.req.raw.headers });
+        c.set('sessionUser', session?.user);
 
-      if (c.req.header('Authorization') && !session?.user) {
-        const token = c.req.header('Authorization')?.split(' ')[1];
+        if (c.req.header('Authorization') && !session?.user) {
+          const token = c.req.header('Authorization')?.split(' ')[1];
 
-        if (token) {
-          const localJwks = await auth.api.getJwks();
-          const jwks = createLocalJWKSet(localJwks);
+          if (token) {
+            const localJwks = await auth.api.getJwks();
+            const jwks = createLocalJWKSet(localJwks);
 
-          const { payload } = await jwtVerify(token, jwks);
-          const userId = payload.sub;
+            const { payload } = await jwtVerify(token, jwks);
+            const userId = payload.sub;
 
-          if (userId) {
-            const db = await getZeroDB(userId);
-            c.set('sessionUser', await db.findUser());
+            if (userId) {
+              const db = await getZeroDB(userId);
+              c.set('sessionUser', await db.findUser());
+            }
           }
         }
       }

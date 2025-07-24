@@ -434,24 +434,8 @@
       ],
     },
     "render": {
-      "triggers": {
-        "crons": ["0 0 * * *"],
-      },
       "ai": {
         "binding": "AI",
-      },
-      "vectorize": [
-        {
-          "binding": "VECTORIZE",
-          "index_name": "threads-vector-staging",
-        },
-        {
-          "binding": "VECTORIZE_MESSAGE",
-          "index_name": "messages-vector-staging",
-        },
-      ],
-      "limits": {
-        "cpu_ms": 300000,
       },
       "durable_objects": {
         "bindings": [
@@ -473,67 +457,16 @@
           },
         ],
       },
-      "r2_buckets": [
-        {
-          "binding": "THREADS_BUCKET",
-          "bucket_name": "threads-staging",
-        },
-      ],
-      "queues": {
-        "producers": [
-          {
-            "queue": "thread-queue-staging",
-            "binding": "thread_queue",
-          },
-          {
-            "queue": "subscribe-queue-staging",
-            "binding": "subscribe_queue",
-          },
-        ],
-        "consumers": [
-          {
-            "queue": "subscribe-queue-staging",
-          },
-          {
-            "queue": "thread-queue-staging",
-          },
-        ],
-      },
       "migrations": [
         {
           "tag": "v1",
-          "new_classes": ["DurableMailbox"],
-        },
-        {
-          "tag": "v2",
-          "new_sqlite_classes": ["ZeroAgent", "ZeroMCP"],
-        },
-        {
-          "tag": "v3",
-          "new_classes": ["ZeroDB"],
-        },
-        {
-          "tag": "v4",
-          "new_sqlite_classes": ["ZeroAgent"],
-        },
-        {
-          "tag": "v5",
-          "deleted_classes": ["DurableMailbox"],
-        },
-        {
-          "tag": "v6",
-          "new_sqlite_classes": ["ZeroDriver"],
-        },
-      ],
-      "observability": {
-        "enabled": true,
-      },
-      "hyperdrive": [
-        {
-          "binding": "HYPERDRIVE",
-          "id": "57834ddb6716440496c8836f6d99bc9a",
-          "localConnectionString": "postgresql://postgres:postgres@localhost:5432/zerodotemail",
-        },
+          "new_sqlite_classes": [
+            "ZeroAgent",
+            "ZeroMCP",
+            "ZeroDB",
+            "ZeroDriver"
+          ]
+        }
       ],
       "vars": {
         "NODE_ENV": "production",
@@ -548,36 +481,6 @@
         "THREAD_SYNC_LOOP": "true",
         "DISABLE_WORKFLOWS": "true",
       },
-      "kv_namespaces": [
-        {
-          "binding": "gmail_history_id",
-          "id": "4e814c70e35d413d99c923029928efae",
-        },
-        {
-          "binding": "gmail_processing_threads",
-          "id": "b7db3a98a80f4e16a8b6edc5fa8c7b76",
-        },
-        {
-          "binding": "subscribed_accounts",
-          "id": "7e6eadacf19c4c56a9ec3c357adb584a",
-        },
-        {
-          "binding": "connection_labels",
-          "id": "4d3a28d3265a4388aae2e9e9b534d019",
-        },
-        {
-          "binding": "prompts_storage",
-          "id": "620e710aaea744e59df4788f9ec18ff9",
-        },
-        {
-          "binding": "gmail_sub_age",
-          "id": "c55e692bb71d4e5bae23dded092b09d5",
-        },
-        {
-          "binding": "snoozed_emails",
-          "id": "f3a30ed7198542d890db172536bade33",
-        },
-      ],
     },
   },
 }

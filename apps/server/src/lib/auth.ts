@@ -12,7 +12,7 @@ import { type Account, betterAuth, type BetterAuthOptions } from 'better-auth';
 import { getBrowserTimezone, isValidTimezone } from './timezones';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { getSocialProviders } from './auth-providers';
-import { redis, resend, twilio } from './services';
+import { redis, resend } from './services';
 import { getContext } from 'hono/context-storage';
 import { dubAnalytics } from '@dub/better-auth';
 import { defaultUserSettings } from './schemas';
@@ -144,32 +144,50 @@ const connectionHandlerHook = async (account: Account) => {
 };
 
 export const createAuth = () => {
-  const twilioClient = twilio();
   const dub = new Dub();
 
-  return betterAuth({
-    plugins: [
-      dubAnalytics({
-        dubClient: dub,
-      }),
-      mcp({
-        loginPage: env.VITE_PUBLIC_APP_URL + '/login',
-      }),
-      jwt(),
-      bearer(),
-      phoneNumber({
-        sendOTP: async ({ code, phoneNumber }) => {
-          await twilioClient.messages
-            .send(phoneNumber, `Your verification code is: ${code}, do not share it with anyone.`)
-            .catch((error) => {
-              console.error('Failed to send OTP', error);
-              throw new APIError('INTERNAL_SERVER_ERROR', {
-                message: `Failed to send OTP, ${error.message}`,
+  const plugins = [
+    dubAnalytics({
+      dubClient: dub,
+    }),
+    mcp({
+      loginPage: env.VITE_PUBLIC_APP_URL + '/login',
+    }),
+    jwt(),
+    bearer(),
+  ];
+
+  // Only add phone number plugin if calls are not disabled
+  // Use a try-catch to handle cases where env might not be available during startup
+  try {
+    console.log('[AUTH] DISABLE_CALLS value:', env.DISABLE_CALLS);
+    if (env.DISABLE_CALLS !== 'true') {
+      console.log('[AUTH] Adding phone number plugin');
+      plugins.push(
+        phoneNumber({
+          sendOTP: async ({ code, phoneNumber }) => {
+            const { twilio } = await import('./services');
+            const twilioClient = twilio();
+            await twilioClient.messages
+              .send(phoneNumber, `Your verification code is: ${code}, do not share it with anyone.`)
+              .catch((error) => {
+                console.error('Failed to send OTP', error);
+                throw new APIError('INTERNAL_SERVER_ERROR', {
+                  message: `Failed to send OTP, ${error.message}`,
+                });
               });
-            });
-        },
-      }),
-    ],
+          },
+        })
+      );
+    } else {
+      console.log('[AUTH] Skipping phone number plugin - calls disabled');
+    }
+  } catch (error) {
+    console.log('Skipping phone number plugin due to environment unavailability');
+  }
+
+  return betterAuth({
+    plugins,
     user: {
       deleteUser: {
         enabled: true,
