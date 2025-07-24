@@ -53,6 +53,7 @@ import type { Connection } from 'agents';
 import { openai } from '@ai-sdk/openai';
 import { createDb } from '../../db';
 import { DriverRpcDO } from './rpc';
+import { getConnectionFromDurableObject } from '../../lib/server-utils';
 import { eq } from 'drizzle-orm';
 import { Effect } from 'effect';
 
@@ -161,15 +162,18 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
   public async setupAuth() {
     if (this.name === 'general') return;
     if (!this.driver) {
-      const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
-      const _connection = await db.query.connection.findFirst({
-        where: eq(connection.id, this.name),
-      });
-      if (_connection) this.driver = connectionToDriver(_connection);
-      this.ctx.waitUntil(conn.end());
-      this.ctx.waitUntil(this.syncThreads('inbox'));
-      this.ctx.waitUntil(this.syncThreads('sent'));
-      this.ctx.waitUntil(this.syncThreads('spam'));
+      try {
+        // Use Durable Objects instead of Hyperdrive
+        const connectionData = await getConnectionFromDurableObject(this.name);
+        if (connectionData) {
+          this.driver = connectionToDriver(connectionData);
+          this.ctx.waitUntil(this.syncThreads('inbox'));
+          this.ctx.waitUntil(this.syncThreads('sent'));
+          this.ctx.waitUntil(this.syncThreads('spam'));
+        }
+      } catch (error) {
+        console.error('Error setting up auth with Durable Objects:', error);
+      }
     }
   }
   async rawListThreads(params: {

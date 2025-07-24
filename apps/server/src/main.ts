@@ -5,7 +5,9 @@ import { aiRouter } from './routes/ai';
 import { env, WorkerEntrypoint } from 'cloudflare:workers';
 import { appRouter } from './trpc';
 import { createAuth } from './lib/auth';
+import { getZeroDB } from './lib/server-utils';
 import type { HonoContext, HonoVariables } from './ctx';
+
 // import { trpcServer } from '@hono/trpc-server';
 
 // Simple Durable Objects for Google OAuth only
@@ -18,7 +20,192 @@ class ZeroMCP {
 }
 
 class ZeroDB {
-  constructor() {}
+  private state: any;
+  private env: any;
+
+  constructor(state: any, env: any) {
+    this.state = state;
+    this.env = env;
+  }
+
+  async createUser(userData: {
+    id: string;
+    email: string;
+    name: string;
+    picture: string;
+    emailVerified: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
+    await this.state.storage.put(`user:${userData.id}`, {
+      ...userData,
+      createdAt: userData.createdAt.toISOString(),
+      updatedAt: userData.updatedAt.toISOString(),
+    });
+    return userData;
+  }
+
+  async findUser() {
+    const userId = this.state.storage.get('userId') as string;
+    if (!userId) return null;
+    
+    const userData = await this.state.storage.get(`user:${userId}`);
+    if (!userData) return null;
+    
+    return {
+      ...userData,
+      createdAt: new Date(userData.createdAt),
+      updatedAt: new Date(userData.updatedAt),
+    };
+  }
+
+  async updateUser(updates: Partial<{
+    defaultConnectionId: string | undefined;
+    name: string;
+    email: string;
+    picture: string;
+    customPrompt: string;
+    phoneNumber: string;
+    phoneNumberVerified: boolean;
+  }>) {
+    const userId = this.state.storage.get('userId') as string;
+    if (!userId) throw new Error('User not found');
+    
+    const userData = await this.state.storage.get(`user:${userId}`);
+    if (!userData) throw new Error('User not found');
+    
+    const updatedUser = {
+      ...userData,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    
+    await this.state.storage.put(`user:${userId}`, updatedUser);
+    return updatedUser;
+  }
+
+  async createConnection(connectionData: {
+    id: string;
+    userId: string;
+    email: string;
+    name: string;
+    picture: string;
+    accessToken: string;
+    refreshToken: string;
+    scope: string;
+    providerId: 'google' | 'microsoft';
+    expiresAt: Date;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
+    await this.state.storage.put(`connection:${connectionData.id}`, {
+      ...connectionData,
+      expiresAt: connectionData.expiresAt.toISOString(),
+      createdAt: connectionData.createdAt.toISOString(),
+      updatedAt: connectionData.updatedAt.toISOString(),
+    });
+    
+    // Store connection ID in user's connections list
+    const connections = await this.state.storage.get(`connections:${connectionData.userId}`) as string[] || [];
+    if (!connections.includes(connectionData.id)) {
+      connections.push(connectionData.id);
+      await this.state.storage.put(`connections:${connectionData.userId}`, connections);
+    }
+    
+    return connectionData;
+  }
+
+  async findUserConnection(connectionId: string) {
+    const connectionData = await this.state.storage.get(`connection:${connectionId}`);
+    if (!connectionData) return null;
+    
+    return {
+      ...connectionData,
+      expiresAt: new Date(connectionData.expiresAt),
+      createdAt: new Date(connectionData.createdAt),
+      updatedAt: new Date(connectionData.updatedAt),
+    };
+  }
+
+  async findFirstConnection() {
+    const userId = this.state.storage.get('userId') as string;
+    if (!userId) return null;
+    
+    const connections = await this.state.storage.get(`connections:${userId}`) as string[] || [];
+    if (connections.length === 0) return null;
+    
+    return await this.findUserConnection(connections[0]);
+  }
+
+  async findManyConnections() {
+    const userId = this.state.storage.get('userId') as string;
+    if (!userId) return [];
+    
+    const connectionIds = await this.state.storage.get(`connections:${userId}`) as string[] || [];
+    const connections = [];
+    
+    for (const connectionId of connectionIds) {
+      const connection = await this.findUserConnection(connectionId);
+      if (connection) {
+        connections.push(connection);
+      }
+    }
+    
+    return connections;
+  }
+
+  async updateConnection(connectionId: string, updates: Partial<{
+    accessToken: string | null;
+    refreshToken: string | null;
+    name: string;
+    picture: string;
+    scope: string;
+    expiresAt: Date;
+  }>) {
+    const connectionData = await this.state.storage.get(`connection:${connectionId}`);
+    if (!connectionData) throw new Error('Connection not found');
+    
+    const updatedConnection = {
+      ...connectionData,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+      ...(updates.expiresAt && { expiresAt: updates.expiresAt.toISOString() }),
+    };
+    
+    await this.state.storage.put(`connection:${connectionId}`, updatedConnection);
+    return updatedConnection;
+  }
+
+  async deleteConnection(connectionId: string) {
+    const connectionData = await this.state.storage.get(`connection:${connectionId}`);
+    if (!connectionData) return;
+    
+    // Remove from user's connections list
+    const userId = connectionData.userId;
+    const connections = await this.state.storage.get(`connections:${userId}`) as string[] || [];
+    const updatedConnections = connections.filter(id => id !== connectionId);
+    await this.state.storage.put(`connections:${userId}`, updatedConnections);
+    
+    // Delete connection data
+    await this.state.storage.delete(`connection:${connectionId}`);
+  }
+
+  async deleteActiveConnection() {
+    const userId = this.state.storage.get('userId') as string;
+    if (!userId) return;
+    
+    const userData = await this.findUser();
+    if (!userData?.defaultConnectionId) return;
+    
+    await this.deleteConnection(userData.defaultConnectionId);
+    await this.updateUser({ defaultConnectionId: undefined });
+  }
+
+  // RPC methods for Durable Object communication
+  async setMetaData(userId: string) {
+    await this.state.storage.put('userId', userId);
+    return this;
+  }
 }
 
 class ZeroDriver {
@@ -225,6 +412,50 @@ export default class extends WorkerEntrypoint<typeof env> {
         
         const userData = await userResponse.json() as GoogleUserInfo;
         
+        // Create or update user and connection in database using Durable Objects
+        try {
+          const db = await getZeroDB(userData.id);
+          
+          // Create or update user
+          await db.createUser({
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            picture: userData.picture,
+            emailVerified: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          
+          // Create or update connection
+          const connectionId = `${userData.id}_${userData.email}`;
+          await db.createConnection({
+            id: connectionId,
+            userId: userData.id,
+            email: userData.email,
+            name: userData.name,
+            picture: userData.picture,
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token,
+            scope: tokenData.scope,
+            providerId: 'google',
+            expiresAt: new Date(Date.now() + (tokenData.expires_in * 1000)),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          
+          // Set as default connection if user doesn't have one
+          const userDataFromDB = await db.findUser();
+          if (!userDataFromDB?.defaultConnectionId) {
+            await db.updateUser({ defaultConnectionId: connectionId });
+          }
+          
+          console.log('Successfully created/updated user and connection using Durable Objects:', { userId: userData.id, connectionId });
+        } catch (dbError) {
+          console.error('Durable Object database error during OAuth callback:', dbError);
+          // Continue with the flow even if database operations fail
+        }
+        
         // Create a simple session token (in production, use proper JWT)
         const sessionToken = btoa(JSON.stringify({
           userId: userData.id,
@@ -355,6 +586,50 @@ export default class extends WorkerEntrypoint<typeof env> {
         
         const userData = await userResponse.json() as GoogleUserInfo;
         
+        // Create or update user and connection in database using Durable Objects
+        try {
+          const db = await getZeroDB(userData.id);
+          
+          // Create or update user
+          await db.createUser({
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            picture: userData.picture,
+            emailVerified: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          
+          // Create or update connection
+          const connectionId = `${userData.id}_${userData.email}`;
+          await db.createConnection({
+            id: connectionId,
+            userId: userData.id,
+            email: userData.email,
+            name: userData.name,
+            picture: userData.picture,
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token,
+            scope: tokenData.scope,
+            providerId: 'google',
+            expiresAt: new Date(Date.now() + (tokenData.expires_in * 1000)),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          
+          // Set as default connection if user doesn't have one
+          const userDataFromDB = await db.findUser();
+          if (!userDataFromDB?.defaultConnectionId) {
+            await db.updateUser({ defaultConnectionId: connectionId });
+          }
+          
+          console.log('Successfully created/updated user and connection using Durable Objects:', { userId: userData.id, connectionId });
+        } catch (dbError) {
+          console.error('Durable Object database error during OAuth code exchange:', dbError);
+          // Continue with the flow even if database operations fail
+        }
+        
         // Create a simple session token (in production, use proper JWT)
         const sessionToken = btoa(JSON.stringify({
           userId: userData.id,
@@ -412,6 +687,40 @@ export default class extends WorkerEntrypoint<typeof env> {
       return response;
     })
     .get('/api/trpc/test', (c) => c.json({ message: 'tRPC endpoint is working!' }))
+    .get('/api/test-durable-objects', async (c) => {
+      // Test Durable Objects functionality
+      try {
+        const testUserId = 'test-user-123';
+        const db = await getZeroDB(testUserId);
+        
+        // Test creating a user
+        await db.createUser({
+          id: testUserId,
+          email: 'test@example.com',
+          name: 'Test User',
+          picture: 'https://example.com/avatar.jpg',
+          emailVerified: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+        
+        // Test finding the user
+        const user = await db.findUser();
+        
+        return c.json({ 
+          success: true, 
+          message: 'Durable Objects are working!',
+          user: user ? { id: user.id, email: user.email, name: user.name } : null
+        });
+      } catch (error) {
+        console.error('Durable Objects test error:', error);
+        return c.json({ 
+          success: false, 
+          message: 'Durable Objects test failed',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, 500);
+      }
+    })
     .all('/api/trpc/:path*', async (c) => {
       // Handle tRPC requests
       const path = c.req.param('path');
@@ -435,9 +744,28 @@ export default class extends WorkerEntrypoint<typeof env> {
           return c.json({ error: 'Invalid tRPC procedure path' }, 400);
         }
         
+        // Get request body for mutations
+        let input: any = undefined;
+        if (c.req.method === 'POST') {
+          try {
+            const body = await c.req.json();
+            input = body;
+          } catch (e) {
+            // Body might not be JSON or might be empty
+            console.log('No request body or invalid JSON');
+          }
+        }
+        
         // Create caller and call the procedure
         const caller = appRouter.createCaller(ctx);
-        const result = await caller[routerName as keyof typeof caller][procedureName as any]();
+        const router = caller[routerName as keyof typeof caller] as any;
+        const procedure = router?.[procedureName];
+        
+        if (!procedure) {
+          return c.json({ error: `Procedure ${routerName}.${procedureName} not found` }, 404);
+        }
+        
+        const result = await procedure(input);
         return c.json(result);
         
       } catch (error: any) {
@@ -449,6 +777,10 @@ export default class extends WorkerEntrypoint<typeof env> {
         
         if (error.code === 'BAD_REQUEST') {
           return c.json({ error: error.message || 'Bad request' }, 400);
+        }
+        
+        if (error.code === 'NOT_FOUND') {
+          return c.json({ error: error.message || 'Not found' }, 404);
         }
         
         return c.json({ error: 'Internal server error' }, 500);

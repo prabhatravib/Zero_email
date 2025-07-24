@@ -10,6 +10,16 @@ export const getZeroDB = async (userId: string) => {
   return rpcTarget;
 };
 
+// Helper function to get connection data from Durable Objects
+export const getConnectionFromDurableObject = async (connectionId: string) => {
+  // Extract userId from connectionId (format: userId_email)
+  const userId = connectionId.split('_')[0];
+  if (!userId) return null;
+  
+  const db = await getZeroDB(userId);
+  return await db.findUserConnection(connectionId);
+};
+
 export const getZeroAgent = async (connectionId: string) => {
   const stub = env.ZERO_DRIVER.get(env.ZERO_DRIVER.idFromName(connectionId));
   const rpcTarget = await stub.setMetaData(connectionId);
