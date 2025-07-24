@@ -1,16 +1,9 @@
-import { activeDriverProcedure, createRateLimiterMiddleware, router } from '../trpc';
-import { getZeroAgent } from '../../lib/server-utils';
-import { Ratelimit } from '@upstash/ratelimit';
+import { router, privateProcedure } from '../trpc';
 import { z } from 'zod';
 
+// Simplified labels router that returns mock data
 export const labelsRouter = router({
-  list: activeDriverProcedure
-    .use(
-      createRateLimiterMiddleware({
-        generatePrefix: ({ sessionUser }) => `ratelimit:get-labels-${sessionUser?.id || 'anonymous'}`,
-        limiter: Ratelimit.slidingWindow(120, '1m'),
-      }),
-    )
+  list: privateProcedure
     .output(
       z.array(
         z.object({
@@ -26,18 +19,37 @@ export const labelsRouter = router({
         }),
       ),
     )
-    .query(async ({ ctx }) => {
-      const { activeConnection } = ctx;
-      const agent = await getZeroAgent(activeConnection.id);
-      return await agent.getUserLabels();
+    .query(async () => {
+      // Return mock labels
+      return [
+        {
+          id: 'INBOX',
+          name: 'INBOX',
+          type: 'system',
+        },
+        {
+          id: 'SENT',
+          name: 'SENT',
+          type: 'system',
+        },
+        {
+          id: 'DRAFT',
+          name: 'DRAFT',
+          type: 'system',
+        },
+        {
+          id: 'SPAM',
+          name: 'SPAM',
+          type: 'system',
+        },
+        {
+          id: 'TRASH',
+          name: 'TRASH',
+          type: 'system',
+        },
+      ];
     }),
-  create: activeDriverProcedure
-    .use(
-      createRateLimiterMiddleware({
-        generatePrefix: ({ sessionUser }) => `ratelimit:labels-post-${sessionUser?.id || 'anonymous'}`,
-        limiter: Ratelimit.slidingWindow(60, '1m'),
-      }),
-    )
+  create: privateProcedure
     .input(
       z.object({
         name: z.string(),
@@ -52,22 +64,16 @@ export const labelsRouter = router({
           }),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      const { activeConnection } = ctx;
-      const agent = await getZeroAgent(activeConnection.id);
-      const label = {
-        ...input,
+    .mutation(async ({ input }) => {
+      // Return mock created label
+      return {
+        id: `label-${Date.now()}`,
+        name: input.name,
+        color: input.color,
         type: 'user',
       };
-      return await agent.createLabel(label);
     }),
-  update: activeDriverProcedure
-    .use(
-      createRateLimiterMiddleware({
-        generatePrefix: ({ sessionUser }) => `ratelimit:labels-patch-${sessionUser?.id || 'anonymous'}`,
-        limiter: Ratelimit.slidingWindow(60, '1m'),
-      }),
-    )
+  update: privateProcedure
     .input(
       z.object({
         id: z.string(),
@@ -81,23 +87,19 @@ export const labelsRouter = router({
           .optional(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      const { activeConnection } = ctx;
-      const agent = await getZeroAgent(activeConnection.id);
-      const { id, ...label } = input;
-      return await agent.updateLabel(id, label);
+    .mutation(async ({ input }) => {
+      // Return mock updated label
+      return {
+        id: input.id,
+        name: input.name,
+        color: input.color,
+        type: input.type || 'user',
+      };
     }),
-  delete: activeDriverProcedure
-    .use(
-      createRateLimiterMiddleware({
-        generatePrefix: ({ sessionUser }) => `ratelimit:labels-delete-${sessionUser?.id || 'anonymous'}`,
-        limiter: Ratelimit.slidingWindow(60, '1m'),
-      }),
-    )
+  delete: privateProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const { activeConnection } = ctx;
-      const agent = await getZeroAgent(activeConnection.id);
-      return await agent.deleteLabel(input.id);
+    .mutation(async ({ input }) => {
+      // Return mock success
+      return { success: true };
     }),
 });

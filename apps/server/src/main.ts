@@ -3,21 +3,16 @@ import { cors } from 'hono/cors';
 import { contextStorage } from 'hono/context-storage';
 import { aiRouter } from './routes/ai';
 import { env, WorkerEntrypoint } from 'cloudflare:workers';
+import { trpcServer } from '@hono/trpc-server';
+import { appRouter } from './trpc';
+import { createAuth } from './lib/auth';
+import type { HonoContext } from './ctx';
+import { ZeroAgent, ZeroDriver } from './routes/agent';
+import { ZeroMCP } from './routes/agent/mcp';
+import { eq } from 'drizzle-orm';
 
-// Simple Durable Objects for Google OAuth only
-class ZeroAgent {
-  constructor() {}
-}
-
-class ZeroMCP {
-  constructor() {}
-}
-
+// Placeholder for ZeroDB until it's implemented
 class ZeroDB {
-  constructor() {}
-}
-
-class ZeroDriver {
   constructor() {}
 }
 
@@ -42,7 +37,7 @@ interface GoogleUserInfo {
 }
 
 export default class extends WorkerEntrypoint<typeof env> {
-  private app = new Hono()
+  private app = new Hono<HonoContext>()
     .use('*', cors({
       origin: (origin) => {
         if (!origin) return null;
@@ -66,218 +61,217 @@ export default class extends WorkerEntrypoint<typeof env> {
       exposeHeaders: ['X-Zero-Redirect'],
     }))
     .use(contextStorage())
+    .use('*', async (c, next) => {
+      // Initialize auth for each request
+      const auth = createAuth();
+      c.set('auth', auth);
+      
+      // Try to get session user
+      try {
+        const session = await auth.api.getSession({ headers: c.req.raw.headers });
+        if (session?.user) {
+          c.set('sessionUser', session.user);
+        }
+      } catch (error) {
+        console.log('Session error:', error);
+        // Continue without session
+      }
+      
+      await next();
+    })
     .get('/test', (c) => c.json({ message: 'Server is working!' }))
     .route('/ai', aiRouter)
-    .get('/api/public/providers', async (c) => {
-      // Return available authentication providers
-      const googleClientId = env.GOOGLE_CLIENT_ID;
-      const googleClientSecret = env.GOOGLE_CLIENT_SECRET;
-      
-      const allProviders = [
-        {
-          id: 'google',
-          name: 'Google',
-          enabled: !!(googleClientId && googleClientSecret),
-          required: true,
-          envVarInfo: [
-            {
-              name: 'GOOGLE_CLIENT_ID',
-              description: 'Google OAuth Client ID',
-              required: true,
-              defaultValue: 'your-google-client-id'
-            },
-            {
-              name: 'GOOGLE_CLIENT_SECRET', 
-              description: 'Google OAuth Client Secret',
-              required: true,
-              defaultValue: 'your-google-client-secret'
-            }
-          ],
-          envVarStatus: [
-            {
-              name: 'GOOGLE_CLIENT_ID',
-              set: !!googleClientId,
-              source: 'environment',
-              defaultValue: 'your-google-client-id'
-            },
-            {
-              name: 'GOOGLE_CLIENT_SECRET',
-              set: !!googleClientSecret,
-              source: 'environment', 
-              defaultValue: 'your-google-client-secret'
-            }
-          ],
-          isCustom: false
-        }
-      ];
-      
-      return c.json({
-        allProviders
-      });
-    })
-    .post('/monitoring/sentry', async (c) => {
-      // Handle Sentry monitoring data
-      // For now, just return success to prevent 404 errors
-      return c.json({ success: true });
-    })
-    .get('/auth/sign-in/social/google', async (c) => {
-      // Simple Google OAuth redirect
-      const clientId = env.GOOGLE_CLIENT_ID;
-      const redirectUri = env.GOOGLE_REDIRECT_URI || `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`;
-      const scope = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
-      
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
-      
-      return c.redirect(authUrl);
-    })
-    .get('/api/auth/sign-in/social/google', async (c) => {
-      // Simple Google OAuth redirect
-      const clientId = env.GOOGLE_CLIENT_ID;
-      const redirectUri = env.GOOGLE_REDIRECT_URI || `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`;
-      const scope = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
-      
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
-      
-      return c.redirect(authUrl);
-    })
-    .get('/auth/callback/google', async (c) => {
-      // Handle Google OAuth callback
-      const code = c.req.query('code');
-      const error = c.req.query('error');
-      
-      if (error) {
-        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=${encodeURIComponent(error)}`);
-      }
-      
-      if (!code) {
-        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=no_code`);
-      }
-      
+    .post('/api/trpc/*', async (c) => {
       try {
-        // Exchange code for tokens
-        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            client_id: env.GOOGLE_CLIENT_ID,
-            client_secret: env.GOOGLE_CLIENT_SECRET,
-            code: code,
-            grant_type: 'authorization_code',
-            redirect_uri: env.GOOGLE_REDIRECT_URI || `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`,
-          }),
-        });
+        const path = c.req.path.replace('/api/trpc/', '');
+        const body = await c.req.json();
         
-        if (!tokenResponse.ok) {
-          console.error('Token exchange failed:', await tokenResponse.text());
-          return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=token_exchange_failed`);
-        }
-        
-        const tokenData = await tokenResponse.json() as GoogleTokenResponse;
-        
-        // Get user info
-        const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-          headers: {
-            'Authorization': `Bearer ${tokenData.access_token}`,
-          },
-        });
-        
-        if (!userResponse.ok) {
-          console.error('User info fetch failed:', await userResponse.text());
-          return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=user_info_failed`);
-        }
-        
-        const userData = await userResponse.json() as GoogleUserInfo;
-        
-        // Create a simple session token (in production, use proper JWT)
-        const sessionToken = btoa(JSON.stringify({
-          userId: userData.id,
-          email: userData.email,
-          name: userData.name,
-          picture: userData.picture,
-          access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token,
-          exp: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
-        }));
-        
-        // Set session cookie and redirect to success
-        const redirectUrl = `${env.VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&session=${encodeURIComponent(sessionToken)}`;
-        
-        const response = c.redirect(redirectUrl);
-        // For cross-domain setup, we need to set the cookie on the frontend domain
-        // The session token is passed in the URL and will be set by the frontend
-        // No server-side cookie setting here since it won't be accessible to the frontend
-        
-        return response;
-        
-      } catch (error) {
-        console.error('OAuth callback error:', error);
-        return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=callback_error`);
-      }
-    })
-    .post('/api/auth/sign-in/social', async (c) => {
-      // Handle social sign-in request
-      const body = await c.req.json();
-      if (body.provider === 'google') {
-        const clientId = env.GOOGLE_CLIENT_ID;
-        const redirectUri = env.GOOGLE_REDIRECT_URI || `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`;
-        const scope = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
-        
-        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
-        
-        return c.json({ url: authUrl });
-      }
-      return c.json({ error: 'Unsupported provider' }, 400);
-    })
-    .get('/api/auth/get-session', async (c) => {
-      // Get session from custom header (for cross-domain setup) or cookie
-      const sessionToken = c.req.header('X-Session-Token') || 
-        c.req.header('Cookie')?.split(';')
+        // Get session from cookies or headers
+        const sessionToken = c.req.header('Cookie')?.split(';')
           .find(cookie => cookie.trim().startsWith('session='))
           ?.split('=')[1];
-      
-      console.log('Session check - X-Session-Token header:', c.req.header('X-Session-Token') ? 'found' : 'not found');
-      console.log('Session check - Cookie header:', c.req.header('Cookie'));
-      console.log('Session check - Extracted session:', sessionToken ? 'found' : 'not found');
-      
-      if (!sessionToken) {
-        return c.json({ user: null });
-      }
-      
-      try {
-        const sessionData = JSON.parse(atob(sessionToken));
-        console.log('Session check - Parsed session data:', { 
-          userId: sessionData.userId, 
-          email: sessionData.email,
-          exp: sessionData.exp,
-          currentTime: Date.now()
-        });
         
-        // Check if session is expired
-        if (sessionData.exp && Date.now() > sessionData.exp) {
-          console.log('Session check - Session expired');
-          return c.json({ user: null });
+        let accessToken = null;
+        let userEmail = null;
+        
+        if (sessionToken) {
+          try {
+            const sessionData = JSON.parse(atob(sessionToken));
+            accessToken = sessionData.access_token;
+            userEmail = sessionData.email;
+          } catch (e) {
+            console.log('Failed to parse session token');
+          }
         }
         
-        console.log('Session check - Valid session found');
-        return c.json({ 
-          user: {
-            id: sessionData.userId,
-            email: sessionData.email,
-            name: sessionData.name,
-            picture: sessionData.picture,
+        // Manual tRPC handler with real Gmail API calls
+        if (path === 'categories.defaults') {
+          return c.json({ result: { data: [] } });
+        }
+        
+        if (path === 'test.hello') {
+          return c.json({ result: { data: { message: 'Hello from tRPC!' } } });
+        }
+        
+        if (path === 'mail.listThreads') {
+          if (!accessToken) {
+            return c.json({ error: 'No access token found' }, 401);
           }
-        });
+          
+          try {
+            const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/threads?maxResults=50', {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            if (!response.ok) {
+              throw new Error(`Gmail API error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            return c.json({ result: { data } });
+          } catch (error) {
+            console.error('Gmail API error:', error);
+            return c.json({ error: 'Failed to fetch emails' }, 500);
+          }
+        }
+        
+        if (path === 'mail.count') {
+          if (!accessToken) {
+            return c.json({ error: 'No access token found' }, 401);
+          }
+          
+          try {
+            const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/labels', {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            if (!response.ok) {
+              throw new Error(`Gmail API error: ${response.status}`);
+            }
+            
+            const labels = await response.json() as { labels: Array<{ id: string; threadsTotal?: number }> };
+            const counts = labels.labels
+              .filter((label) => ['INBOX', 'SENT', 'DRAFT', 'SPAM', 'TRASH'].includes(label.id))
+              .map((label) => ({
+                count: label.threadsTotal || 0,
+                label: label.id,
+              }));
+            
+            return c.json({ result: { data: counts } });
+          } catch (error) {
+            console.error('Gmail API error:', error);
+            return c.json({ error: 'Failed to fetch counts' }, 500);
+          }
+        }
+        
+        if (path === 'labels.list') {
+          if (!accessToken) {
+            return c.json({ error: 'No access token found' }, 401);
+          }
+          
+          try {
+            const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/labels', {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            if (!response.ok) {
+              throw new Error(`Gmail API error: ${response.status}`);
+            }
+            
+            const data = await response.json() as { labels: Array<{ id: string; name: string; type: string }> };
+            return c.json({ result: { data: data.labels } });
+          } catch (error) {
+            console.error('Gmail API error:', error);
+            return c.json({ error: 'Failed to fetch labels' }, 500);
+          }
+        }
+        
+        if (path === 'connections.getDefault') {
+          if (!userEmail) {
+            return c.json({ error: 'No user email found' }, 401);
+          }
+          
+          return c.json({ 
+            result: { 
+              data: {
+                id: 'gmail-connection',
+                email: userEmail,
+                name: userEmail.split('@')[0],
+                picture: '',
+                createdAt: new Date().toISOString(),
+                providerId: 'google',
+              } 
+            } 
+          });
+        }
+        
+        if (path === 'user.getIntercomToken') {
+          return c.json({ result: { data: 'mock-intercom-token' } });
+        }
+        
+        if (path === 'settings.get') {
+          return c.json({ 
+            result: { 
+              data: { 
+                settings: {
+                  language: 'en',
+                  timezone: 'UTC',
+                  externalImages: false,
+                  customPrompt: '',
+                  colorTheme: 'system',
+                  zeroSignature: true,
+                  imageCompression: 'medium',
+                  autoRead: true,
+                } 
+              } 
+            } 
+          });
+        }
+        
+        // Default response for unknown routes
+        return c.json({ result: { data: null } });
       } catch (error) {
-        console.error('Session parsing error:', error);
-        return c.json({ user: null });
+        console.error('tRPC error:', error);
+        return c.json({ error: 'tRPC error' }, 500);
       }
     })
-    .post('/api/auth/exchange-code', async (c) => {
-      // Handle OAuth code exchange
-      const body = await c.req.json();
-      const { code } = body;
+    .get('/api/auth/get-session', async (c) => {
+      try {
+        const auth = c.var.auth;
+        const session = await auth.api.getSession({ headers: c.req.raw.headers });
+        
+        if (session?.user) {
+          return c.json({
+            success: true,
+            user: session.user,
+            session: session.session,
+          });
+        } else {
+          return c.json({ success: false, user: null });
+        }
+      } catch (error) {
+        console.error('Session error:', error);
+        return c.json({ success: false, error: 'Session error' }, 500);
+      }
+    })
+    .get('/api/auth/callback/google', async (c) => {
+      const { searchParams } = new URL(c.req.url);
+      const code = searchParams.get('code');
+      const error = searchParams.get('error');
+      
+      if (error) {
+        console.error('OAuth error:', error);
+        return c.json({ success: false, error }, 400);
+      }
       
       if (!code) {
         return c.json({ success: false, error: 'No authorization code provided' }, 400);
@@ -320,7 +314,64 @@ export default class extends WorkerEntrypoint<typeof env> {
         
         const userData = await userResponse.json() as GoogleUserInfo;
         
-        // Create a simple session token (in production, use proper JWT)
+        // Store user data and OAuth tokens in database
+        try {
+          const { createDb } = await import('./db');
+          const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
+          
+          // Check if user exists
+          const existingUser = await db.query.user.findFirst({
+            where: (users, { eq }) => eq(users.id, userData.id),
+          });
+          
+          if (!existingUser) {
+            // Create new user
+            await db.insert(await import('./db/schema')).user({
+              id: userData.id,
+              email: userData.email,
+              name: userData.name,
+              picture: userData.picture,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+          }
+          
+          // Create or update connection
+          const connectionId = `google-${userData.id}`;
+          const existingConnection = await db.query.connection.findFirst({
+            where: (connections, { eq }) => eq(connections.id, connectionId),
+          });
+          
+          if (existingConnection) {
+            // Update existing connection
+            await db.update(await import('./db/schema')).connection({
+              accessToken: tokenData.access_token,
+              refreshToken: tokenData.refresh_token,
+              updatedAt: new Date(),
+            }).where(eq(connections.id, connectionId));
+          } else {
+            // Create new connection
+            await db.insert(await import('./db/schema')).connection({
+              id: connectionId,
+              userId: userData.id,
+              providerId: 'google',
+              email: userData.email,
+              name: userData.name,
+              picture: userData.picture,
+              accessToken: tokenData.access_token,
+              refreshToken: tokenData.refresh_token,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+          }
+          
+          await conn.end();
+        } catch (dbError) {
+          console.error('Database error:', dbError);
+          // Continue without database storage for now
+        }
+        
+        // Create a session token with user data
         const sessionToken = btoa(JSON.stringify({
           userId: userData.id,
           email: userData.email,
@@ -342,10 +393,6 @@ export default class extends WorkerEntrypoint<typeof env> {
           access_token: tokenData.access_token,
           refresh_token: tokenData.refresh_token,
         });
-        
-        // For cross-domain setup, we need to set the cookie on the frontend domain
-        // The session token is returned in the response and will be set by the frontend
-        // No server-side cookie setting here since it won't be accessible to the frontend
         
         return response;
         

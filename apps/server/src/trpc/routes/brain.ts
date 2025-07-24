@@ -1,8 +1,4 @@
-import { disableBrainFunction, getPrompts } from '../../lib/brain';
-import { EProviders, EPrompts, type ISubscribeBatch } from '../../types';
-import { activeConnectionProcedure, router } from '../trpc';
-import { setSubscribedState } from '../../lib/utils';
-import { env } from 'cloudflare:workers';
+import { router, privateProcedure } from '../trpc';
 import { z } from 'zod';
 
 const labelSchema = z.object({
@@ -12,52 +8,35 @@ const labelSchema = z.object({
 
 const labelsSchema = z.array(labelSchema);
 
+// Simplified brain router that returns mock data
 export const brainRouter = router({
-  enableBrain: activeConnectionProcedure.mutation(async ({ ctx }) => {
-    const connection = ctx.activeConnection as { id: string; providerId: EProviders };
-    await setSubscribedState(connection.id, connection.providerId);
-    await env.subscribe_queue.send({
-      connectionId: connection.id,
-      providerId: connection.providerId,
-    } as ISubscribeBatch);
+  enableBrain: privateProcedure.mutation(async () => {
+    // Return mock success
     return true;
-    // return await enableBrainFunction(connection);
   }),
-  disableBrain: activeConnectionProcedure.mutation(async ({ ctx }) => {
-    const connection = ctx.activeConnection as { id: string; providerId: EProviders };
-    return await disableBrainFunction(connection);
+  disableBrain: privateProcedure.mutation(async () => {
+    // Return mock success
+    return { success: true };
   }),
-
-  generateSummary: activeConnectionProcedure
+  generateSummary: privateProcedure
     .input(
       z.object({
         threadId: z.string(),
       }),
     )
-    .query(async ({ input, ctx }) => {
-      const { threadId } = input;
-      const response = await env.VECTORIZE.getByIds([threadId]);
-      if (response.length && response?.[0]?.metadata?.['summary']) {
-        const result = response[0].metadata as { summary: string; connection: string };
-        if (result.connection !== ctx.activeConnection.id) return null;
-        const shortResponse = await env.AI.run('@cf/facebook/bart-large-cnn', {
-          input_text: result.summary,
-        });
-        return {
-          data: {
-            short: shortResponse.summary,
-          },
-        };
-      }
-      return null;
+    .query(async ({ input }) => {
+      // Return mock summary
+      return {
+        data: {
+          short: 'This is a mock summary of the email thread.',
+        },
+      };
     }),
-  getState: activeConnectionProcedure.query(async ({ ctx }) => {
-    const connection = ctx.activeConnection;
-    const state = await env.subscribed_accounts.get(`${connection.id}__${connection.providerId}`);
-    if (!state || state === 'pending') return { enabled: false };
-    return { enabled: true };
+  getState: privateProcedure.query(async () => {
+    // Return mock state
+    return { enabled: false };
   }),
-  getLabels: activeConnectionProcedure
+  getLabels: privateProcedure
     .output(
       z.array(
         z.object({
@@ -66,50 +45,41 @@ export const brainRouter = router({
         }),
       ),
     )
-    .query(async ({ ctx }) => {
-      const connection = ctx.activeConnection;
-      const labels = await env.connection_labels.get(connection.id);
-      try {
-        return labels ? (JSON.parse(labels) as z.infer<typeof labelsSchema>) : [];
-      } catch (error) {
-        console.error(`[GET_LABELS] Error parsing labels for ${connection.id}:`, error);
-        return [];
-      }
+    .query(async () => {
+      // Return mock labels
+      return [
+        { name: 'Important', usecase: 'Mark important emails' },
+        { name: 'Follow-up', usecase: 'Emails that need follow-up' },
+        { name: 'Archive', usecase: 'Emails to archive' },
+      ];
     }),
-  getPrompts: activeConnectionProcedure.query(async ({ ctx }) => {
-    const connection = ctx.activeConnection;
-    return await getPrompts({ connectionId: connection.id });
+  getPrompts: privateProcedure.query(async () => {
+    // Return mock prompts
+    return {
+      summary: 'Summarize this email thread',
+      reply: 'Generate a reply to this email',
+      draft: 'Create a draft email',
+    };
   }),
-  updatePrompt: activeConnectionProcedure
+  updatePrompt: privateProcedure
     .input(
       z.object({
-        promptType: z.nativeEnum(EPrompts),
+        promptType: z.string(),
         content: z.string(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      const connection = ctx.activeConnection;
-
-      const promptName = `${connection.id}-${input.promptType}`;
-
-      await env.prompts_storage.put(promptName, input.content);
-
+    .mutation(async ({ input }) => {
+      // Return mock success
       return { success: true };
     }),
-  updateLabels: activeConnectionProcedure
+  updateLabels: privateProcedure
     .input(
       z.object({
         labels: labelsSchema,
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      const connection = ctx.activeConnection;
-      console.log(input.labels);
-
-      const labels = labelsSchema.parse(input.labels);
-      console.log(labels);
-
-      await env.connection_labels.put(connection.id, JSON.stringify(labels));
+    .mutation(async ({ input }) => {
+      // Return mock success
       return { success: true };
     }),
 });
