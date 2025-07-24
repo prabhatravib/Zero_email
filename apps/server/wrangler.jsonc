@@ -57,5 +57,7 @@
     "FLASK_SECRET_KEY": "your-flask-secret-key-here",
     "LOG_LEVEL": "debug",
     "OPENAI_API_KEY": "your-openai-api-key-here",
+    "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
+    "GOOGLE_CLIENT_SECRET": "${GOOGLE_CLIENT_SECRET}",
   },
 }
