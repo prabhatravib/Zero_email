@@ -84,13 +84,14 @@ function LoginClientContent({ providers, isProd }: LoginClientProps) {
     .map((p) => p.name);
 
   const missingProviders = providers
-    .filter((p) => p.required && !p.enabled && p.envVarInfo)
+    .filter((p) => p.required && !p.enabled && p.envVarInfo && p.envVarInfo.length > 0)
     .map((p) => ({
       id: p.id,
       name: p.name,
       envVarInfo: p.envVarInfo || [],
-      envVarStatus: p.envVarStatus,
-    }));
+      envVarStatus: p.envVarStatus || [],
+    }))
+    .filter((p) => p.envVarInfo && p.envVarInfo.length > 0);
 
   const toggleProvider = (providerId: string) => {
     setExpandedProviders((prev) => ({
@@ -183,7 +184,7 @@ function LoginClientContent({ providers, isProd }: LoginClientProps) {
                         </div>
                         <div className="flex items-center">
                           <span className="mr-2 text-xs text-black/60 dark:text-white/60">
-                            {provider.envVarStatus.filter((v) => !v.set).length} missing
+                            {provider.envVarStatus?.filter((v) => !v.set).length || 0} missing
                           </span>
                           <svg
                             className={`h-5 w-5 text-black/60 transition-transform duration-200 dark:text-white/60 ${expandedProviders[provider.id] ? 'rotate-180' : ''}`}
@@ -204,13 +205,13 @@ function LoginClientContent({ providers, isProd }: LoginClientProps) {
                         className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedProviders[provider.id] ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}
                       >
                         <div className="bg-black/[0.03] p-4 font-mono text-sm dark:bg-white/[0.03]">
-                          {provider.envVarStatus.map((envVar) => (
+                          {provider.envVarStatus?.filter(Boolean).map((envVar) => (
                             <div
                               key={envVar.name}
                               className={`mb-3 flex items-start transition-all duration-300 ease-in-out last:mb-0 ${expandedProviders[provider.id] ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'}`}
                               style={{
                                 transitionDelay: expandedProviders[provider.id]
-                                  ? `${provider.envVarStatus.indexOf(envVar) * 50}ms`
+                                  ? `${(provider.envVarStatus?.indexOf(envVar) || 0) * 50}ms`
                                   : '0ms',
                               }}
                             >

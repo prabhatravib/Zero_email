@@ -70,15 +70,49 @@ export default class extends WorkerEntrypoint<typeof env> {
     .route('/ai', aiRouter)
     .get('/api/public/providers', async (c) => {
       // Return available authentication providers
+      const googleClientId = env.GOOGLE_CLIENT_ID;
+      const googleClientSecret = env.GOOGLE_CLIENT_SECRET;
+      
+      const allProviders = [
+        {
+          id: 'google',
+          name: 'Google',
+          enabled: !!(googleClientId && googleClientSecret),
+          required: true,
+          envVarInfo: [
+            {
+              name: 'GOOGLE_CLIENT_ID',
+              description: 'Google OAuth Client ID',
+              required: true,
+              defaultValue: 'your-google-client-id'
+            },
+            {
+              name: 'GOOGLE_CLIENT_SECRET', 
+              description: 'Google OAuth Client Secret',
+              required: true,
+              defaultValue: 'your-google-client-secret'
+            }
+          ],
+          envVarStatus: [
+            {
+              name: 'GOOGLE_CLIENT_ID',
+              set: !!googleClientId,
+              source: 'environment',
+              defaultValue: 'your-google-client-id'
+            },
+            {
+              name: 'GOOGLE_CLIENT_SECRET',
+              set: !!googleClientSecret,
+              source: 'environment', 
+              defaultValue: 'your-google-client-secret'
+            }
+          ],
+          isCustom: false
+        }
+      ];
+      
       return c.json({
-        providers: [
-          {
-            id: 'google',
-            name: 'Google',
-            type: 'oauth',
-            scopes: ['https://www.googleapis.com/auth/gmail.modify', 'https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email']
-          }
-        ]
+        allProviders
       });
     })
     .post('/monitoring/sentry', async (c) => {
