@@ -205,7 +205,10 @@ export function Navigation() {
                     console.error('Authentication failed:', error);
                     toast.error('Authentication service is currently unavailable. Please try again later or contact support.');
                     
-
+                    // Fallback: redirect to contact form
+                    setTimeout(() => {
+                      window.open('https://cal.com/team/0', '_blank');
+                    }, 2000);
                   }
                 }
               }}
@@ -262,7 +265,14 @@ export function Navigation() {
                   </a>
                 ))}
               </div>
-
+              <a
+                target="_blank"
+                rel="noreferrer"
+                href="https://cal.com/team/0"
+                className="font-medium"
+              >
+                Contact Us
+              </a>
             </div>
             <Separator className="mt-8" />
             <div className="mt-8 flex flex-row items-center justify-center gap-4">

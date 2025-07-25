@@ -97,7 +97,10 @@ export const WelcomeEmail = ({ name }: EmailProps) => {
               Mail0 is for people like us: curious, technical, and tired of bloated tools pretending to be minimal 🙃
             </Text>
             <Text style={text}>
-              Want to chat about email? Just reply to this email and I'll get back to you.
+              Want to chat about email and get a $20 gift card to anywhere you like?{' '}
+              <Link href="https://cal.com/team/0/chat?overlayCalendar=true" style={link}>
+                Book some time with me here
+              </Link>
             </Text>
             <Text style={text}>
               Thanks for being one of the first to join this journey 🚀
@@ -145,7 +148,12 @@ export const Mail0ProEmail = ({ name }: EmailProps) => {
                 Try it free for 7 days, no strings attached
               </Link>
             </Text>
-
+            <Text style={text}>
+              Have questions or want help deciding if Pro is right for you?{' '}
+              <Link href="https://cal.com/team/0/chat?overlayCalendar=true" style={link}>
+                Book a quick call and I'll send you a $20 gift card of your choice
+              </Link>
+            </Text>
             <Text style={text}>
               Let's level up your inbox,
             </Text>
@@ -182,7 +190,12 @@ export const AutoLabelingEmail = ({ name }: EmailProps) => {
             <Text style={text}>
               It's one of those little features that quietly saves you hours every week ⏳
             </Text>
-
+            <Text style={text}>
+              Curious how labeling works behind the scenes?{' '}
+              <Link href="https://cal.com/team/0/chat?overlayCalendar=true" style={link}>
+                Book a quick chat and I'll send you a $20 gift card as a thank you
+              </Link>
+            </Text>
             <Text style={text}>
               Thanks for being here,
             </Text>
@@ -222,7 +235,12 @@ export const AIWritingAssistantEmail = ({ name }: EmailProps) => {
             <Text style={text}>
               Next time you open an email, try hitting "Generate" and watch the magic happen ✨
             </Text>
-
+            <Text style={text}>
+              Want to see it in action or share your thoughts?{' '}
+              <Link href="https://cal.com/team/0/chat?overlayCalendar=true" style={link}>
+                I'll send you a $20 gift card just for booking a quick call
+              </Link>
+            </Text>
             <Text style={text}>
               Talk soon,
             </Text>
@@ -264,7 +282,12 @@ export const ShortcutsEmail = ({ name }: EmailProps) => {
             <Text style={text}>
               Once you get into the flow, it's wild how fast you move.
             </Text>
-
+            <Text style={text}>
+              Got feedback or shortcut ideas?{' '}
+              <Link href="https://cal.com/team/0/chat?overlayCalendar=true" style={link}>
+                Let's talk and I'll send you a $20 gift card for your time
+              </Link>
+            </Text>
             <Text style={text}>
               Let's make your inbox feel like second nature.
             </Text>
@@ -304,7 +327,12 @@ export const CategoriesEmail = ({ name }: EmailProps) => {
             <Text style={text}>
               You can rename, hide, or reorder the categories any way you like.
             </Text>
-
+            <Text style={text}>
+              Want to customize categories or suggest improvements?{' '}
+              <Link href="https://cal.com/team/0/chat?overlayCalendar=true" style={link}>
+                Book a quick chat with me and I'll send you a $20 gift card
+              </Link>
+            </Text>
             <Text style={text}>
               Talk soon,
             </Text>
@@ -347,7 +375,12 @@ export const SuperSearchEmail = ({ name }: EmailProps) => {
             <Text style={text}>
               It's fast, flexible, and honestly kind of magical.
             </Text>
-
+            <Text style={text}>
+              Let's nerd out about how Super Search works.{' '}
+              <Link href="https://cal.com/team/0/chat?overlayCalendar=true" style={link}>
+                I'll send you a $20 gift card just for booking a time
+              </Link>
+            </Text>
             <Text style={text}>
               See you in the future,
             </Text>
@@ -384,7 +417,12 @@ export const Mail0ProWelcomeEmail = ({ name }: EmailProps) => {
             <Text style={text}>
               You're part of a group of people who are done wasting time on email. Welcome.
             </Text>
-
+            <Text style={text}>
+              Need help getting the most out of Pro?{' '}
+              <Link href="https://cal.com/team/0/chat?overlayCalendar=true" style={link}>
+                I'd love to chat and send you a $20 gift card for your time
+              </Link>
+            </Text>
             <Text style={text}>
               Let's make this the smartest inbox you've ever used.
             </Text>
@@ -414,7 +452,12 @@ export const Mail0CancellationEmail = ({ name }: EmailProps) => {
               I saw you canceled your Mail0 Pro subscription. Totally okay. 
               Life changes, tools shift, and we get it.
             </Text>
-
+            <Text style={text}>
+              I'd love to hear what could have been better.{' '}
+              <Link href="https://cal.com/team/0/chat?overlayCalendar=true" style={link}>
+                Book a quick call and I'll send you a $20 gift card of your choice
+              </Link>
+            </Text>
             <Text style={text}>You'll still have access to your account under the free plan:</Text>
             <Text style={listItem}>✅ 1 email connection</Text>
             <Text style={listItem}>✅ Basic labeling</Text>

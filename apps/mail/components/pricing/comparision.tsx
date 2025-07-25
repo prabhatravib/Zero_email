@@ -147,6 +147,10 @@ export default function Comparision() {
                 </div>
               </div>
               <button
+                onClick={() => {
+                  // Simple redirect to contact form
+                  window.open('https://cal.com/team/0', '_blank');
+                }}
                 className="inline-flex h-[40px] items-center justify-center gap-2.5 self-stretch overflow-hidden rounded-lg bg-gradient-to-l from-white/0 to-white/10 p-[3.5px] outline outline-1 outline-offset-[-1px] outline-white/10"
               >
                 <div className="flex items-center justify-center">

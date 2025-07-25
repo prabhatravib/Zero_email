@@ -158,6 +158,10 @@ export default function PricingCard() {
             </div>
           </div>
           <button
+            onClick={() => {
+              // Simple redirect to contact form
+              window.open('https://cal.com/team/0', '_blank');
+            }}
             className="z-30 mt-auto inline-flex h-10 items-center justify-center gap-2.5 self-stretch overflow-hidden rounded-lg bg-[#2D2D2D] p-3 shadow shadow-black/30 outline outline-1 outline-offset-[-1px] outline-[#434343]"
           >
             <div className="flex items-center justify-center gap-2.5 px-1">
@@ -277,6 +281,7 @@ export default function PricingCard() {
           </div>
           <button
             className="z-30 mt-auto inline-flex h-10 items-center justify-center gap-2.5 self-stretch overflow-hidden rounded-lg bg-[#2D2D2D] p-3 shadow shadow-black/30 outline outline-1 outline-offset-[-1px] outline-[#434343]"
+            onClick={() => window.open('https://cal.com/team/0/chat', '_blank')}
           >
             <div className="flex items-center justify-center gap-2.5 px-1">
               <div className="justify-start text-center font-semibold leading-none text-[#D5D5D5]">

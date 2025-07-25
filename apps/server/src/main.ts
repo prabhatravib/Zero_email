@@ -326,29 +326,14 @@ interface GoogleUserInfo {
 
 export default class {
     private app = new Hono<HonoContext>()
-        .use('*', async (c, next) => {
-            // Handle CORS preflight requests
-            if (c.req.method === 'OPTIONS') {
-                const response = new Response(null, { status: 204 });
-                const origin = c.req.header('Origin');
-                if (origin && (origin.includes('pitext-email.onrender.com') || origin.includes('localhost') || origin.includes('127.0.0.1'))) {
-                    response.headers.set('Access-Control-Allow-Origin', origin);
-                }
-                response.headers.set('Access-Control-Allow-Credentials', 'true');
-                response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-                response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Session-Token, Accept, Origin, X-Requested-With');
-                return response;
-            }
-            await next();
-        })
         .use('*', cors({
             origin: (origin) => {
-                if (!origin) return origin;
+                if (!origin) return null;
                 let hostname: string;
                 try {
                     hostname = new URL(origin).hostname;
                 } catch {
-                    return origin;
+                    return null;
                 }
                 // Allow Render domains and localhost for development
                 if (hostname === 'pitext-email.onrender.com' ||
@@ -357,10 +342,10 @@ export default class {
                     hostname === '127.0.0.1') {
                     return origin;
                 }
-                return origin; // Allow all origins for now to debug CORS issues
+                return null;
             },
             credentials: true,
-            allowHeaders: ['Content-Type', 'Authorization', 'X-Session-Token', 'Accept', 'Origin', 'X-Requested-With'],
+            allowHeaders: ['Content-Type', 'Authorization', 'X-Session-Token'],
             exposeHeaders: ['X-Zero-Redirect'],
         }))
         .use(contextStorage())
@@ -396,26 +381,6 @@ export default class {
             await next();
         })
         .get('/test', (c) => c.json({ message: 'Server is working!' }))
-        .options('/api/test-cors', async (c) => {
-            const response = new Response(null, { status: 204 });
-            const origin = c.req.header('Origin');
-            if (origin && (origin.includes('pitext-email.onrender.com') || origin.includes('localhost') || origin.includes('127.0.0.1'))) {
-                response.headers.set('Access-Control-Allow-Origin', origin);
-            }
-            response.headers.set('Access-Control-Allow-Credentials', 'true');
-            response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-            response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Session-Token, Accept, Origin, X-Requested-With');
-            return response;
-        })
-        .get('/api/test-cors', (c) => {
-            const response = c.json({ 
-                message: 'CORS test endpoint',
-                timestamp: new Date().toISOString(),
-                origin: c.req.header('Origin'),
-                method: c.req.method
-            });
-            return response;
-        })
         .route('/ai', aiRouter)
         .get('/api/public/providers', async (c) => {
             // Return available authentication providers
