@@ -327,25 +327,10 @@ interface GoogleUserInfo {
 export default class {
     private app = new Hono<HonoContext>()
         .use('*', cors({
-            origin: (origin) => {
-                if (!origin) return null;
-                let hostname: string;
-                try {
-                    hostname = new URL(origin).hostname;
-                } catch {
-                    return null;
-                }
-                // Allow Render domains and localhost for development
-                if (hostname === 'pitext-email.onrender.com' ||
-                    hostname.endsWith('.onrender.com') ||
-                    hostname === 'localhost' ||
-                    hostname === '127.0.0.1') {
-                    return origin;
-                }
-                return null;
-            },
+            origin: ['https://pitext-email.onrender.com', 'http://localhost:3000', 'http://localhost:8787'],
             credentials: true,
-            allowHeaders: ['Content-Type', 'Authorization', 'X-Session-Token'],
+            allowHeaders: ['Content-Type', 'Authorization', 'X-Session-Token', 'Origin', 'Accept'],
+            allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
             exposeHeaders: ['X-Zero-Redirect'],
         }))
         .use(contextStorage())
@@ -381,6 +366,12 @@ export default class {
             await next();
         })
         .get('/test', (c) => c.json({ message: 'Server is working!' }))
+        .get('/health', (c) => c.json({ 
+            status: 'ok', 
+            timestamp: new Date().toISOString(),
+            cors: 'enabled',
+            origin: c.req.header('Origin')
+        }))
         .route('/ai', aiRouter)
         .get('/api/public/providers', async (c) => {
             // Return available authentication providers

@@ -50,11 +50,87 @@ app.use('/api', async (req, res) => {
   }
 });
 
+// Proxy SSE (Server-Sent Events) endpoint
+app.use('/sse', async (req, res) => {
+  try {
+    const upstreamUrl = 'https://pitext-mail.prabhatravib.workers.dev' + req.originalUrl;
+    
+    console.log(`Proxying SSE ${req.method} ${req.originalUrl} -> ${upstreamUrl}`);
+    
+    // Prepare headers - remove host header to avoid conflicts
+    const headers = { ...req.headers };
+    delete headers.host;
+    
+    // Prepare request options
+    const requestOptions = {
+      method: req.method,
+      headers,
+      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req.body,
+    };
+    
+    const upstreamResp = await fetch(upstreamUrl, requestOptions);
+    
+    // Forward status and headers
+    res.status(upstreamResp.status);
+    upstreamResp.headers.forEach((value, key) => {
+      res.set(key, value);
+    });
+    
+    // Stream the response body
+    upstreamResp.body.pipe(res);
+    
+  } catch (error) {
+    console.error('SSE Proxy error:', error);
+    res.status(500).json({ 
+      error: 'SSE Proxy error', 
+      message: error.message 
+    });
+  }
+});
+
+// Proxy auth endpoints
+app.use('/auth', async (req, res) => {
+  try {
+    const upstreamUrl = 'https://pitext-mail.prabhatravib.workers.dev' + req.originalUrl;
+    
+    console.log(`Proxying auth ${req.method} ${req.originalUrl} -> ${upstreamUrl}`);
+    
+    // Prepare headers - remove host header to avoid conflicts
+    const headers = { ...req.headers };
+    delete headers.host;
+    
+    // Prepare request options
+    const requestOptions = {
+      method: req.method,
+      headers,
+      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req.body,
+    };
+    
+    const upstreamResp = await fetch(upstreamUrl, requestOptions);
+    
+    // Forward status and headers
+    res.status(upstreamResp.status);
+    upstreamResp.headers.forEach((value, key) => {
+      res.set(key, value);
+    });
+    
+    // Stream the response body
+    upstreamResp.body.pipe(res);
+    
+  } catch (error) {
+    console.error('Auth Proxy error:', error);
+    res.status(500).json({ 
+      error: 'Auth Proxy error', 
+      message: error.message 
+    });
+  }
+});
+
 // Catch-all for non-API routes
 app.use('*', (req, res) => {
   res.status(404).json({ 
     error: 'Not found', 
-    message: 'This proxy only handles /api routes' 
+    message: 'This proxy only handles /api, /sse, and /auth routes' 
   });
 });
 
@@ -62,4 +138,6 @@ const port = process.env.PORT || 10000;
 app.listen(port, () => {
   console.log(`Proxy server listening on port ${port}`);
   console.log(`Proxying /api/* -> https://pitext-mail.prabhatravib.workers.dev/api/*`);
+  console.log(`Proxying /sse/* -> https://pitext-mail.prabhatravib.workers.dev/sse/*`);
+  console.log(`Proxying /auth/* -> https://pitext-mail.prabhatravib.workers.dev/auth/*`);
 }); 
