@@ -11,36 +11,17 @@ import {
   type MetaFunction,
 } from 'react-router';
 import { Analytics as DubAnalytics } from '@dub/analytics/react';
-import { ServerProviders } from '@/providers/server-providers';
 import { ClientProviders } from '@/providers/client-providers';
-import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import { useEffect, type PropsWithChildren } from 'react';
-import type { AppRouter } from '@zero/server/trpc';
 import { Button } from '@/components/ui/button';
 import { getLocale } from '@/paraglide/runtime';
 import { siteConfig } from '@/lib/site-config';
-import { signOut } from '@/lib/auth-client';
 import type { Route } from './+types/root';
 import { AlertCircle } from 'lucide-react';
 import { m } from '@/paraglide/messages';
 import { ArrowLeft } from 'lucide-react';
 import * as Sentry from '@sentry/react';
-import superjson from 'superjson';
 import './globals.css';
-
-const getUrl = () => import.meta.env.VITE_PUBLIC_BACKEND_URL + '/api/trpc';
-
-export const getServerTrpc = (req: Request) =>
-  createTRPCClient<AppRouter>({
-    links: [
-      httpBatchLink({
-        maxItems: 1,
-        url: getUrl(),
-        transformer: superjson,
-        headers: req.headers,
-      }),
-    ],
-  });
 
 export const meta: MetaFunction = () => {
   return [
@@ -56,17 +37,10 @@ export const meta: MetaFunction = () => {
 };
 
 export async function loader(_: LoaderFunctionArgs) {
-  //   const trpc = getServerTrpc(request);
-  //   const defaultConnection = await trpc.connections.getDefault
-  //     .query()
-  //     .then((res) => (res?.id as string) ?? null)
-  //     .catch(() => null);
-  return { connectionId: 'defaultConnection' };
+  return { connectionId: null };
 }
 
 export function Layout({ children }: PropsWithChildren) {
-  const { connectionId } = useLoaderData<typeof loader>();
-
   return (
     <html lang={getLocale()} suppressHydrationWarning>
       <head>
@@ -82,14 +56,12 @@ export function Layout({ children }: PropsWithChildren) {
         <Links />
       </head>
       <body className="antialiased">
-        <ServerProviders connectionId={connectionId}>
-          <ClientProviders>{children}</ClientProviders>
-          <DubAnalytics
-            domainsConfig={{
-              refer: 'mail0.com',
-            }}
-          />
-        </ServerProviders>
+        <ClientProviders>{children}</ClientProviders>
+        <DubAnalytics
+          domainsConfig={{
+            refer: 'mail0.com',
+          }}
+        />
         <ScrollRestoration />
         <Scripts />
       </body>
