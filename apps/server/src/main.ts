@@ -732,6 +732,7 @@ export default class extends WorkerEntrypoint<typeof env> {
         .use(
             '/api/trpc/*',
             trpcServer({
+                endpoint: '/api/trpc',
                 router: appRouter,
                 createContext: (opts, c) => ({
                     c,
