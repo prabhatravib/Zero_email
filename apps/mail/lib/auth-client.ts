@@ -14,6 +14,8 @@ export const authClient = {
 export const signIn = {
   social: async ({ provider, callbackURL }: { provider: string; callbackURL: string }) => {
     try {
+      console.log('Making social sign-in request to:', `${BACKEND_URL}/api/auth/sign-in/social`);
+      
       const response = await fetch(`${BACKEND_URL}/api/auth/sign-in/social`, {
         method: 'POST',
         headers: {
@@ -23,11 +25,16 @@ export const signIn = {
         credentials: 'include',
       });
 
+      console.log('Social sign-in response status:', response.status);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Social sign-in error response:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('Social sign-in response data:', data);
       
       if (data.url) {
         // Redirect to Google OAuth
@@ -45,16 +52,22 @@ export const signIn = {
 // Custom session management
 export const getSession = async () => {
   try {
+    console.log('Making session request to:', `${BACKEND_URL}/api/auth/get-session`);
+    
     const response = await fetch(`${BACKEND_URL}/api/auth/get-session`, {
       method: 'GET',
       credentials: 'include',
     });
 
+    console.log('Session response status:', response.status);
+
     if (!response.ok) {
+      console.error('Session request failed:', response.status, response.statusText);
       return null;
     }
 
     const data = await response.json();
+    console.log('Session response data:', data);
     return data.user;
   } catch (error) {
     console.error('Failed to get session:', error);

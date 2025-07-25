@@ -222,7 +222,7 @@ class ZeroDB {
     }
 
     async deleteActiveConnection() {
-        const userId = this.state.storage.get('userId') as string;
+        const userId = await this.state.storage.get('userId') as string;
         if (!userId) return;
 
         const userData = await this.findUser();
@@ -327,11 +327,25 @@ interface GoogleUserInfo {
 export default class {
     private app = new Hono<HonoContext>()
         .use('*', cors({
-            origin: ['https://pitext-email.onrender.com', 'http://localhost:3000', 'http://localhost:8787'],
+            origin: (origin) => {
+                // Allow requests with no origin (like mobile apps or curl requests)
+                if (!origin) return '*';
+                
+                const allowedOrigins = [
+                    'https://pitext-email.onrender.com',
+                    'http://localhost:3000', 
+                    'http://localhost:8787',
+                    'http://localhost:5173',
+                    'http://127.0.0.1:5173'
+                ];
+                
+                return allowedOrigins.includes(origin) ? origin : '';
+            },
             credentials: true,
-            allowHeaders: ['Content-Type', 'Authorization', 'X-Session-Token', 'Origin', 'Accept'],
-            allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-            exposeHeaders: ['X-Zero-Redirect'],
+            allowHeaders: ['Content-Type', 'Authorization', 'X-Session-Token', 'Origin', 'Accept', 'X-Requested-With'],
+            allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+            exposeHeaders: ['X-Zero-Redirect', 'Set-Cookie'],
+            maxAge: 86400, // 24 hours
         }))
         .use(contextStorage())
         .use('*', async (c, next) => {

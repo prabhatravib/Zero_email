@@ -41,6 +41,7 @@
     }
   ],
   "vars": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "VITE_PUBLIC_APP_URL": "https://pitext-email.onrender.com"
   },
 }

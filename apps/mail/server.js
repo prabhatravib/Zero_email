@@ -58,6 +58,7 @@ app.use('/api', async (req, res) => {
     const upstreamUrl = 'https://pitext-mail.prabhatravib.workers.dev' + req.originalUrl;
     
     console.log(`Proxying API ${req.method} ${req.originalUrl} -> ${upstreamUrl}`);
+    console.log('Request headers:', req.headers);
     
     // Prepare headers - remove host header to avoid conflicts
     const headers = { ...req.headers };
@@ -70,7 +71,16 @@ app.use('/api', async (req, res) => {
       body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req.body,
     };
     
+    console.log('Making upstream request with options:', {
+      method: requestOptions.method,
+      headers: requestOptions.headers,
+      hasBody: !!requestOptions.body
+    });
+    
     const upstreamResp = await fetch(upstreamUrl, requestOptions);
+    
+    console.log('Upstream response status:', upstreamResp.status);
+    console.log('Upstream response headers:', Object.fromEntries(upstreamResp.headers.entries()));
     
     // Forward status and headers
     res.status(upstreamResp.status);
@@ -88,6 +98,17 @@ app.use('/api', async (req, res) => {
       message: error.message 
     });
   }
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    proxy: 'enabled',
+    origin: req.headers.origin,
+    host: req.headers.host
+  });
 });
 
 // Serve static files from the build directory
