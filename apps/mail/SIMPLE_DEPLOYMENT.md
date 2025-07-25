@@ -38,7 +38,7 @@ Set these environment variables in Render:
 
 ## How It Works
 - The application is now a static landing page
-- All "Get Started" buttons redirect to `https://cal.com/team/0`
+
 - No backend API is required
 - Users can contact you through the Cal.com link for Gmail integration setup
 
@@ -51,7 +51,7 @@ If you want to change where the "Get Started" buttons redirect:
    - `apps/mail/components/pricing/comparision.tsx`
    - `apps/mail/components/home/footer.tsx`
 
-2. Replace `https://cal.com/team/0` with your preferred contact form or Gmail OAuth setup page.
+
 
 ## Next Steps
 Once deployed, users can:

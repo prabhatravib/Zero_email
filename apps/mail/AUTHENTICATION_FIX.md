@@ -20,7 +20,7 @@ Based on the render logs and configuration:
 - Added user-friendly error messages with toast notifications
 
 ### 2. Fallback Mechanism
-- When authentication fails, users are automatically redirected to `https://cal.com/team/0`
+
 - This provides a contact form for manual Gmail integration setup
 - Users get immediate feedback instead of silent failures
 
@@ -59,7 +59,7 @@ Based on the render logs and configuration:
 3. **If successful**: User is redirected to Google login
 4. **If authentication fails**: 
    - User sees error message: "Login service is currently unavailable. Please contact support for Gmail integration setup."
-   - User is automatically redirected to contact form at `https://cal.com/team/0`
+   
    - User can request manual Gmail integration setup
 
 ## Benefits

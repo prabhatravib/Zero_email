@@ -74,7 +74,6 @@ export default function Footer() {
               >
                 <Button 
                   className="h-8 bg-white text-black"
-                  onClick={() => window.open('https://cal.com/team/0', '_blank')}
                 >
                   Get Started
                 </Button>
