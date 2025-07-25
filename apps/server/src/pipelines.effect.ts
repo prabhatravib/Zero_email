@@ -31,7 +31,7 @@ import { connection } from './db/schema';
 import { Effect, Console } from 'effect';
 import * as cheerio from 'cheerio';
 import { eq } from 'drizzle-orm';
-import { createDb } from './db';
+// Database disabled - using Durable Objects instead
 
 const showLogs = true;
 
@@ -210,30 +210,13 @@ export const runZeroWorkflow = (
     });
     yield* Console.log('[ZERO_WORKFLOW] Set processing flag for history:', historyProcessingKey);
 
-    const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
-
+    // Database disabled - using Durable Objects instead
     const foundConnection = yield* Effect.tryPromise({
       try: async () => {
         console.log('[ZERO_WORKFLOW] Finding connection:', connectionId);
-        const [foundConnection] = await db
-          .select()
-          .from(connection)
-          .where(eq(connection.id, connectionId.toString()));
-        await conn.end();
-        if (!foundConnection) {
-          throw new Error(`Connection not found ${connectionId}`);
-        }
-        if (!foundConnection.accessToken || !foundConnection.refreshToken) {
-          throw new Error(`Connection is not authorized ${connectionId}`);
-        }
-        console.log('[ZERO_WORKFLOW] Found connection:', foundConnection.id);
-        return foundConnection;
+        // Use Durable Objects instead of database
+        throw new Error('Database disabled - using Durable Objects');
       },
-      catch: (error) => ({ _tag: 'DatabaseError' as const, error }),
-    });
-
-    yield* Effect.tryPromise({
-      try: async () => conn.end(),
       catch: (error) => ({ _tag: 'DatabaseError' as const, error }),
     });
 
@@ -478,18 +461,8 @@ export const runThreadWorkflow = (
       const foundConnection = yield* Effect.tryPromise({
         try: async () => {
           console.log('[THREAD_WORKFLOW] Finding connection:', connectionId);
-          const [foundConnection] = await db
-            .select()
-            .from(connection)
-            .where(eq(connection.id, connectionId.toString()));
-          if (!foundConnection) {
-            throw new Error(`Connection not found ${connectionId}`);
-          }
-          if (!foundConnection.accessToken || !foundConnection.refreshToken) {
-            throw new Error(`Connection is not authorized ${connectionId}`);
-          }
-          console.log('[THREAD_WORKFLOW] Found connection:', foundConnection.id);
-          return foundConnection;
+          // Use Durable Objects instead of database
+          throw new Error('Database disabled - using Durable Objects');
         },
         catch: (error) => ({ _tag: 'DatabaseError' as const, error }),
       });

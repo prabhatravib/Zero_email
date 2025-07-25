@@ -28,12 +28,13 @@ Command.displayName = CommandPrimitive.displayName;
 const CommandDialog = ({ children, ...props }: DialogProps) => {
   return (
     <Dialog {...props}>
-      <DialogTitle className="sr-only">Command</DialogTitle>
-      <DialogDescription className="sr-only">Command</DialogDescription>
       <DialogContent
         showOverlay={true}
         className="dark:bg-panelDark w-full overflow-hidden rounded-xl border-none bg-white p-0 sm:max-w-lg [&>button:last-child]:hidden"
+        aria-describedby="command-dialog-description"
       >
+        <DialogTitle className="sr-only">Command</DialogTitle>
+        <DialogDescription id="command-dialog-description" className="sr-only">Command dialog for searching and executing commands</DialogDescription>
         <Command className="[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2">
           {children}
         </Command>

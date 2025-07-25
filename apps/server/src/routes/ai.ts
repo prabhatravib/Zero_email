@@ -6,7 +6,7 @@ import { env } from 'cloudflare:workers';
 import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
 import { Tools } from '../types';
-import { createDb } from '../db';
+// Database disabled - using Durable Objects instead
 import { Hono } from 'hono';
 import { tool } from 'ai';
 import { z } from 'zod';
@@ -16,107 +16,12 @@ export const aiRouter = new Hono();
 aiRouter.get('/', (c) => c.text('Twilio + ElevenLabs + AI Phone System Ready'));
 
 aiRouter.post('/do/:action', async (c) => {
-  if (env.DISABLE_CALLS) return c.json({ success: false, error: 'Not implemented' }, 400);
-  if (env.VOICE_SECRET !== c.req.header('X-Voice-Secret'))
-    return c.json({ success: false, error: 'Unauthorized' }, 401);
-  if (!c.req.header('X-Caller')) return c.json({ success: false, error: 'Unauthorized' }, 401);
-  const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
-  const user = await db.query.user.findFirst({
-    where: (user, { eq, and }) =>
-      and(eq(user.phoneNumber, c.req.header('X-Caller')!), eq(user.phoneNumberVerified, true)),
-  });
-  if (!user) return c.json({ success: false, error: 'Unauthorized' }, 401);
-
-  const connection = await db.query.connection.findFirst({
-    where: (connection, { eq, or }) =>
-      or(eq(connection.id, user.defaultConnectionId!), eq(connection.userId, user.id)),
-  });
-  await conn.end();
-  if (!connection) return c.json({ success: false, error: 'Unauthorized' }, 401);
-
-  try {
-    const action = c.req.param('action') as Tools;
-    const body = await c.req.json();
-    console.log('[DEBUG] action', action, body);
-    const agent = await getZeroAgent(connection.id);
-    switch (action) {
-      case Tools.ComposeEmail:
-        const newBody = await composeEmail({
-          prompt: body.prompt,
-          emailSubject: body.emailSubject,
-          username: 'Nizar Abi Zaher',
-          connectionId: connection.id,
-        });
-        return c.json({ success: true, result: newBody });
-      case Tools.SendEmail:
-        const result = await agent.create({
-          to: body.to.map((to: any) => ({
-            name: to.name ?? to.email,
-            email: to.email ?? 'founders@0.email',
-          })),
-          subject: body.subject,
-          message: body.message,
-          attachments: [],
-          headers: {},
-        });
-        return c.json({ success: true, result });
-      default:
-        return c.json({ success: false, error: 'Not implemented' }, 400);
-    }
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 400);
-  }
+  return c.json({ success: false, error: 'Voice features disabled - no database storage' }, 400);
 });
 
 aiRouter.post('/call', async (c) => {
-  console.log('[DEBUG] Received call request');
-
-  if (env.DISABLE_CALLS) {
-    console.log('[DEBUG] Calls are disabled');
-    return c.json({ success: false, error: 'Not implemented' }, 400);
-  }
-
-  if (env.VOICE_SECRET !== c.req.header('X-Voice-Secret')) {
-    console.log('[DEBUG] Invalid voice secret');
-    return c.json({ success: false, error: 'Unauthorized' }, 401);
-  }
-
-  if (!c.req.header('X-Caller')) {
-    console.log('[DEBUG] Missing caller header');
-    return c.json({ success: false, error: 'Unauthorized' }, 401);
-  }
-
-  console.log('[DEBUG] Parsing request body');
-  const { success, data } = await z
-    .object({
-      query: z.string(),
-    })
-    .safeParseAsync(await c.req.json());
-
-  if (!success) {
-    console.log('[DEBUG] Invalid request body');
-    return c.json({ success: false, error: 'Invalid request' }, 400);
-  }
-
-  console.log('[DEBUG] Connecting to database');
-  const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
-
-  console.log('[DEBUG] Finding user by phone number:', c.req.header('X-Caller'));
-  const user = await db.query.user.findFirst({
-    where: (user, { eq, and }) =>
-      and(eq(user.phoneNumber, c.req.header('X-Caller')!), eq(user.phoneNumberVerified, true)),
-  });
-
-  if (!user) {
-    console.log('[DEBUG] User not found or not verified');
-    return c.json({ success: false, error: 'Unauthorized' }, 401);
-  }
-
-  console.log('[DEBUG] Finding connection for user:', user.id);
-  const connection = await db.query.connection.findFirst({
-    where: (connection, { eq, or }) =>
-      or(eq(connection.id, user.defaultConnectionId!), eq(connection.userId, user.id)),
-  });
+  return c.json({ success: false, error: 'Voice features disabled - no database storage' }, 400);
+});
 
   await conn.end();
 
