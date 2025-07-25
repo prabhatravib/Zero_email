@@ -485,8 +485,7 @@ export const mailRouter = router({
       await Promise.all(
         input.ids.map((threadId) =>
           // Snoozing disabled - no KV storage
-            metadata: { wakeAt: wakeAtIso },
-          }),
+          Promise.resolve()
         ),
       );
 
@@ -507,6 +506,7 @@ export const mailRouter = router({
       await Promise.all(
         input.ids.map((threadId) =>
           // Snoozing disabled - no KV storage
+          Promise.resolve()
         ),
       );
       return { success: true };

@@ -23,7 +23,15 @@ aiRouter.post('/call', async (c) => {
   return c.json({ success: false, error: 'Voice features disabled - no database storage' }, 400);
 });
 
-  await conn.end();
+aiRouter.post('/chat', async (c) => {
+  const data = await c.req.json();
+  
+  if (!data.query) {
+    return c.json({ success: false, error: 'No query provided' }, 400);
+  }
+
+  // Get user connection - simplified for Cloudflare Workers
+  const connection = null; // Database disabled - using Durable Objects instead
 
   if (!connection) {
     console.log('[DEBUG] No connection found for user');
