@@ -168,6 +168,13 @@ export function Navigation() {
                     </Button>
                   </a>
                 </NavigationMenuItem>
+                <NavigationMenuItem className="bg-transparent text-white">
+                  <Link to="/gmail-demo">
+                    <Button variant="ghost" className="h-9 bg-transparent ml-1">
+                      Gmail Demo
+                    </Button>
+                  </Link>
+                </NavigationMenuItem>
               </NavigationMenuList>
             </NavigationMenu>
           </div>
