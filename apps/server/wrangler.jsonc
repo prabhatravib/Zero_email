@@ -7,58 +7,7 @@
   "ai": {
     "binding": "AI",
   },
-  "kv_namespaces": [
-    {
-      "binding": "snoozed_emails",
-      "id": "your-snoozed-emails-kv-id"
-    },
-    {
-      "binding": "gmail_history_id",
-      "id": "your-gmail-history-id-kv-id"
-    },
-    {
-      "binding": "gmail_processing_threads",
-      "id": "your-gmail-processing-threads-kv-id"
-    },
-    {
-      "binding": "subscribed_accounts",
-      "id": "your-subscribed-accounts-kv-id"
-    },
-    {
-      "binding": "connection_labels",
-      "id": "your-connection-labels-kv-id"
-    },
-    {
-      "binding": "prompts_storage",
-      "id": "your-prompts-storage-kv-id"
-    }
-  ],
-  "r2": [
-    {
-      "binding": "THREADS_BUCKET",
-      "bucket_name": "your-threads-bucket-name"
-    }
-  ],
-  "vectorize": [
-    {
-      "binding": "VECTORIZE",
-      "index_name": "your-vectorize-index-name"
-    },
-    {
-      "binding": "VECTORIZE_MESSAGE",
-      "index_name": "your-vectorize-message-index-name"
-    }
-  ],
-  "queues": [
-    {
-      "binding": "subscribe_queue",
-      "name": "your-subscribe-queue-name"
-    },
-    {
-      "binding": "unsnooze_queue",
-      "name": "your-unsnooze-queue-name"
-    }
-  ],
+
 
   "durable_objects": {
     "bindings": [
@@ -97,26 +46,12 @@
     "VITE_PUBLIC_BACKEND_URL": "https://pitext-mail.prabhatravib.workers.dev",
     "VITE_PUBLIC_APP_URL": "https://pitext-email.onrender.com",
     "DISABLE_CALLS": "true",
-    "ELEVENLABS_API_KEY": "1234567890",
-    "VOICE_SECRET": "1234567890",
-    "DROP_AGENT_TABLES": "false",
-    "THREAD_SYNC_MAX_COUNT": "20",
-    "THREAD_SYNC_LOOP": "true",
     "DISABLE_WORKFLOWS": "true",
     "BETTER_AUTH_SECRET": "412222f1901b6a88402bf8eb1f148faa",
     "BETTER_AUTH_URL": "https://pitext-mail.prabhatravib.workers.dev",
     "GOOGLE_REDIRECT_URI": "https://pitext-mail.prabhatravib.workers.dev/auth/callback/google",
-    "AUTUMN_SECRET_KEY": "",
-    "FLASK_SECRET_KEY": "your-flask-secret-key-here",
-    "LOG_LEVEL": "debug",
-    "OPENAI_API_KEY": "your-openai-api-key-here",
     "GOOGLE_CLIENT_ID": "363401296279-vo7al766jmct0gcat24rrn2grv2jh1p5.apps.googleusercontent.com",
     "GOOGLE_CLIENT_SECRET": "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",
-    "JWT_SECRET": "your-super-secure-jwt-secret-key-here-make-this-random-and-long",
-    "OPENAI_MODEL": "gpt-4o",
-    "OPENAI_MINI_MODEL": "gpt-4o-mini",
-    "AUTORAG_ID": "",
-    "GOOGLE_S_ACCOUNT": "{}",
-
+    "JWT_SECRET": "your-super-secure-jwt-secret-key-here-make-this-random-and-long"
   },
 }

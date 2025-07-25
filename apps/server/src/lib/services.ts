@@ -7,4 +7,11 @@ export const resend = () =>
     ? new Resend(env.RESEND_API_KEY)
     : { emails: { send: async (...args: unknown[]) => console.log(args) } };
 
-export const redis = () => new Redis({ url: env.REDIS_URL, token: env.REDIS_TOKEN });
+export const redis = () => {
+  // Redis disabled - no Redis storage
+  return {
+    get: async () => null,
+    set: async () => null,
+    del: async () => null,
+  };
+};

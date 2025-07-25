@@ -30,14 +30,13 @@ export async function setSubscribedState(
   connectionId: string,
   providerId: EProviders,
 ): Promise<void> {
-  return await env.subscribed_accounts.put(
-    `${connectionId}__${providerId}`,
-    new Date().toISOString(),
-  );
+  // Brain features disabled - no KV storage
+  return;
 }
 
 export async function cleanupOnFailure(connectionId: string): Promise<void> {
-  return await env.subscribed_accounts.delete(connectionId);
+  // Brain features disabled - no KV storage
+  return;
 }
 
 export const FOLDERS = {

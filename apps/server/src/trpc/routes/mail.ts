@@ -126,7 +126,8 @@ export const mailRouter = router({
           threadsResponse.threads.map(async (t: ThreadItem) => {
             const keyName = `${t.id}__${activeConnection.id}`;
             try {
-              const wakeAtIso = await env.snoozed_emails.get(keyName);
+              // Snoozing disabled - no KV storage
+      const wakeAtIso = null;
               if (!wakeAtIso) {
                 filtered.push(t);
                 return;
@@ -144,7 +145,7 @@ export const mailRouter = router({
               });
 
               await agent.modifyLabels([t.id], ['INBOX'], ['SNOOZED']);
-              await env.snoozed_emails.delete(keyName);
+              // Snoozing disabled - no KV storage
             } catch (error) {
               console.error('[UNSNOOZE_ON_ACCESS] Failed for', t.id, error);
               filtered.push(t);
@@ -483,7 +484,7 @@ export const mailRouter = router({
       const wakeAtIso = wakeAtDate.toISOString();
       await Promise.all(
         input.ids.map((threadId) =>
-          env.snoozed_emails.put(`${threadId}__${activeConnection.id}`, wakeAtIso, {
+          // Snoozing disabled - no KV storage
             metadata: { wakeAt: wakeAtIso },
           }),
         ),
@@ -505,7 +506,7 @@ export const mailRouter = router({
 
       await Promise.all(
         input.ids.map((threadId) =>
-          env.snoozed_emails.delete(`${threadId}__${activeConnection.id}`),
+          // Snoozing disabled - no KV storage
         ),
       );
       return { success: true };
