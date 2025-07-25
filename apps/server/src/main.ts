@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { contextStorage } from 'hono/context-storage';
 import { aiRouter } from './routes/ai';
-import { env, WorkerEntrypoint } from 'cloudflare:workers';
+import { env, WorkerEntrypoint, DurableObject } from 'cloudflare:workers';
 import { appRouter } from './trpc';
 import { createAuth } from './lib/auth';
 import { getZeroDB } from './lib/server-utils';
@@ -11,21 +11,21 @@ import type { HonoContext, HonoVariables } from './ctx';
 import { trpcServer } from '@hono/trpc-server';
 
 // Simple Durable Objects for Google OAuth only
-class ZeroAgent {
-    constructor() { }
-}
-
-class ZeroMCP {
-    constructor() { }
-}
-
-class ZeroDB {
-    private state: any;
-    private env: any;
-
+class ZeroAgent extends DurableObject {
     constructor(state: any, env: any) {
-        this.state = state;
-        this.env = env;
+        super(state, env);
+    }
+}
+
+class ZeroMCP extends DurableObject {
+    constructor(state: any, env: any) {
+        super(state, env);
+    }
+}
+
+class ZeroDB extends DurableObject {
+    constructor(state: any, env: any) {
+        super(state, env);
     }
 
     async createUser(userData: {
@@ -46,7 +46,7 @@ class ZeroDB {
     }
 
     async findUser() {
-        const userId = this.state.storage.get('userId') as string;
+        const userId = await this.state.storage.get('userId') as string;
         if (!userId) return null;
 
         const userData = await this.state.storage.get(`user:${userId}`);
@@ -68,7 +68,7 @@ class ZeroDB {
         phoneNumber: string;
         phoneNumberVerified: boolean;
     }>) {
-        const userId = this.state.storage.get('userId') as string;
+        const userId = await this.state.storage.get('userId') as string;
         if (!userId) throw new Error('User not found');
 
         const userData = await this.state.storage.get(`user:${userId}`);
@@ -128,7 +128,7 @@ class ZeroDB {
     }
 
     async findFirstConnection() {
-        const userId = this.state.storage.get('userId') as string;
+        const userId = await this.state.storage.get('userId') as string;
         if (!userId) return null;
 
         const connections = await this.state.storage.get(`connections:${userId}`) as string[] || [];
@@ -138,7 +138,7 @@ class ZeroDB {
     }
 
     async findManyConnections() {
-        const userId = this.state.storage.get('userId') as string;
+        const userId = await this.state.storage.get('userId') as string;
         if (!userId) return [];
 
         const connectionIds = await this.state.storage.get(`connections:${userId}`) as string[] || [];
@@ -263,8 +263,10 @@ class ZeroDB {
     }
 }
 
-class ZeroDriver {
-    constructor() { }
+class ZeroDriver extends DurableObject {
+    constructor(state: any, env: any) {
+        super(state, env);
+    }
 }
 
 // Type definitions for Google OAuth responses
