@@ -3,6 +3,10 @@ import React from 'react';
 // Custom auth client for our new endpoints
 const BACKEND_URL = import.meta.env.VITE_PUBLIC_BACKEND_URL;
 
+// Debug: Log the backend URL being used
+console.log('Auth client - BACKEND_URL from env:', BACKEND_URL);
+console.log('Auth client - All env vars:', import.meta.env);
+
 export const authClient = {
   baseURL: BACKEND_URL,
   fetchOptions: {

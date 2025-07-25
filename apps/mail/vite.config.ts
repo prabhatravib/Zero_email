@@ -83,6 +83,9 @@ export default defineConfig(({ mode }) => {
       // Ensure environment variables are available at build time
       'process.env.WRANGLER_ENV': JSON.stringify(wranglerEnv),
       'process.env.NODE_ENV': JSON.stringify(mode),
+      // Force environment variables to be available
+      'import.meta.env.VITE_PUBLIC_BACKEND_URL': JSON.stringify(process.env.VITE_PUBLIC_BACKEND_URL),
+      'import.meta.env.VITE_PUBLIC_APP_URL': JSON.stringify(process.env.VITE_PUBLIC_APP_URL),
     },
   };
 });
