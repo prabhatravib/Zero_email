@@ -1,7 +1,8 @@
 import React from 'react';
 
 // Custom auth client for our new endpoints
-const BACKEND_URL = import.meta.env.VITE_PUBLIC_BACKEND_URL;
+// Force the correct backend URL to fix CORS issues
+const BACKEND_URL = 'https://pitext-email.onrender.com';
 
 // Debug: Log the backend URL being used
 console.log('Auth client - BACKEND_URL from env:', BACKEND_URL);
