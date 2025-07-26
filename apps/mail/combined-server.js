@@ -24,8 +24,6 @@ app.use('/api', async (req, res) => {
     const upstreamUrl = 'https://pitext-mail.prabhatravib.workers.dev' + req.originalUrl;
     
     console.log(`Proxying ${req.method} ${req.originalUrl} -> ${upstreamUrl}`);
-    console.log('Request headers:', headers);
-    console.log('Request body:', req.body);
     
     // Prepare headers - remove problematic headers to prevent content decoding issues
     const headers = { ...req.headers };
@@ -54,11 +52,7 @@ app.use('/api', async (req, res) => {
       body,
     };
     
-    console.log('Request options:', {
-      method: requestOptions.method,
-      headers: requestOptions.headers,
-      body: body
-    });
+    console.log('Request body being sent:', body);
     
     const upstreamResp = await fetch(upstreamUrl, requestOptions);
     
