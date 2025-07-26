@@ -36,6 +36,17 @@ export const signIn = {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Gmail OAuth error response:', errorText);
+        
+        // Try to parse error response as JSON for better error details
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.error && errorData.details) {
+            throw new Error(`${errorData.error}: ${errorData.details}`);
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, use the raw error text
+        }
+        
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 

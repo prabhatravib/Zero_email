@@ -49,6 +49,18 @@ export const createConfig = (env: any) => ({
 
 // Helper function to get Google OAuth URL
 export function getGoogleOAuthUrl(env: any): string {
+    console.log('🔍 getGoogleOAuthUrl - Environment variables check:');
+    console.log('env.GOOGLE_CLIENT_ID:', env?.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET');
+    console.log('env.GOOGLE_CLIENT_SECRET:', env?.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET');
+    console.log('env.GOOGLE_REDIRECT_URI:', env?.GOOGLE_REDIRECT_URI);
+    
     const config = createConfig(env);
-    return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${config.google.clientId}&redirect_uri=${encodeURIComponent(config.google.redirectUri)}&response_type=code&scope=${encodeURIComponent(config.google.scopes)}&access_type=offline`;
+    console.log('🔍 getGoogleOAuthUrl - Config created:');
+    console.log('config.google.clientId:', config.google.clientId);
+    console.log('config.google.redirectUri:', config.google.redirectUri);
+    
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${config.google.clientId}&redirect_uri=${encodeURIComponent(config.google.redirectUri)}&response_type=code&scope=${encodeURIComponent(config.google.scopes)}&access_type=offline`;
+    
+    console.log('🔍 getGoogleOAuthUrl - Generated URL:', authUrl);
+    return authUrl;
 } 

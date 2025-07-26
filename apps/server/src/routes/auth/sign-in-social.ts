@@ -1,4 +1,5 @@
 import { getGoogleOAuthUrl } from '../../config';
+import { validateGoogleOAuthConfig } from '../../lib/auth';
 import type { HonoContext } from '../../ctx';
 
 export const signInSocialHandler = async (c: HonoContext) => {
@@ -34,11 +35,27 @@ export const signInSocialHandler = async (c: HonoContext) => {
             console.log('Processing Google OAuth request...');
             
             const env = c.env as unknown as Record<string, string>;
-            console.log('Environment variables available:', Object.keys(env).filter(key => key.includes('GOOGLE')));
-            console.log('GOOGLE_CLIENT_ID:', env.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET');
-            console.log('GOOGLE_CLIENT_SECRET:', env.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET');
+            console.log('🔍 signInSocialHandler - Environment check:');
+            console.log('env keys:', Object.keys(env).filter(key => key.includes('GOOGLE')));
+            console.log('env.GOOGLE_CLIENT_ID:', env?.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET');
+            console.log('env.GOOGLE_CLIENT_SECRET:', env?.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET');
+            
+            // Validate Google OAuth configuration first
+            try {
+                console.log('🔍 signInSocialHandler - Starting validation...');
+                validateGoogleOAuthConfig(env);
+                console.log('🔍 signInSocialHandler - Validation passed');
+            } catch (validationError) {
+                console.error('Google OAuth configuration validation failed:', validationError);
+                return c.json({ 
+                    error: 'OAuth Configuration Error', 
+                    details: validationError instanceof Error ? validationError.message : 'Unknown validation error',
+                    fixInstructions: 'Please configure Google OAuth credentials in Cloudflare Workers dashboard'
+                }, 500);
+            }
             
             try {
+                console.log('🔍 signInSocialHandler - Generating OAuth URL...');
                 const authUrl = getGoogleOAuthUrl(env);
                 console.log('Generated Google OAuth URL:', authUrl);
                 return c.json({ url: authUrl });
