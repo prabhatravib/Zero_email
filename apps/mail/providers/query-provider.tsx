@@ -92,6 +92,17 @@ export const trpcClient = createTRPCClient<AppRouter>({
       transformer: superjson,
       url: getUrl(),
       maxItems: 1,
+      headers: () => {
+        // Get session token from localStorage
+        const sessionToken = localStorage.getItem('gmail_session_token');
+        const headers: Record<string, string> = {};
+        
+        if (sessionToken) {
+          headers['X-Session-Token'] = sessionToken;
+        }
+        
+        return headers;
+      },
       fetch: (url, options) =>
         fetch(url, { ...options, credentials: 'include' }).then((res) => {
           const currentPath = new URL(window.location.href).pathname;
