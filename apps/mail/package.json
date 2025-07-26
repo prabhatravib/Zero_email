@@ -7,6 +7,7 @@
     "dev": "react-router dev",
     "dev:custom": "node dev-server.js",
     "dev:fixed": "vite --config vite.config.ts",
+    "dev:enhanced": "node dev-with-proxy.js",
     "build": "react-router build",
     "start": "node start.js",
     "start:static": "node server.js",

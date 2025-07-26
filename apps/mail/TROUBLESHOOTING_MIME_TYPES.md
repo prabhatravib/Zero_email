@@ -17,12 +17,17 @@ npm run build
 npm run start:static
 ```
 
-### Solution 2: Use Custom Development Server
+### Solution 2: Use Enhanced Development Server (Recommended for React Router)
+```bash
+npm run dev:enhanced
+```
+
+### Solution 3: Use Custom Development Server
 ```bash
 npm run dev:custom
 ```
 
-### Solution 3: Use Fixed Vite Configuration
+### Solution 4: Use Fixed Vite Configuration
 ```bash
 npm run dev:fixed
 ```
@@ -50,9 +55,10 @@ The enhanced proxy server automatically sets correct MIME types:
 - `.json` files → `application/json`
 
 ### 2. Development Workflow
-1. Use `npm run dev:custom` for development
-2. Use `npm run start:static` for testing production build
-3. Clear browser cache if issues persist
+1. Use `npm run dev:enhanced` for development (recommended)
+2. Use `npm run dev:custom` for alternative development server
+3. Use `npm run start:static` for testing production build
+4. Clear browser cache if issues persist
 
 ### 3. Browser Cache Issues
 If you still see MIME type errors:
