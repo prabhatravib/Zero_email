@@ -18,114 +18,6 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'combined-server' });
 });
 
-// Proxy auth endpoints to Cloudflare Workers backend
-app.use('/auth', async (req, res) => {
-  try {
-    const upstreamUrl = 'https://pitext-mail.prabhatravib.workers.dev' + req.originalUrl;
-    
-    console.log(`Proxying auth ${req.method} ${req.originalUrl} -> ${upstreamUrl}`);
-    
-    // Prepare headers - remove host header to avoid conflicts
-    const headers = { ...req.headers };
-    delete headers.host;
-    
-    // Prepare request options
-    const requestOptions = {
-      method: req.method,
-      headers,
-      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req.body,
-      redirect: 'manual' // Important: Don't follow redirects automatically
-    };
-    
-    const upstreamResp = await fetch(upstreamUrl, requestOptions);
-    
-    console.log(`Upstream response status: ${upstreamResp.status}`);
-    console.log(`Upstream response headers:`, Object.fromEntries(upstreamResp.headers.entries()));
-    
-    // Handle redirects properly to break the loop
-    if (upstreamResp.status >= 300 && upstreamResp.status < 400) {
-      const location = upstreamResp.headers.get('location');
-      if (location) {
-        console.log(`Redirect detected to: ${location}`);
-        
-        // Check if this is a redirect to the frontend callback
-        if (location.includes('/auth/callback/google')) {
-          console.log(`This is a callback redirect, fetching content from: ${location}`);
-          
-          // Instead of redirecting, serve the frontend callback page directly
-          const indexPath = join(__dirname, 'build', 'client', 'index.html');
-          if (existsSync(indexPath)) {
-            console.log('Serving frontend callback page directly');
-            res.sendFile(indexPath);
-            return;
-          } else {
-            console.error('Frontend build not found, falling back to redirect');
-            res.redirect(upstreamResp.status, location);
-            return;
-          }
-        }
-        
-        // For other redirects, fetch the content
-        try {
-          console.log(`Fetching redirected content from: ${location}`);
-          const redirectResp = await fetch(location, {
-            method: 'GET',
-            headers: {
-              'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-              'Accept-Language': 'en-US,en;q=0.5',
-              'Accept-Encoding': 'gzip, deflate',
-              'Connection': 'keep-alive',
-            },
-            redirect: 'manual'
-          });
-          
-          console.log(`Redirect response status: ${redirectResp.status}`);
-          
-          // Forward the redirect response status and headers
-          res.status(redirectResp.status);
-          redirectResp.headers.forEach((value, key) => {
-            const lowerKey = key.toLowerCase();
-            // Don't forward problematic headers
-            if (!['content-encoding', 'content-length', 'transfer-encoding', 'connection'].includes(lowerKey)) {
-              res.set(key, value);
-            }
-          });
-          
-          // Stream the response body
-          redirectResp.body.pipe(res);
-          return;
-        } catch (redirectError) {
-          console.error('Failed to fetch redirected content:', redirectError);
-          // Fallback: return the original redirect response
-          res.status(upstreamResp.status);
-          upstreamResp.headers.forEach((value, key) => {
-            res.set(key, value);
-          });
-          upstreamResp.body.pipe(res);
-          return;
-        }
-      }
-    }
-    
-    // Forward status and headers
-    res.status(upstreamResp.status);
-    upstreamResp.headers.forEach((value, key) => {
-      res.set(key, value);
-    });
-    
-    // Stream the response body
-    upstreamResp.body.pipe(res);
-    
-  } catch (error) {
-    console.error('Auth proxy error:', error);
-    res.status(500).json({ 
-      error: 'Auth proxy error', 
-      message: error.message 
-    });
-  }
-});
-
 // Proxy all /api requests to the Cloudflare Workers backend
 app.use('/api', async (req, res) => {
   try {
@@ -211,9 +103,9 @@ const buildDir = join(__dirname, 'build', 'client');
 if (existsSync(buildDir)) {
   app.use(express.static(buildDir));
   
-  // Serve index.html for all non-API and non-auth routes (SPA routing)
+  // Serve index.html for all non-API routes (SPA routing)
   app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api') && !req.path.startsWith('/auth')) {
+    if (!req.path.startsWith('/api')) {
       const indexPath = join(buildDir, 'index.html');
       if (existsSync(indexPath)) {
         res.sendFile(indexPath);
@@ -225,7 +117,7 @@ if (existsSync(buildDir)) {
 } else {
   // Fallback if build directory doesn't exist
   app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api') && !req.path.startsWith('/auth')) {
+    if (!req.path.startsWith('/api')) {
       res.status(404).json({ 
         error: 'Frontend not available', 
         message: 'Build directory not found' 
@@ -237,7 +129,6 @@ if (existsSync(buildDir)) {
 const port = process.env.PORT || 10000;
 app.listen(port, () => {
   console.log(`Combined server listening on port ${port}`);
-  console.log(`Proxying /auth/* -> https://pitext-mail.prabhatravib.workers.dev/auth/* (with content fetching)`);
   console.log(`Proxying /api/* -> https://pitext-mail.prabhatravib.workers.dev/api/*`);
   console.log(`Serving frontend from: ${buildDir}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

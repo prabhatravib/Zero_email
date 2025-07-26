@@ -18,7 +18,7 @@ class WorkerClass {
     }
 
     async fetch(request: Request, env: any, ctx: any): Promise<Response> {
-        return this.app.fetch(request, env, ctx);
+        return this.app.fetch(request);
     }
 }
 

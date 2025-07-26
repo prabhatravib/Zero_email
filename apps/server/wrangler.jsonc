@@ -42,9 +42,6 @@
   ],
   "vars": {
     "VITE_PUBLIC_APP_URL": "https://pitext-email.onrender.com",
-    "GOOGLE_REDIRECT_URI": "https://pitext-mail.prabhatravib.workers.dev/api/auth/callback/google",
-    "GOOGLE_CLIENT_ID": "363401296279-vo7al766jmct0gcat24rrn2grv2jh1p5.apps.googleusercontent.com",
-    "BETTER_AUTH_URL": "https://pitext-mail.prabhatravib.workers.dev",
-    "NODE_ENV": "production"
+    "GOOGLE_REDIRECT_URI": "https://pitext-mail.prabhatravib.workers.dev/auth/callback/google"
   }
 }

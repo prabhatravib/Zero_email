@@ -10,7 +10,7 @@ export const authProxy = {
   api: {
     getSession: async ({ headers }: { headers: Headers }) => {
       try {
-        console.log('Auth proxy - Making session request to: /api/auth/session');
+        console.log('Auth proxy - Making session request to: /api/auth/get-session');
         
         // Get session token from localStorage for cross-domain access
         const sessionToken = localStorage.getItem('gmail_session_token');
@@ -21,14 +21,13 @@ export const authProxy = {
         
         // Add session token to headers if available
         if (sessionToken) {
-          console.log('Auth proxy - Session token found, length:', sessionToken.length);
           requestHeaders['X-Session-Token'] = sessionToken;
         }
         
-        const response = await fetch('/api/auth/session', {
+        const response = await fetch('/api/auth/get-session', {
           method: 'GET',
           headers: requestHeaders,
-          credentials: 'include',
+          credentials: 'include', // This ensures cookies are sent
         });
 
         if (!response.ok) {

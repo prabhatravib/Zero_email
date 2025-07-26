@@ -1,11 +1,9 @@
 import { authProviders, customProviders, isProviderEnabled } from '../lib/auth-providers';
 import type { HonoContext } from '../ctx';
 import { Hono } from 'hono';
-import { createAuth } from '../lib/auth';
 
 const publicRouter = new Hono<HonoContext>();
 
-// Register specific routes first
 publicRouter.get('/providers', async (c) => {
   const env = c.env as unknown as Record<string, string>;
   const isProd = env.NODE_ENV === 'production';
@@ -107,27 +105,4 @@ publicRouter.get('/debug-callbacks', async (c) => {
   return c.json(callbackUrls);
 });
 
-// Mount Better Auth handler - this handles all auth routes including sign-in/social and callbacks
-publicRouter.on(['GET', 'POST'], '/*', async (c) => {
-  try {
-    const auth = createAuth(c.env);
-    return auth.handler(c.req.raw);
-  } catch (error) {
-    console.error('Better Auth Error:', error);
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    console.error('Environment variables available:', {
-      GOOGLE_CLIENT_ID: c.env.GOOGLE_CLIENT_ID ? 'set' : 'not set',
-      GOOGLE_CLIENT_SECRET: c.env.GOOGLE_CLIENT_SECRET ? 'set' : 'not set',
-      BETTER_AUTH_SECRET: c.env.BETTER_AUTH_SECRET ? 'set' : 'not set',
-      BETTER_AUTH_URL: c.env.BETTER_AUTH_URL || 'not set',
-      VITE_PUBLIC_BACKEND_URL: c.env.VITE_PUBLIC_BACKEND_URL || 'not set',
-    });
-    return c.json({ error: 'Authentication system error', details: error instanceof Error ? error.message : String(error) }, 500);
-  }
-});
-
 export { publicRouter };
-
-export const registerAuthRoutes = (app: Hono<HonoContext>) => {
-    app.route('/api/auth', publicRouter);
-};
