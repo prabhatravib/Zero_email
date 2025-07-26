@@ -111,10 +111,33 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Serve static files from the build directory
-app.use(express.static(join(__dirname, 'build/client')));
+// Serve static files from the build directory with proper MIME types
+app.use(express.static(join(__dirname, 'build/client'), {
+  setHeaders: (res, path) => {
+    // Set proper MIME types for JavaScript files
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    } else if (path.endsWith('.mjs')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    } else if (path.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    } else if (path.endsWith('.woff2')) {
+      res.setHeader('Content-Type', 'font/woff2');
+    } else if (path.endsWith('.woff')) {
+      res.setHeader('Content-Type', 'font/woff');
+    } else if (path.endsWith('.ttf')) {
+      res.setHeader('Content-Type', 'font/ttf');
+    } else if (path.endsWith('.svg')) {
+      res.setHeader('Content-Type', 'image/svg+xml');
+    } else if (path.endsWith('.png')) {
+      res.setHeader('Content-Type', 'image/png');
+    } else if (path.endsWith('.jpg') || path.endsWith('.jpeg')) {
+      res.setHeader('Content-Type', 'image/jpeg');
+    }
+  }
+}));
 
-// Handle all routes by serving the index.html file (SPA)
+// Handle all other routes by serving the index.html file (SPA)
 app.get('*', (req, res) => {
   res.sendFile(join(__dirname, 'build/client/index.html'));
 });
