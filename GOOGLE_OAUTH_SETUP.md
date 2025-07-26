@@ -1,7 +1,7 @@
 # Google OAuth Setup Guide
 
 ## Problem
-Your deployed application is getting a 500 error when trying to access `/api/auth/sign-in/social`. The Google OAuth credentials are configured in your Cloudflare Workers dashboard, but there may be an issue with how they're being accessed at runtime.
+Your deployed application is getting a 500 error when trying to access `/api/auth/sign-in/social`. The Google OAuth credentials are configured in your Cloudflare Workers dashboard, and the OAuth endpoint works when called directly, but there's an issue with the proxy configuration that's causing the request to fail when called from the frontend.
 
 ## Solution
 
@@ -42,30 +42,38 @@ Your deployed application is getting a 500 error when trying to access `/api/aut
 
 **Note**: The credentials are properly configured as secrets, which is the correct approach for security.
 
-### Step 4: Deploy the Updated Code
+### Step 4: Fix the Proxy Configuration
+
+The issue was in the proxy configuration in `apps/mail/server.js`. The proxy was not properly handling JSON request bodies when forwarding requests to the Cloudflare Workers backend.
+
+**Fix Applied:**
+- Updated the proxy to properly stringify JSON request bodies
+- Added better error handling to capture and log error responses
+- Added debugging to track request body content
+
+### Step 5: Deploy the Updated Code
 
 1. Push your code changes to GitHub
 2. Your deployment pipeline should automatically deploy the updated code
-3. The new debugging will help identify the exact issue
+3. The proxy fix should resolve the 500 error
 
-### Step 5: Debug the Issue
+### Step 6: Test the Fix
 
-1. **Run the debug script**:
+1. **Run the proxy test script**:
    ```bash
-   node test-oauth-debug.js
+   node test-proxy-fix.js
    ```
 
-2. **Check Cloudflare Workers logs**:
-   - Go to your worker dashboard
-   - Check the "Logs" tab for detailed error messages
-   - Look for the debug messages starting with 🔍
-
-3. **Test the OAuth flow**:
+2. **Test the OAuth flow in your browser**:
    - Visit your deployed application
    - Click "Get Started" or "Continue with Gmail"
-   - Check the browser console for any error messages
+   - You should now be redirected to Google's OAuth consent screen
 
-### Step 6: Test the Setup
+3. **Check the logs** (if issues persist):
+   - Check your frontend server logs for proxy debugging information
+   - Check Cloudflare Workers logs for any remaining issues
+
+### Step 7: Test the Setup
 
 1. Visit your deployed application
 2. Click "Get Started" or "Continue with Gmail"

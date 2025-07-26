@@ -29,7 +29,8 @@ app.use('/auth', async (req, res) => {
     const requestOptions = {
       method: req.method,
       headers,
-      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req.body,
+      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : 
+            req.headers['content-type']?.includes('application/json') ? JSON.stringify(req.body) : req.body,
     };
     
     const upstreamResp = await fetch(upstreamUrl, requestOptions);
@@ -68,19 +69,35 @@ app.use('/api', async (req, res) => {
     const requestOptions = {
       method: req.method,
       headers,
-      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req.body,
+      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : 
+            req.headers['content-type']?.includes('application/json') ? JSON.stringify(req.body) : req.body,
     };
     
     console.log('Making upstream request with options:', {
       method: requestOptions.method,
       headers: requestOptions.headers,
-      hasBody: !!requestOptions.body
+      hasBody: !!requestOptions.body,
+      bodyContent: req.headers['content-type']?.includes('application/json') ? JSON.stringify(req.body) : 'not-json'
     });
     
     const upstreamResp = await fetch(upstreamUrl, requestOptions);
     
     console.log('Upstream response status:', upstreamResp.status);
     console.log('Upstream response headers:', Object.fromEntries(upstreamResp.headers.entries()));
+    
+    // If there's an error, capture the response body for debugging
+    if (!upstreamResp.ok) {
+      const errorBody = await upstreamResp.text();
+      console.error('Upstream error response body:', errorBody);
+      
+      // Forward the error response
+      res.status(upstreamResp.status);
+      upstreamResp.headers.forEach((value, key) => {
+        res.set(key, value);
+      });
+      res.send(errorBody);
+      return;
+    }
     
     // Forward status and headers
     res.status(upstreamResp.status);
