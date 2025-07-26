@@ -40,8 +40,8 @@
       ]
     }
   ],
-  "vars": {
-    "NODE_ENV": "production",
-    "VITE_PUBLIC_APP_URL": "https://pitext-email.onrender.com"
-  },
+  "secrets": [
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET"
+  ]
 }
