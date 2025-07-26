@@ -7,17 +7,19 @@ import { ZeroAgent, ZeroMCP, ZeroDB, ZeroDriver } from './durable-objects';
 import type { HonoContext } from './ctx';
 
 class WorkerClass {
-    private app = new Hono<HonoContext>()
-        .use('*', corsMiddleware)
-        .use(contextStorageMiddleware);
+    private app: Hono<HonoContext>;
 
     constructor() {
-        // Register all routes
-        registerAuthRoutes(this.app);
-        registerRoutes(this.app);
+        this.app = new Hono<HonoContext>()
+            .use('*', corsMiddleware)
+            .use(contextStorageMiddleware);
     }
 
     async fetch(request: Request, env: any, ctx: any): Promise<Response> {
+        // Register all routes
+        registerAuthRoutes(this.app);
+        registerRoutes(this.app);
+
         return this.app.fetch(request, env, ctx);
     }
 }
