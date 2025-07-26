@@ -12,10 +12,10 @@ services:
       - key: WRANGLER_ENV
         value: render
       - key: VITE_PUBLIC_BACKEND_URL
-        value: https://pitext-mail.prabhatravib.workers.dev
+        value: https://pitext-email.onrender.com
       - key: VITE_PUBLIC_APP_URL
         value: https://pitext-email.onrender.com
     healthCheckPath: /
     autoDeploy: true
-    buildCommand: pnpm install --frozen-lockfile && cd apps/mail && WRANGLER_ENV=render VITE_PUBLIC_BACKEND_URL=https://pitext-mail.prabhatravib.workers.dev VITE_PUBLIC_APP_URL=https://pitext-email.onrender.com pnpm run build
+    buildCommand: pnpm install --frozen-lockfile && cd apps/mail && WRANGLER_ENV=render VITE_PUBLIC_BACKEND_URL=https://pitext-email.onrender.com VITE_PUBLIC_APP_URL=https://pitext-email.onrender.com pnpm run build
     startCommand: cd apps/mail && NODE_ENV=production pnpm run start
