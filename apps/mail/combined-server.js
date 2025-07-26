@@ -34,17 +34,38 @@ app.use('/auth', async (req, res) => {
       method: req.method,
       headers,
       body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req.body,
+      redirect: 'manual' // Important: Don't follow redirects automatically
     };
     
     const upstreamResp = await fetch(upstreamUrl, requestOptions);
+    
+    console.log(`Upstream response status: ${upstreamResp.status}`);
+    console.log(`Upstream response headers:`, Object.fromEntries(upstreamResp.headers.entries()));
     
     // Handle redirects properly to break the loop
     if (upstreamResp.status >= 300 && upstreamResp.status < 400) {
       const location = upstreamResp.headers.get('location');
       if (location) {
-        console.log(`Following redirect to: ${location}`);
-        // Always fetch the redirected content instead of redirecting
-        // This prevents the redirect loop
+        console.log(`Redirect detected to: ${location}`);
+        
+        // Check if this is a redirect to the frontend callback
+        if (location.includes('/auth/callback/google')) {
+          console.log(`This is a callback redirect, fetching content from: ${location}`);
+          
+          // Instead of redirecting, serve the frontend callback page directly
+          const indexPath = join(__dirname, 'build', 'client', 'index.html');
+          if (existsSync(indexPath)) {
+            console.log('Serving frontend callback page directly');
+            res.sendFile(indexPath);
+            return;
+          } else {
+            console.error('Frontend build not found, falling back to redirect');
+            res.redirect(upstreamResp.status, location);
+            return;
+          }
+        }
+        
+        // For other redirects, fetch the content
         try {
           console.log(`Fetching redirected content from: ${location}`);
           const redirectResp = await fetch(location, {
@@ -56,6 +77,7 @@ app.use('/auth', async (req, res) => {
               'Accept-Encoding': 'gzip, deflate',
               'Connection': 'keep-alive',
             },
+            redirect: 'manual'
           });
           
           console.log(`Redirect response status: ${redirectResp.status}`);
