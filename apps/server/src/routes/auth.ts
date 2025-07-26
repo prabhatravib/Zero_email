@@ -109,8 +109,21 @@ publicRouter.get('/debug-callbacks', async (c) => {
 
 // Mount Better Auth handler - this handles all auth routes including sign-in/social and callbacks
 publicRouter.on(['GET', 'POST'], '/*', async (c) => {
-  const auth = createAuth(c.env);
-  return auth.handler(c.req.raw);
+  try {
+    const auth = createAuth(c.env);
+    return auth.handler(c.req.raw);
+  } catch (error) {
+    console.error('Better Auth Error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Environment variables available:', {
+      GOOGLE_CLIENT_ID: c.env.GOOGLE_CLIENT_ID ? 'set' : 'not set',
+      GOOGLE_CLIENT_SECRET: c.env.GOOGLE_CLIENT_SECRET ? 'set' : 'not set',
+      BETTER_AUTH_SECRET: c.env.BETTER_AUTH_SECRET ? 'set' : 'not set',
+      BETTER_AUTH_URL: c.env.BETTER_AUTH_URL || 'not set',
+      VITE_PUBLIC_BACKEND_URL: c.env.VITE_PUBLIC_BACKEND_URL || 'not set',
+    });
+    return c.json({ error: 'Authentication system error', details: error instanceof Error ? error.message : String(error) }, 500);
+  }
 });
 
 export { publicRouter };

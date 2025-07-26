@@ -80,7 +80,7 @@ IMPORTANT: Do NOT add credentials to wrangler.jsonc as they will be committed to
         enabled: false,
       },
     },
-    baseURL: env.VITE_PUBLIC_BACKEND_URL,
+    baseURL: env.BETTER_AUTH_URL || 'https://pitext-mail.prabhatravib.workers.dev',
     trustedOrigins: [
       'https://pitext-email.onrender.com',
       'http://localhost:3000',
