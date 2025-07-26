@@ -520,8 +520,8 @@ importers:
         specifier: 3.0.9
         version: 3.0.9
       '@hono/trpc-server':
-        specifier: ^0.3.4
-        version: 0.3.4(@trpc/server@11.4.3(typescript@5.8.3))(hono@4.8.3)
+        specifier: ^0.4.0
+        version: 0.4.0(@trpc/server@11.4.3(typescript@5.8.3))(hono@4.8.3)
       '@microsoft/microsoft-graph-client':
         specifier: ^3.0.7
         version: 3.0.7
@@ -1632,8 +1632,8 @@ packages:
     resolution: {integrity: sha512-gI3PaVcnVTGDbfRpOhN9aFoIAq37yQeG9064xoMbpUoMGo7rSrkUsLXdfENs0sq3YbwwGB+fmSGNjD+EqQm0Jw==}
     engines: {node: '>=12.0.0'}
 
-  '@hono/trpc-server@0.3.4':
-    resolution: {integrity: sha512-xFOPjUPnII70FgicDzOJy1ufIoBTu8eF578zGiDOrYOrYN8CJe140s9buzuPkX+SwJRYK8LjEBHywqZtxdm8aA==}
+  '@hono/trpc-server@0.4.0':
+    resolution: {integrity: sha512-LGlJfCmNIGMwcknZEIYdujVMs9OkNVazhpOhaz3kTWOXvNL660VOHpvvktosCiJrajyBY1RtIJKQ+IKaQvNuSg==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
       '@trpc/server': ^10.10.0 || >11.0.0-rc
@@ -9615,7 +9615,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@hono/trpc-server@0.3.4(@trpc/server@11.4.3(typescript@5.8.3))(hono@4.8.3)':
+  '@hono/trpc-server@0.4.0(@trpc/server@11.4.3(typescript@5.8.3))(hono@4.8.3)':
     dependencies:
       '@trpc/server': 11.4.3(typescript@5.8.3)
       hono: 4.8.3

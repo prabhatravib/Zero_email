@@ -37,6 +37,7 @@ export const getServerTrpc = (req: Request) =>
         maxItems: 1,
         url: getUrl(),
         transformer: superjson,
+        methodOverride: 'POST', // Ensure queries use POST
         headers: req.headers,
       }),
     ],

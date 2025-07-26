@@ -70,8 +70,6 @@ export const signIn = {
 // Simplified session management
 export const getSession = async () => {
   try {
-    console.log('Getting session from localStorage');
-    
     // First try to get session token (preferred method)
     const sessionToken = localStorage.getItem('gmail_session_token');
     

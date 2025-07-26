@@ -19,5 +19,6 @@ export const registerRoutes = (app: Hono<HonoContext>) => {
     // Register auth routes
     app.route('/auth', publicRouter);
     
+    // Register tRPC routes
     registerTrpcRoutes(app);
 }; 

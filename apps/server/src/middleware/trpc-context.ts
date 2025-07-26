@@ -7,8 +7,6 @@ export const trpcContextMiddleware = async (c: HonoContext, next: () => Promise<
     // Try to get session from custom session token first
     const sessionToken = c.req.header('X-Session-Token');
     console.log('🔍 tRPC middleware - Session token:', sessionToken ? 'present' : 'missing');
-    console.log('🔍 tRPC middleware - RAW X-Session-Token header:', sessionToken);
-    console.log('🔍 tRPC middleware - Session token length:', sessionToken?.length || 0);
     let sessionUser: any = null;
     
     if (sessionToken) {
@@ -18,10 +16,10 @@ export const trpcContextMiddleware = async (c: HonoContext, next: () => Promise<
             // Decode the session token to get user data
             let userData;
             try {
-                // Use Buffer for base64 decoding in Cloudflare Workers
-                const decodedToken = Buffer.from(sessionToken, 'base64').toString('utf-8');
+                // Use atob for base64 decoding in Cloudflare Workers (no Buffer available)
+                const decodedToken = atob(sessionToken);
                 userData = JSON.parse(decodedToken);
-                console.log('🔍 tRPC middleware - Decoded session token:', userData);
+                console.log('🔍 tRPC middleware - Decoded session token successfully');
             } catch (decodeError) {
                 console.error('🔍 tRPC middleware - Failed to decode session token:', decodeError);
                 // Fallback: try to use the token as email directly
@@ -40,7 +38,7 @@ export const trpcContextMiddleware = async (c: HonoContext, next: () => Promise<
                 
                 if (response.ok) {
                     const sessionData = await response.json();
-                    console.log('🔍 tRPC middleware - Session data retrieved:', sessionData);
+                    console.log('🔍 tRPC middleware - Session data retrieved successfully');
                     sessionUser = {
                         id: sessionData.email,
                         email: sessionData.email,

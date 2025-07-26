@@ -5,8 +5,17 @@ import type { HonoContext } from '../ctx';
 import type { Hono } from 'hono';
 
 export const registerTrpcRoutes = (app: Hono<HonoContext>) => {
-    app.use('/api/trpc', trpcContextMiddleware)
-       .use('/api/trpc', trpcServer({
-           router: appRouter,
-       }));
+    console.log('🔍 Registering tRPC routes...');
+    try {
+        // Mount middleware first, then tRPC server with wildcard path and endpoint
+        app.use('/api/trpc/*', trpcContextMiddleware)
+           .use('/api/trpc/*', trpcServer({
+               router: appRouter,
+               endpoint: '/api/trpc',
+           }));
+        
+        console.log('✅ tRPC routes registered successfully');
+    } catch (error) {
+        console.error('❌ Failed to register tRPC routes:', error);
+    }
 }; 
