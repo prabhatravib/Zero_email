@@ -24,6 +24,8 @@ app.use('/api', async (req, res) => {
     const upstreamUrl = 'https://pitext-mail.prabhatravib.workers.dev' + req.originalUrl;
     
     console.log(`Proxying ${req.method} ${req.originalUrl} -> ${upstreamUrl}`);
+    console.log('Request headers:', headers);
+    console.log('Request body:', req.body);
     
     // Prepare headers - remove problematic headers to prevent content decoding issues
     const headers = { ...req.headers };
@@ -36,11 +38,27 @@ app.use('/api', async (req, res) => {
     headers['content-type'] = headers['content-type'] || 'application/json';
     
     // Prepare request options
+    let body = undefined;
+    if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
+      // If body is already parsed as JSON, stringify it back
+      if (typeof req.body === 'object') {
+        body = JSON.stringify(req.body);
+      } else {
+        body = req.body;
+      }
+    }
+    
     const requestOptions = {
       method: req.method,
       headers,
-      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req.body,
+      body,
     };
+    
+    console.log('Request options:', {
+      method: requestOptions.method,
+      headers: requestOptions.headers,
+      body: body
+    });
     
     const upstreamResp = await fetch(upstreamUrl, requestOptions);
     
