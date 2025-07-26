@@ -1,9 +1,8 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import { jwt, bearer } from 'better-auth/plugins';
 import { getSocialProviders } from './auth-providers';
-import { env } from 'cloudflare:workers';
 
-export const createAuth = () => {
+export const createAuth = (env: any) => {
   // Fail hard if Google OAuth credentials are not properly configured
   const requiredEnvVars = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'];
   
@@ -25,7 +24,7 @@ To fix this:
 2. Create a new project or select existing project
 3. Enable Gmail API and Google+ API
 4. Create OAuth 2.0 credentials
-5. Set the authorized redirect URI to: https://pitext-mail.prabhatravib.workers.dev/auth/callback/google
+5. Set the authorized redirect URI to: https://pitext-mail.prabhatravib.workers.dev/api/auth/callback/google
 6. Add the credentials in Cloudflare Workers dashboard (NOT in wrangler.jsonc for security)
 
 Current configuration:

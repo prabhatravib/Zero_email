@@ -1,5 +1,4 @@
 import { cors } from 'hono/cors';
-import { config } from '../config';
 import type { HonoContext } from '../ctx';
 
 export const corsMiddleware = cors({
@@ -7,11 +6,17 @@ export const corsMiddleware = cors({
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return '*';
         
-        return config.cors.allowedOrigins.includes(origin) ? origin : '';
+        const allowedOrigins = [
+            'https://pitext-email.onrender.com',
+            'http://localhost:3000',
+            'http://localhost:5173'
+        ];
+        
+        return allowedOrigins.includes(origin) ? origin : '';
     },
     credentials: true,
-    allowHeaders: config.cors.allowHeaders,
-    allowMethods: config.cors.allowMethods,
-    exposeHeaders: config.cors.exposeHeaders,
-    maxAge: config.cors.maxAge,
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Session-Token'],
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    exposeHeaders: ['X-Zero-Redirect', 'Set-Cookie'],
+    maxAge: 86400,
 }); 
