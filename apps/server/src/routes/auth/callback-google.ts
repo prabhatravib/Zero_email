@@ -119,11 +119,23 @@ export const googleCallbackHandler = async (c: any) => {
         };
         console.log('User info fetched:', userData.email);
 
-        // For now, just redirect with success and user data
-        // We'll implement proper session storage later when Durable Objects are working
-        const successUrl = `${config.app.publicUrl}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&name=${encodeURIComponent(userData.name)}&picture=${encodeURIComponent(userData.picture)}`;
+        // Create a proper session token with the actual access token
+        const sessionData = {
+            email: userData.email,
+            name: userData.name,
+            picture: userData.picture,
+            access_token: tokenData.access_token,
+            refresh_token: tokenData.refresh_token,
+            expires_at: Date.now() + (tokenData.expires_in * 1000)
+        };
         
-        console.log('Redirecting to frontend with success:', successUrl);
+        // Encode the session data as base64 for the frontend
+        const sessionToken = btoa(JSON.stringify(sessionData));
+        
+        // Redirect with the actual session token
+        const successUrl = `${config.app.publicUrl}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&name=${encodeURIComponent(userData.name)}&picture=${encodeURIComponent(userData.picture)}&session=${encodeURIComponent(sessionToken)}`;
+        
+        console.log('Redirecting to frontend with success and session token');
         return c.redirect(successUrl);
 
     } catch (error) {

@@ -29,33 +29,32 @@ export default function AuthCallback() {
       if (success === 'true' && email) {
         toast.success(`Successfully connected to Gmail as ${email}`);
         
-        // Store user data in localStorage for now (temporary solution)
-        const userData = {
-          email,
-          name: name || email,
-          picture: picture || '',
-          authenticated: true,
-          timestamp: Date.now()
-        };
+        // Get the session token from the backend
+        const sessionToken = searchParams.get('session');
         
-        // Store both user data and session token for compatibility
-        localStorage.setItem('gmail_user_data', JSON.stringify(userData));
-        
-        // Create a session token that the server can validate
-        const sessionToken = btoa(JSON.stringify({
-          email,
-          name: name || email,
-          picture: picture || '',
-          access_token: 'temp_token', // Placeholder for now
-          refresh_token: 'temp_refresh', // Placeholder for now
-          expires_at: Date.now() + (24 * 60 * 60 * 1000) // 24 hours from now
-        }));
-        
-        localStorage.setItem('gmail_session_token', sessionToken);
-        console.log('DEBUG: sessionToken stored:', sessionToken);
-        console.log('DEBUG: sessionToken length:', sessionToken.length);
-        console.log('DEBUG: sessionToken type:', typeof sessionToken);
-        console.log('User data and session token stored in localStorage:', userData);
+        if (sessionToken) {
+          // Store the real session token from the backend
+          localStorage.setItem('gmail_session_token', sessionToken);
+          
+          // Store user data for compatibility
+          const userData = {
+            email,
+            name: name || email,
+            picture: picture || '',
+            authenticated: true,
+            timestamp: Date.now()
+          };
+          localStorage.setItem('gmail_user_data', JSON.stringify(userData));
+          
+          console.log('DEBUG: Real session token stored from backend');
+          console.log('DEBUG: sessionToken length:', sessionToken.length);
+          console.log('DEBUG: User data stored:', userData);
+        } else {
+          console.error('No session token received from backend');
+          toast.error('Authentication failed: No session token received');
+          navigate('/login');
+          return;
+        }
         
         // Redirect to mail with user data
         console.log('Authentication successful, redirecting to /mail');
