@@ -92,7 +92,6 @@ export const trpcClient = createTRPCClient<AppRouter>({
       transformer: superjson,
       url: getUrl(),
       maxItems: 1,
-      methodOverride: 'POST', // Ensure queries use POST
       headers: () => {
         // Get session token from localStorage
         const sessionToken = localStorage.getItem('gmail_session_token');

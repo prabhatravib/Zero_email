@@ -7,12 +7,11 @@ const getUrl = () => import.meta.env.VITE_PUBLIC_BACKEND_URL + '/api/trpc';
 export const getServerTrpc = (req: Request) =>
   createTRPCClient<AppRouter>({
     links: [
-      httpBatchLink({
-        maxItems: 1,
-        url: getUrl(),
-        transformer: superjson,
-        methodOverride: 'POST', // Ensure queries use POST
-        headers: req.headers,
-      }),
+          httpBatchLink({
+      maxItems: 1,
+      url: getUrl(),
+      transformer: superjson,
+      headers: req.headers,
+    }),
     ],
   });
