@@ -27,6 +27,12 @@ export const googleCallbackHandler = async (c: HonoContext) => {
             publicUrl: config.app.publicUrl
         });
         
+        // Log the actual client ID being used (first few characters for security)
+        const clientId = config.google.clientId;
+        const maskedClientId = clientId ? `${clientId.substring(0, 10)}...${clientId.substring(clientId.length - 10)}` : 'NOT SET';
+        console.log('Client ID being used in token exchange:', maskedClientId);
+        console.log('Expected client ID from frontend:', '363401296279-vo7al766jmct0gcat24rrn2grv2jh1p5.apps.googleusercontent.com');
+        
         // Exchange code for tokens
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
             method: 'POST',
