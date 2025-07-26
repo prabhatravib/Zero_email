@@ -106,3 +106,7 @@ publicRouter.get('/debug-callbacks', async (c) => {
 });
 
 export { publicRouter };
+
+export const registerAuthRoutes = (app: Hono<HonoContext>) => {
+    app.route('/auth', publicRouter);
+};
