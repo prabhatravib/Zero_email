@@ -40,8 +40,8 @@
       ]
     }
   ],
-  "secrets": [
-    "GOOGLE_CLIENT_ID",
-    "GOOGLE_CLIENT_SECRET"
-  ]
+  "vars": {
+    "VITE_PUBLIC_APP_URL": "https://pitext-email.onrender.com",
+    "GOOGLE_REDIRECT_URI": "https://pitext-mail.prabhatravib.workers.dev/auth/callback/google"
+  }
 }
