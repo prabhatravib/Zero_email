@@ -67,6 +67,76 @@ class WorkerClass {
                 return c.json({ url: authUrl });
             }
             return c.json({ error: 'Unsupported provider' }, 400);
+        })
+        .get('/auth/callback/google', async (c) => {
+            // Handle Google OAuth callback
+            const code = c.req.query('code');
+            const error = c.req.query('error');
+
+            if (error) {
+                return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=${encodeURIComponent(error)}`);
+            }
+
+            if (!code) {
+                return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=no_code`);
+            }
+
+            try {
+                // Exchange code for tokens
+                const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        client_id: GOOGLE_CLIENT_ID,
+                        client_secret: GOOGLE_CLIENT_SECRET,
+                        code: code,
+                        grant_type: 'authorization_code',
+                        redirect_uri: GOOGLE_REDIRECT_URI,
+                    }),
+                });
+
+                if (!tokenResponse.ok) {
+                    console.error('Token exchange failed:', await tokenResponse.text());
+                    return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=token_exchange_failed`);
+                }
+
+                const tokenData = await tokenResponse.json() as any;
+
+                // Get user info
+                const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+                    headers: {
+                        'Authorization': `Bearer ${tokenData.access_token}`,
+                    },
+                });
+
+                if (!userResponse.ok) {
+                    console.error('User info fetch failed:', await userResponse.text());
+                    return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=user_info_failed`);
+                }
+
+                const userData = await userResponse.json() as any;
+
+                // Create a session token
+                const sessionToken = btoa(JSON.stringify({
+                    userId: userData.id,
+                    email: userData.email,
+                    name: userData.name,
+                    picture: userData.picture,
+                    access_token: tokenData.access_token,
+                    refresh_token: tokenData.refresh_token,
+                    exp: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
+                }));
+
+                // Redirect to success with session token
+                const redirectUrl = `${VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&session=${encodeURIComponent(sessionToken)}`;
+                return c.redirect(redirectUrl);
+
+            } catch (error) {
+                console.error('OAuth callback error:', error);
+                return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=callback_error`);
+            }
         });
 
     async fetch(request: Request, env: any, ctx: any): Promise<Response> {
