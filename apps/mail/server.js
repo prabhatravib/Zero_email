@@ -111,14 +111,56 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Debug endpoint to check what files are available
+app.get('/debug/assets', (req, res) => {
+  const fs = require('fs');
+  const assetsPath = join(__dirname, 'build/client/assets');
+  
+  try {
+    const files = fs.readdirSync(assetsPath);
+    const jsFiles = files.filter(f => f.endsWith('.js'));
+    res.json({
+      totalFiles: files.length,
+      jsFiles: jsFiles,
+      assetsPath: assetsPath
+    });
+  } catch (error) {
+    res.json({
+      error: error.message,
+      assetsPath: assetsPath
+    });
+  }
+});
+
+// Specific route handler for JavaScript files to ensure proper MIME types
+app.get('*.js', (req, res) => {
+  const fs = require('fs');
+  const filePath = join(__dirname, 'build/client', req.path);
+  
+  console.log('JS file request:', req.path, '->', filePath);
+  
+  if (fs.existsSync(filePath)) {
+    console.log('JS file found, serving with proper MIME type');
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(filePath);
+  } else {
+    console.log('JS file not found, returning 404');
+    res.status(404).send('JavaScript file not found');
+  }
+});
+
 // Serve static files from the build directory with proper MIME types
 app.use(express.static(join(__dirname, 'build/client'), {
   setHeaders: (res, path) => {
+    console.log('Serving static file:', path);
+    
     // Set proper MIME types for JavaScript files
     if (path.endsWith('.js')) {
       res.setHeader('Content-Type', 'application/javascript');
+      console.log('Set Content-Type: application/javascript for:', path);
     } else if (path.endsWith('.mjs')) {
       res.setHeader('Content-Type', 'application/javascript');
+      console.log('Set Content-Type: application/javascript for:', path);
     } else if (path.endsWith('.css')) {
       res.setHeader('Content-Type', 'text/css');
     } else if (path.endsWith('.woff2')) {
