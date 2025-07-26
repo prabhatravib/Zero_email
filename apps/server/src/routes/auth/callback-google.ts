@@ -8,12 +8,18 @@ export const googleCallbackHandler = async (c: HonoContext) => {
 
     if (error) {
         console.error('Google OAuth error from Google:', error);
-        return c.redirect(`${config.app.publicUrl}/auth/callback/google?error=${encodeURIComponent(error)}`);
+        return c.json({ 
+            error: true, 
+            message: error 
+        }, 400);
     }
 
     if (!code) {
         console.error('No authorization code received from Google');
-        return c.redirect(`${config.app.publicUrl}/auth/callback/google?error=no_code`);
+        return c.json({ 
+            error: true, 
+            message: 'No authorization code received' 
+        }, 400);
     }
 
     try {
@@ -37,7 +43,10 @@ export const googleCallbackHandler = async (c: HonoContext) => {
         if (!tokenResponse.ok) {
             const errorText = await tokenResponse.text();
             console.error('Token exchange failed:', errorText);
-            return c.redirect(`${config.app.publicUrl}/auth/callback/google?error=token_exchange_failed`);
+            return c.json({ 
+                error: true, 
+                message: 'Token exchange failed' 
+            }, 400);
         }
 
         const tokenData = await tokenResponse.json() as {
@@ -57,7 +66,10 @@ export const googleCallbackHandler = async (c: HonoContext) => {
         if (!userResponse.ok) {
             const errorText = await userResponse.text();
             console.error('User info fetch failed:', errorText);
-            return c.redirect(`${config.app.publicUrl}/auth/callback/google?error=user_info_failed`);
+            return c.json({ 
+                error: true, 
+                message: 'Failed to get user info' 
+            }, 400);
         }
 
         const userData = await userResponse.json() as {
@@ -67,12 +79,18 @@ export const googleCallbackHandler = async (c: HonoContext) => {
         };
         console.log('User info fetched:', userData.email);
 
-        // For now, just redirect with success and user data
-        // We'll implement proper session storage later when Durable Objects are working
-        const successUrl = `${config.app.publicUrl}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&name=${encodeURIComponent(userData.name)}&picture=${encodeURIComponent(userData.picture)}`;
-        
-        console.log('Redirecting to frontend with success:', successUrl);
-        return c.redirect(successUrl);
+        // Return JSON response instead of redirecting
+        return c.json({
+            success: true,
+            user: {
+                email: userData.email,
+                name: userData.name,
+                picture: userData.picture,
+                access_token: tokenData.access_token,
+                refresh_token: tokenData.refresh_token,
+                expires_in: tokenData.expires_in
+            }
+        });
 
     } catch (error) {
         console.error('OAuth callback error:', error);
@@ -85,6 +103,9 @@ export const googleCallbackHandler = async (c: HonoContext) => {
                 errorType = 'parse_error';
             }
         }
-        return c.redirect(`${config.app.publicUrl}/auth/callback/google?error=${encodeURIComponent(errorType)}`);
+        return c.json({ 
+            error: true, 
+            message: errorType 
+        }, 500);
     }
 }; 
