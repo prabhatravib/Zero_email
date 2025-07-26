@@ -11,9 +11,11 @@ export default function AuthCallback() {
       const error = searchParams.get('error');
       const success = searchParams.get('success');
       const email = searchParams.get('email');
+      const name = searchParams.get('name');
+      const picture = searchParams.get('picture');
       const exchangeToken = searchParams.get('exchange');
 
-      console.log('Auth callback parameters:', { error, success, email, exchangeToken });
+      console.log('Auth callback parameters:', { error, success, email, name, picture, exchangeToken });
 
       // Handle OAuth errors
       if (error) {
@@ -27,65 +29,32 @@ export default function AuthCallback() {
       if (success === 'true' && email) {
         toast.success(`Successfully connected to Gmail as ${email}`);
         
-        // Exchange the exchange token for a session token
-        if (exchangeToken) {
-          try {
-            const response = await fetch('/api/auth/exchange-token', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ exchangeToken }),
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              if (data.sessionId) {
-                // Store session token in localStorage for cross-domain access
-                localStorage.setItem('gmail_session_token', data.sessionId);
-                console.log('Session token stored in localStorage');
-                
-                // Redirect to mail with valid session
-                console.log('Valid session established, redirecting to /mail');
-                navigate('/mail');
-                return;
-              }
-            } else {
-              const errorData = await response.json();
-              console.error('Exchange token failed:', errorData);
-            }
-          } catch (error) {
-            console.error('Failed to exchange token:', error);
-          }
-        }
+        // Store user data in localStorage for now (temporary solution)
+        const userData = {
+          email,
+          name: name || email,
+          picture: picture || '',
+          authenticated: true,
+          timestamp: Date.now()
+        };
         
-        // If no exchange token or exchange fails, redirect to login
-        console.log('No exchange token or exchange failed, redirecting to login');
-        toast.error('Gmail authentication failed. Please try again.');
-        navigate('/login');
+        localStorage.setItem('gmail_user_data', JSON.stringify(userData));
+        console.log('User data stored in localStorage:', userData);
+        
+        // Redirect to mail with user data
+        console.log('Authentication successful, redirecting to /mail');
+        navigate('/mail');
         return;
       }
 
-      // If no specific parameters, try to get session info
+      // If no specific parameters, try to get existing user data
       try {
-        console.log('No callback parameters, checking existing session');
+        console.log('No callback parameters, checking existing user data');
         
-        // Get session token from localStorage
-        const sessionToken = localStorage.getItem('gmail_session_token');
-        
-        const headers: Record<string, string> = {};
-        if (sessionToken) {
-          headers['X-Session-Token'] = sessionToken;
-        }
-        
-        const response = await fetch('/api/auth/get-session', {
-          credentials: 'include',
-          headers,
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.user) {
+        const userDataStr = localStorage.getItem('gmail_user_data');
+        if (userDataStr) {
+          const userData = JSON.parse(userDataStr);
+          if (userData.authenticated) {
             toast.success('Gmail session found!');
             console.log('Existing Gmail session found, redirecting to /mail');
             navigate('/mail');
@@ -93,7 +62,7 @@ export default function AuthCallback() {
           }
         }
       } catch (error) {
-        console.error('Failed to get Gmail session:', error);
+        console.error('Failed to get existing user data:', error);
       }
 
       // Fallback: redirect to login

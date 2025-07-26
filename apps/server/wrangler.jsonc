@@ -42,6 +42,6 @@
   ],
   "vars": {
     "VITE_PUBLIC_APP_URL": "https://pitext-email.onrender.com",
-    "GOOGLE_REDIRECT_URI": "https://pitext-email.onrender.com/auth/callback/google"
+    "GOOGLE_REDIRECT_URI": "https://pitext-mail.prabhatravib.workers.dev/auth/callback/google"
   }
 }

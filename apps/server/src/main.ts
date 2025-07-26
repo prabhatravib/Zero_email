@@ -41,6 +41,34 @@ class WorkerClass {
         }))
         .use(contextStorage())
         .get('/test', (c) => c.json({ message: 'Server is working!' }))
+        .get('/test-db', async (c) => {
+            try {
+                const env = c.env as any;
+                const db = env.ZERO_DB;
+                
+                if (!db) {
+                    return c.json({ error: 'ZERO_DB not available' }, 500);
+                }
+                
+                const sessionObj = db.get(db.idFromName('sessions'));
+                if (!sessionObj) {
+                    return c.json({ error: 'Failed to get session object' }, 500);
+                }
+                
+                // Test the session object
+                const testResponse = await sessionObj.fetch('http://localhost/test', {
+                    method: 'GET'
+                });
+                
+                if (testResponse.ok) {
+                    return c.json({ message: 'ZERO_DB is working!', dbTest: 'success' });
+                } else {
+                    return c.json({ error: 'ZERO_DB test failed', status: testResponse.status });
+                }
+            } catch (error) {
+                return c.json({ error: 'ZERO_DB test error', details: error instanceof Error ? error.message : String(error) }, 500);
+            }
+        })
         .get('/debug', (c) => c.json({ 
             message: 'Debug endpoint',
             env: {
@@ -224,10 +252,12 @@ class WorkerClass {
             const error = c.req.query('error');
 
             if (error) {
+                console.error('Google OAuth error from Google:', error);
                 return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=${encodeURIComponent(error)}`);
             }
 
             if (!code) {
+                console.error('No authorization code received from Google');
                 return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=no_code`);
             }
 
@@ -250,7 +280,8 @@ class WorkerClass {
                 });
 
                 if (!tokenResponse.ok) {
-                    console.error('Token exchange failed:', await tokenResponse.text());
+                    const errorText = await tokenResponse.text();
+                    console.error('Token exchange failed:', errorText);
                     return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=token_exchange_failed`);
                 }
 
@@ -269,7 +300,8 @@ class WorkerClass {
                 });
 
                 if (!userResponse.ok) {
-                    console.error('User info fetch failed:', await userResponse.text());
+                    const errorText = await userResponse.text();
+                    console.error('User info fetch failed:', errorText);
                     return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=user_info_failed`);
                 }
 
@@ -280,62 +312,25 @@ class WorkerClass {
                 };
                 console.log('User info fetched:', userData.email);
 
-                // Create a session ID
-                const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                // For now, just redirect with success and user data
+                // We'll implement proper session storage later when Durable Objects are working
+                const successUrl = `${VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&name=${encodeURIComponent(userData.name)}&picture=${encodeURIComponent(userData.picture)}`;
                 
-                // Get ZeroDB instance
-                const env = c.env as any;
-                const db = env.ZERO_DB;
-                const sessionObj = db.get(db.idFromName('sessions')); // Use fixed ID for sessions
-                
-                // Store session data in ZeroDB Durable Object
-                try {
-                    // Store session data
-                    const sessionData = {
-                        email: userData.email,
-                        name: userData.name,
-                        picture: userData.picture,
-                        access_token: tokenData.access_token,
-                        refresh_token: tokenData.refresh_token,
-                        expires_at: Date.now() + (tokenData.expires_in * 1000),
-                    };
-                    
-                    await sessionObj.fetch('http://localhost/store', {
-                        method: 'POST',
-                        body: JSON.stringify({ sessionId, sessionData }),
-                    });
-                    
-                    console.log('Session stored in ZeroDB');
-                } catch (dbError) {
-                    console.error('Failed to store session in ZeroDB:', dbError);
-                    // Continue anyway - session will be validated later
-                }
-
-                // Set a secure, short-lived token for the frontend to exchange for the session
-                const exchangeToken = `ex_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                
-                // Store the exchange token temporarily (expires in 5 minutes)
-                try {
-                    await sessionObj.fetch('http://localhost/store-exchange', {
-                        method: 'POST',
-                        body: JSON.stringify({ 
-                            exchangeToken, 
-                            sessionId,
-                            expiresAt: Date.now() + (5 * 60 * 1000) // 5 minutes
-                        }),
-                    });
-                } catch (exchangeError) {
-                    console.error('Failed to store exchange token:', exchangeError);
-                    // Fallback: redirect without exchange token
-                    return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}`);
-                }
-                
-                // Redirect to frontend with exchange token (not the actual session token)
-                return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&exchange=${encodeURIComponent(exchangeToken)}`);
+                console.log('Redirecting to frontend with success:', successUrl);
+                return c.redirect(successUrl);
 
             } catch (error) {
                 console.error('OAuth callback error:', error);
-                return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=callback_error`);
+                // Provide more specific error information
+                let errorType = 'callback_error';
+                if (error instanceof Error) {
+                    if (error.message.includes('fetch')) {
+                        errorType = 'network_error';
+                    } else if (error.message.includes('JSON')) {
+                        errorType = 'parse_error';
+                    }
+                }
+                return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=${encodeURIComponent(errorType)}`);
             }
         });
 

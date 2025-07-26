@@ -59,38 +59,42 @@ export const signIn = {
 // Simplified session management
 export const getSession = async () => {
   try {
-    console.log('Making session request to: /api/auth/get-session');
+    console.log('Getting session from localStorage');
     
-    // Get session token from localStorage for cross-domain access
-    const sessionToken = localStorage.getItem('gmail_session_token');
+    // Get user data from localStorage
+    const userDataStr = localStorage.getItem('gmail_user_data');
     
-    const headers: Record<string, string> = {
-      'Accept': 'application/json',
-    };
-    
-    // Add session token to headers if available
-    if (sessionToken) {
-      headers['X-Session-Token'] = sessionToken;
-    }
-    
-    const response = await fetch(`/api/auth/get-session`, {
-      method: 'GET',
-      headers,
-      credentials: 'include',
-    });
-
-    console.log('Session response status:', response.status);
-
-    if (!response.ok) {
-      console.error('Session request failed:', response.status, response.statusText);
+    if (!userDataStr) {
+      console.log('No user data found in localStorage');
       return null;
     }
-
-    const data = await response.json();
-    console.log('Session response data:', data);
-    return data.user;
+    
+    const userData = JSON.parse(userDataStr);
+    
+    // Check if user data is still valid (not expired)
+    if (userData.authenticated && userData.timestamp) {
+      const now = Date.now();
+      const age = now - userData.timestamp;
+      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+      
+      if (age < maxAge) {
+        console.log('Valid user session found:', userData.email);
+        return {
+          id: userData.email,
+          email: userData.email,
+          name: userData.name,
+          image: userData.picture,
+        };
+      } else {
+        console.log('User session expired, clearing localStorage');
+        localStorage.removeItem('gmail_user_data');
+        return null;
+      }
+    }
+    
+    return null;
   } catch (error) {
-    console.error('Failed to get session:', error);
+    console.error('Failed to get session from localStorage:', error);
     return null;
   }
 };
@@ -154,8 +158,8 @@ export const handleAuthError = (error: any) => {
 export const signOut = async () => {
   try {
     console.log('Signing out...');
-    // Clear session token from localStorage
-    localStorage.removeItem('gmail_session_token');
+    // Clear user data from localStorage
+    localStorage.removeItem('gmail_user_data');
     console.log('Sign out successful');
   } catch (error) {
     console.error('Sign out error:', error);
