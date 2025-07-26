@@ -25,17 +25,10 @@ export class OutlookMailManager implements MailManager {
 
   constructor(public config: ManagerConfig) {
     const getAccessToken = async () => {
-      const c = getContext<HonoContext>();
-      const data = await c.var.auth.api.getAccessToken({
-        body: {
-          providerId: 'microsoft',
-          userId: config.auth.userId,
-          // accountId: config.auth.accountId,
-        },
-        headers: c.req.raw.headers,
-      });
-      if (!data.accessToken) throw new Error('Failed to get access token');
-      return data.accessToken;
+      // For now, use the access token from config
+      // This will need to be updated when Microsoft OAuth is implemented
+      if (!config.auth?.accessToken) throw new Error('No access token available');
+      return config.auth.accessToken;
     };
 
     this.graphClient = Client.initWithMiddleware({

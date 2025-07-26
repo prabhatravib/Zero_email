@@ -1,10 +1,16 @@
 import type { env } from 'cloudflare:workers';
-import type { Auth } from './lib/auth';
 
-export type SessionUser = NonNullable<Awaited<ReturnType<Auth['api']['getSession']>>>['user'];
+export type SessionUser = {
+  id: string;
+  email: string;
+  name?: string;
+  image?: string;
+  emailVerified?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
 
 export type HonoVariables = {
-  auth: Auth;
   sessionUser?: SessionUser;
 };
 

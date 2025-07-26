@@ -44,7 +44,6 @@ export const activeConnectionProcedure = privateProcedure.use(async ({ ctx, next
         const activeConnection = await getActiveConnection();
         return next({ ctx: { ...ctx, activeConnection } });
     } catch (err) {
-        await ctx.c.var.auth.api.signOut({ headers: ctx.c.req.raw.headers });
         throw new TRPCError({
             code: 'BAD_REQUEST',
             message: err instanceof Error ? err.message : 'Failed to get active connection',

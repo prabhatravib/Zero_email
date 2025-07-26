@@ -31,11 +31,21 @@ export const signInSocialHandler = async (c: HonoContext) => {
         }
         
         if (body.provider === 'google') {
-            const env = c.env as unknown as Record<string, string>;
-            const authUrl = getGoogleOAuthUrl(env);
+            console.log('Processing Google OAuth request...');
             
-            console.log('Generated Google OAuth URL:', authUrl);
-            return c.json({ url: authUrl });
+            const env = c.env as unknown as Record<string, string>;
+            console.log('Environment variables available:', Object.keys(env).filter(key => key.includes('GOOGLE')));
+            console.log('GOOGLE_CLIENT_ID:', env.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET');
+            console.log('GOOGLE_CLIENT_SECRET:', env.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET');
+            
+            try {
+                const authUrl = getGoogleOAuthUrl(env);
+                console.log('Generated Google OAuth URL:', authUrl);
+                return c.json({ url: authUrl });
+            } catch (urlError) {
+                console.error('Error generating OAuth URL:', urlError);
+                return c.json({ error: 'Failed to generate OAuth URL', details: urlError instanceof Error ? urlError.message : 'Unknown error' }, 500);
+            }
         }
         
         return c.json({ error: 'Unsupported provider' }, 400);

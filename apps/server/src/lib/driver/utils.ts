@@ -10,11 +10,10 @@ export const deleteActiveConnection = async () => {
   const c = getContext<HonoContext>();
   const activeConnection = await getActiveConnection();
   if (!activeConnection) return console.log('No connection ID found');
-  const session = await c.var.auth.api.getSession({ headers: c.req.raw.headers });
-  if (!session) return console.log('No session found');
+  const sessionUser = c.var.sessionUser;
+  if (!sessionUser) return console.log('No session found');
   try {
-    await c.var.auth.api.signOut({ headers: c.req.raw.headers });
-    const db = await getZeroDB(session.user.id);
+    const db = await getZeroDB(sessionUser.id);
     await db.deleteActiveConnection(activeConnection.id);
   } catch (error) {
     console.error('Server: Error deleting connection:', error);

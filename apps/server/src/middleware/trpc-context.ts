@@ -1,9 +1,8 @@
-import { createAuth } from '../lib/auth';
 import type { HonoContext } from '../ctx';
 
 export const trpcContextMiddleware = async (c: HonoContext, next: () => Promise<void>) => {
     // Set up session and auth context for tRPC
-    const auth = createAuth();
+    const env = c.env as any;
     
     // Try to get session from custom session token first
     const sessionToken = c.req.header('X-Session-Token');
@@ -81,16 +80,9 @@ export const trpcContextMiddleware = async (c: HonoContext, next: () => Promise<
         }
     }
     
-    // Fallback to better-auth session if no custom token
-    if (!sessionUser) {
-        const session = await auth.api.getSession({ headers: c.req.raw.headers });
-        sessionUser = session?.user || null;
-    }
-    
     // Set context variables that tRPC expects
     console.log('🔍 tRPC middleware - Final session user:', sessionUser ? 'present' : 'null');
     c.set('sessionUser', sessionUser as any || undefined);
-    c.set('auth', auth);
     
     return next();
 }; 

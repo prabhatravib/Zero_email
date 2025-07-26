@@ -42,6 +42,5 @@ export const serverTrpc = () => {
   return appRouter.createCaller({
     c,
     sessionUser: c.var.sessionUser,
-    auth: c.var.auth,
   });
 };

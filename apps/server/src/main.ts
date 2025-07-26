@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { corsMiddleware } from './middleware/cors';
 import { contextStorageMiddleware } from './middleware/context-storage';
-import { registerAuthRoutes } from './routes/auth';
+import { registerAuthRoutes } from './routes/auth/index';
 import { registerRoutes } from './routes';
 import { ZeroAgent, ZeroMCP, ZeroDB, ZeroDriver } from './durable-objects';
 import type { HonoContext } from './ctx';
