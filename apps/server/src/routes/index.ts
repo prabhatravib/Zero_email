@@ -1,6 +1,6 @@
 import { testHandler, testDbHandler, testTrpcHandler } from './test';
 import { debugHandler } from './debug';
-
+import { publicRouter } from './auth';
 import { debugEnvHandler } from './debug-env';
 import { healthHandler } from './health';
 import { registerTrpcRoutes } from './trpc';
@@ -15,6 +15,9 @@ export const registerRoutes = (app: Hono<HonoContext>) => {
        .get('/debug-env', debugEnvHandler)
        .get('/health', healthHandler)
        .get('/api/test', testTrpcHandler);
+    
+    // Register auth routes
+    app.route('/auth', publicRouter);
     
     registerTrpcRoutes(app);
 }; 
