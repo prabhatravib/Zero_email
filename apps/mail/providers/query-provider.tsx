@@ -98,9 +98,12 @@ export const trpcClient = createTRPCClient<AppRouter>({
         const headers: Record<string, string> = {};
         
         if (sessionToken) {
+          console.log('🔍 tRPC Client - Sending session token:', sessionToken.substring(0, 20) + '...');
           headers['X-Session-Token'] = sessionToken;
           // Also try Authorization header as fallback
           headers['Authorization'] = `Bearer ${sessionToken}`;
+        } else {
+          console.log('🔍 tRPC Client - No session token found in localStorage');
         }
         
         return headers;

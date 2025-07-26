@@ -16,6 +16,16 @@ export const registerRoutes = (app: Hono<HonoContext>) => {
        .get('/health', healthHandler)
        .get('/api/test', testTrpcHandler);
     
+    // WebSocket route for agents
+    app.get('/agents/:agentId/:channel', async (c) => {
+        const { agentId, channel } = c.req.param();
+        const env = c.env as any;
+        
+        // Forward to Durable Object
+        const agent = env.ZERO_AGENT.get(env.ZERO_AGENT.idFromName(agentId));
+        return agent.fetch(c.req.raw);
+    });
+    
     // Register auth routes
     app.route('/auth', publicRouter);
     
