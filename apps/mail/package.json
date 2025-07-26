@@ -5,10 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "react-router dev",
+    "dev:custom": "node dev-server.js",
+    "dev:fixed": "vite --config vite.config.ts",
     "build": "react-router build",
     "start": "node start.js",
     "start:static": "node server.js",
     "start:prod": "NODE_ENV=production node start.js",
+    "test:mime": "node test-mime-types.js",
     "types": "wrangler types",
     "deploy": "wrangler deploy",
     "lint": "eslint .",

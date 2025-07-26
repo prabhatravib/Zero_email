@@ -60,6 +60,23 @@ export default defineConfig(({ mode }) => {
       warmup: {
         clientFiles: ['./app/**/*', './components/**/*'],
       },
+      // Fix MIME type issues
+      headers: {
+        'Cross-Origin-Embedder-Policy': 'unsafe-none',
+        'Cross-Origin-Opener-Policy': 'unsafe-none',
+      },
+      // Ensure proper MIME types for JavaScript files
+      fs: {
+        strict: false,
+      },
+    },
+    // Fix MIME type issues in development
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        '@react-router/dev',
+      ],
     },
     css: {
       postcss: {
@@ -73,6 +90,24 @@ export default defineConfig(({ mode }) => {
     //   },
     build: {
       sourcemap: false,
+      // Ensure proper MIME types in build
+      rollupOptions: {
+        output: {
+          assetFileNames: (assetInfo) => {
+            const info = assetInfo.name.split('.');
+            const ext = info[info.length - 1];
+            if (/\.(css)$/.test(assetInfo.name)) {
+              return `assets/css/[name]-[hash][extname]`;
+            }
+            if (/\.(png|jpe?g|svg|gif|tiff|bmp|ico)$/i.test(assetInfo.name)) {
+              return `assets/images/[name]-[hash][extname]`;
+            }
+            return `assets/[name]-[hash][extname]`;
+          },
+          chunkFileNames: 'assets/js/[name]-[hash].js',
+          entryFileNames: 'assets/js/[name]-[hash].js',
+        },
+      },
     },
     resolve: {
       alias: {
