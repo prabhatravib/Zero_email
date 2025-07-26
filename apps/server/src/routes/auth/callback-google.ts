@@ -1,9 +1,29 @@
 import { createConfig } from '../../config';
 import type { HonoContext } from '../../ctx';
 
-export const googleCallbackHandler = async (c: HonoContext) => {
+export const googleCallbackHandler = async (c: any) => {
     const env = c.env as unknown as Record<string, string>;
+    
+    // Debug environment variables
+    console.log('🔍 googleCallbackHandler - Environment variables check:');
+    console.log('env.GOOGLE_CLIENT_ID:', env?.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET');
+    console.log('env.GOOGLE_CLIENT_SECRET:', env?.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET');
+    console.log('env.GOOGLE_REDIRECT_URI:', env?.GOOGLE_REDIRECT_URI);
+    
+    // Check if environment variables are accessible
+    if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+        console.error('Google OAuth credentials not accessible in callback handler');
+        return c.redirect(`https://pitext-email.onrender.com/auth/callback/google?error=${encodeURIComponent('oauth_config_error')}`);
+    }
+    
     const config = createConfig(env);
+    
+    // Debug config
+    console.log('🔍 googleCallbackHandler - Config created:');
+    console.log('config.google.clientId:', config.google.clientId);
+    console.log('config.google.clientSecret:', config.google.clientSecret ? 'SET' : 'NOT SET');
+    console.log('config.google.redirectUri:', config.google.redirectUri);
+    
     // Handle Google OAuth callback
     const code = c.req.query('code');
     const error = c.req.query('error');
