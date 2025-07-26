@@ -38,6 +38,54 @@ app.use('/auth', async (req, res) => {
     
     const upstreamResp = await fetch(upstreamUrl, requestOptions);
     
+    // Handle redirects properly to break the loop
+    if (upstreamResp.status >= 300 && upstreamResp.status < 400) {
+      const location = upstreamResp.headers.get('location');
+      if (location) {
+        console.log(`Following redirect to: ${location}`);
+        // Always fetch the redirected content instead of redirecting
+        // This prevents the redirect loop
+        try {
+          console.log(`Fetching redirected content from: ${location}`);
+          const redirectResp = await fetch(location, {
+            method: 'GET',
+            headers: {
+              'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Accept-Language': 'en-US,en;q=0.5',
+              'Accept-Encoding': 'gzip, deflate',
+              'Connection': 'keep-alive',
+            },
+          });
+          
+          console.log(`Redirect response status: ${redirectResp.status}`);
+          
+          // Forward the redirect response status and headers
+          res.status(redirectResp.status);
+          redirectResp.headers.forEach((value, key) => {
+            const lowerKey = key.toLowerCase();
+            // Don't forward problematic headers
+            if (!['content-encoding', 'content-length', 'transfer-encoding', 'connection'].includes(lowerKey)) {
+              res.set(key, value);
+            }
+          });
+          
+          // Stream the response body
+          redirectResp.body.pipe(res);
+          return;
+        } catch (redirectError) {
+          console.error('Failed to fetch redirected content:', redirectError);
+          // Fallback: return the original redirect response
+          res.status(upstreamResp.status);
+          upstreamResp.headers.forEach((value, key) => {
+            res.set(key, value);
+          });
+          upstreamResp.body.pipe(res);
+          return;
+        }
+      }
+    }
+    
     // Forward status and headers
     res.status(upstreamResp.status);
     upstreamResp.headers.forEach((value, key) => {
@@ -167,7 +215,7 @@ if (existsSync(buildDir)) {
 const port = process.env.PORT || 10000;
 app.listen(port, () => {
   console.log(`Combined server listening on port ${port}`);
-  console.log(`Proxying /auth/* -> https://pitext-mail.prabhatravib.workers.dev/auth/*`);
+  console.log(`Proxying /auth/* -> https://pitext-mail.prabhatravib.workers.dev/auth/* (with content fetching)`);
   console.log(`Proxying /api/* -> https://pitext-mail.prabhatravib.workers.dev/api/*`);
   console.log(`Serving frontend from: ${buildDir}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

@@ -9,9 +9,13 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleCallback = async () => {
       const error = searchParams.get('error');
+      const success = searchParams.get('success');
+      const email = searchParams.get('email');
+      const name = searchParams.get('name');
+      const picture = searchParams.get('picture');
       const code = searchParams.get('code');
 
-      console.log('Auth callback parameters:', { error, code });
+      console.log('Auth callback parameters:', { error, success, email, name, picture, code });
 
       // Handle OAuth errors from Google
       if (error) {
@@ -21,7 +25,44 @@ export default function AuthCallback() {
         return;
       }
 
-      // Handle OAuth code from Google
+      // Handle successful Gmail authentication (current redirect-based flow)
+      if (success === 'true' && email) {
+        toast.success(`Successfully connected to Gmail as ${email}`);
+        
+        // Store user data in localStorage
+        const userDataToStore = {
+          email,
+          name: name || email,
+          picture: picture || '',
+          authenticated: true,
+          timestamp: Date.now()
+        };
+        
+        localStorage.setItem('gmail_user_data', JSON.stringify(userDataToStore));
+        
+        // Create a session token that the server can validate
+        const sessionToken = btoa(JSON.stringify({
+          email,
+          name: name || email,
+          picture: picture || '',
+          access_token: 'temp_token', // Placeholder for now
+          refresh_token: 'temp_refresh', // Placeholder for now
+          expires_at: Date.now() + (24 * 60 * 60 * 1000) // 24 hours from now
+        }));
+        
+        localStorage.setItem('gmail_session_token', sessionToken);
+        console.log('DEBUG: sessionToken stored:', sessionToken);
+        console.log('DEBUG: sessionToken length:', sessionToken.length);
+        console.log('DEBUG: sessionToken type:', typeof sessionToken);
+        console.log('User data and session token stored in localStorage:', userDataToStore);
+        
+        // Redirect to mail with user data
+        console.log('Authentication successful, redirecting to /mail');
+        navigate('/mail');
+        return;
+      }
+
+      // Handle OAuth code from Google (future JSON-based flow)
       if (code) {
         try {
           console.log('Processing OAuth code:', code);
