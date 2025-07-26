@@ -37,7 +37,17 @@ export const getServerTrpc = (req: Request) =>
       maxItems: 1,
       url: getUrl(),
       transformer: superjson,
-      headers: req.headers,
+      headers: () => {
+        // Get session token from request headers for server-side rendering
+        const sessionToken = req.headers.get('X-Session-Token') || req.headers.get('Authorization')?.replace('Bearer ', '');
+        const headers: Record<string, string> = {};
+        
+        if (sessionToken) {
+          headers['X-Session-Token'] = sessionToken;
+        }
+        
+        return headers;
+      },
     }),
     ],
   });

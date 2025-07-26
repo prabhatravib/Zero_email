@@ -93,12 +93,14 @@ export const trpcClient = createTRPCClient<AppRouter>({
       url: getUrl(),
       maxItems: 1,
       headers: () => {
-        // Get session token from localStorage
+        // Get session token from localStorage for cross-site requests
         const sessionToken = localStorage.getItem('gmail_session_token');
         const headers: Record<string, string> = {};
         
         if (sessionToken) {
           headers['X-Session-Token'] = sessionToken;
+          // Also try Authorization header as fallback
+          headers['Authorization'] = `Bearer ${sessionToken}`;
         }
         
         return headers;
