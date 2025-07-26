@@ -1,16 +1,16 @@
 // Custom auth proxy for our new endpoints
-// Use environment variable for backend URL
-const BACKEND_URL = import.meta.env.VITE_PUBLIC_BACKEND_URL || 'https://pitext-mail.prabhatravib.workers.dev';
+// Use relative URLs to go through the frontend proxy
+const BACKEND_URL = ''; // Empty string means relative URLs
 
 // Debug: Log the backend URL being used
-console.log('Auth proxy - BACKEND_URL from env:', BACKEND_URL);
+console.log('Auth proxy - Using relative URLs for frontend proxy');
 console.log('Auth proxy - All env vars:', import.meta.env);
 
 export const authProxy = {
   api: {
     getSession: async ({ headers }: { headers: Headers }) => {
       try {
-        console.log('Auth proxy - Making session request to:', `${BACKEND_URL}/api/auth/get-session`);
+        console.log('Auth proxy - Making session request to: /api/auth/get-session');
         
         // For cross-domain setup, we need to send the session token from the frontend cookie
         const cookies = document.cookie;
@@ -28,7 +28,7 @@ export const authProxy = {
           requestHeaders.set('X-Session-Token', sessionCookie);
         }
         
-        const response = await fetch(`${BACKEND_URL}/api/auth/get-session`, {
+        const response = await fetch(`/api/auth/get-session`, {
           method: 'GET',
           headers: requestHeaders,
           credentials: 'include',

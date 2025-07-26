@@ -1,11 +1,11 @@
 import React from 'react';
 
 // Custom auth client for our new endpoints
-// Use environment variable for backend URL
-const BACKEND_URL = import.meta.env.VITE_PUBLIC_BACKEND_URL || 'https://pitext-mail.prabhatravib.workers.dev';
+// Use relative URLs to go through the frontend proxy
+const BACKEND_URL = ''; // Empty string means relative URLs
 
 // Debug: Log the backend URL being used
-console.log('Auth client - BACKEND_URL from env:', BACKEND_URL);
+console.log('Auth client - Using relative URLs for frontend proxy');
 console.log('Auth client - All env vars:', import.meta.env);
 
 export const authClient = {
@@ -19,9 +19,9 @@ export const authClient = {
 export const signIn = {
   social: async ({ provider, callbackURL }: { provider: string; callbackURL: string }) => {
     try {
-      console.log('Making social sign-in request to:', `${BACKEND_URL}/api/auth/sign-in/social`);
+      console.log('Making social sign-in request to: /api/auth/sign-in/social');
       
-      const response = await fetch(`${BACKEND_URL}/api/auth/sign-in/social`, {
+      const response = await fetch(`/api/auth/sign-in/social`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -57,9 +57,9 @@ export const signIn = {
 // Custom session management
 export const getSession = async () => {
   try {
-    console.log('Making session request to:', `${BACKEND_URL}/api/auth/get-session`);
+    console.log('Making session request to: /api/auth/get-session');
     
-    const response = await fetch(`${BACKEND_URL}/api/auth/get-session`, {
+    const response = await fetch(`/api/auth/get-session`, {
       method: 'GET',
       credentials: 'include',
     });
@@ -138,7 +138,7 @@ export const handleAuthError = (error: any) => {
 export const signUp = signIn; // For compatibility
 export const signOut = async () => {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/auth/sign-out`, {
+    const response = await fetch(`/api/auth/sign-out`, {
       method: 'POST',
       credentials: 'include',
     });
