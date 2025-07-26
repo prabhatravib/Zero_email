@@ -56,6 +56,45 @@ class WorkerClass {
             cors: 'enabled',
             origin: c.req.header('Origin')
         }))
+        .post('/api/auth/exchange-token', async (c) => {
+            // Handle exchange token exchange
+            try {
+                const body = await c.req.json();
+                const { exchangeToken } = body;
+                
+                if (!exchangeToken) {
+                    return c.json({ error: 'Exchange token required' }, 400);
+                }
+                
+                const env = c.env as any;
+                const db = env.ZERO_DB;
+                const sessionObj = db.get(db.idFromName('sessions'));
+                
+                const response = await sessionObj.fetch('http://localhost/exchange', {
+                    method: 'POST',
+                    body: JSON.stringify({ exchangeToken }),
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    return c.json({ 
+                        sessionId: data.sessionId,
+                        user: {
+                            id: data.sessionData.email,
+                            email: data.sessionData.email,
+                            name: data.sessionData.name,
+                            image: data.sessionData.picture,
+                        }
+                    });
+                } else {
+                    const errorText = await response.text();
+                    return c.json({ error: errorText }, response.status);
+                }
+            } catch (error) {
+                console.error('Exchange token error:', error);
+                return c.json({ error: 'Exchange failed' }, 500);
+            }
+        })
         .get('/api/auth/get-session', async (c) => {
             // Set proper headers to prevent content decoding issues
             c.header('Content-Type', 'application/json');
@@ -64,17 +103,28 @@ class WorkerClass {
             c.header('Expires', '0');
             
             try {
-                // Get session ID from cookies
+                // Get session ID from cookies or headers (for cross-domain access)
+                let sessionId = null;
+                
+                // First try to get from cookies
                 const cookies = c.req.header('Cookie') || '';
                 const sessionMatch = cookies.match(/session=([^;]+)/);
                 
-                if (!sessionMatch) {
-                    console.log('No session cookie found');
-                    return c.json({ user: null });
+                if (sessionMatch) {
+                    sessionId = sessionMatch[1];
+                    console.log('Session ID found in cookies:', sessionId);
+                } else {
+                    // Try to get from headers (for cross-domain access)
+                    sessionId = c.req.header('X-Session-Token');
+                    if (sessionId) {
+                        console.log('Session ID found in headers:', sessionId);
+                    }
                 }
                 
-                const sessionId = sessionMatch[1];
-                console.log('Session ID found:', sessionId);
+                if (!sessionId) {
+                    console.log('No session ID found in cookies or headers');
+                    return c.json({ user: null });
+                }
                 
                 // Retrieve session data from ZeroDB Durable Object
                 try {
@@ -233,12 +283,13 @@ class WorkerClass {
                 // Create a session ID
                 const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 
+                // Get ZeroDB instance
+                const env = c.env as any;
+                const db = env.ZERO_DB;
+                const sessionObj = db.get(db.idFromName('sessions')); // Use fixed ID for sessions
+                
                 // Store session data in ZeroDB Durable Object
                 try {
-                    const env = c.env as any;
-                    const db = env.ZERO_DB;
-                    const sessionObj = db.get(db.idFromName('sessions')); // Use fixed ID for sessions
-                    
                     // Store session data
                     const sessionData = {
                         email: userData.email,
@@ -260,11 +311,27 @@ class WorkerClass {
                     // Continue anyway - session will be validated later
                 }
 
-                // Set secure HTTP-only cookie with session ID
-                c.header('Set-Cookie', `session=${sessionId}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${tokenData.expires_in}`);
-
-                // Redirect to frontend with success (no sensitive data in URL)
-                return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}`);
+                // Set a secure, short-lived token for the frontend to exchange for the session
+                const exchangeToken = `ex_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                
+                // Store the exchange token temporarily (expires in 5 minutes)
+                try {
+                    await sessionObj.fetch('http://localhost/store-exchange', {
+                        method: 'POST',
+                        body: JSON.stringify({ 
+                            exchangeToken, 
+                            sessionId,
+                            expiresAt: Date.now() + (5 * 60 * 1000) // 5 minutes
+                        }),
+                    });
+                } catch (exchangeError) {
+                    console.error('Failed to store exchange token:', exchangeError);
+                    // Fallback: redirect without exchange token
+                    return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}`);
+                }
+                
+                // Redirect to frontend with exchange token (not the actual session token)
+                return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&exchange=${encodeURIComponent(exchangeToken)}`);
 
             } catch (error) {
                 console.error('OAuth callback error:', error);
@@ -333,6 +400,57 @@ class ZeroDB {
             } else {
                 return new Response('Session not found', { status: 404 });
             }
+        }
+
+        if (path === '/store-exchange' && request.method === 'POST') {
+            // Store exchange token mapping
+            const body = await request.json() as { exchangeToken: string; sessionId: string; expiresAt: number };
+            const { exchangeToken, sessionId, expiresAt } = body;
+            if (!exchangeToken || !sessionId) {
+                return new Response('Exchange token and session ID required', { status: 400 });
+            }
+            
+            // Store exchange token mapping
+            await this.state.storage.put(`exchange_${exchangeToken}`, { sessionId, expiresAt });
+            
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        if (path === '/exchange' && request.method === 'POST') {
+            // Exchange token for session ID
+            const body = await request.json() as { exchangeToken: string };
+            const { exchangeToken } = body;
+            if (!exchangeToken) {
+                return new Response('Exchange token required', { status: 400 });
+            }
+            
+            // Get exchange token mapping
+            const exchangeData = await this.state.storage.get(`exchange_${exchangeToken}`);
+            if (!exchangeData) {
+                return new Response('Exchange token not found', { status: 404 });
+            }
+            
+            // Check if expired
+            if (exchangeData.expiresAt && Date.now() > exchangeData.expiresAt) {
+                // Clean up expired token
+                await this.state.storage.delete(`exchange_${exchangeToken}`);
+                return new Response('Exchange token expired', { status: 410 });
+            }
+            
+            // Get session data
+            const sessionData = await this.state.storage.get(exchangeData.sessionId);
+            if (!sessionData) {
+                return new Response('Session not found', { status: 404 });
+            }
+            
+            // Clean up exchange token (one-time use)
+            await this.state.storage.delete(`exchange_${exchangeToken}`);
+            
+            return new Response(JSON.stringify({ sessionId: exchangeData.sessionId, sessionData }), {
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
 
         return new Response('Not found', { status: 404 });

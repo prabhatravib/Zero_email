@@ -11,9 +11,9 @@ export default function AuthCallback() {
       const error = searchParams.get('error');
       const success = searchParams.get('success');
       const email = searchParams.get('email');
-      const sessionToken = searchParams.get('session');
+      const exchangeToken = searchParams.get('exchange');
 
-      console.log('Auth callback parameters:', { error, success, email, sessionToken });
+      console.log('Auth callback parameters:', { error, success, email, exchangeToken });
 
       // Handle OAuth errors
       if (error) {
@@ -27,38 +27,60 @@ export default function AuthCallback() {
       if (success === 'true' && email) {
         toast.success(`Successfully connected to Gmail as ${email}`);
         
-        // Session is now managed via HTTP-only cookies set by the backend
-        // No need to store anything in localStorage
-        
-        // Check if we have a valid session
-        try {
-          const response = await fetch('/api/auth/get-session', {
-            credentials: 'include',
-          });
+        // Exchange the exchange token for a session token
+        if (exchangeToken) {
+          try {
+            const response = await fetch('/api/auth/exchange-token', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ exchangeToken }),
+            });
 
-          if (response.ok) {
-            const data = await response.json();
-            if (data.user) {
-              console.log('Valid session found, redirecting to /mail');
-              navigate('/mail');
-              return;
+            if (response.ok) {
+              const data = await response.json();
+              if (data.sessionId) {
+                // Store session token in localStorage for cross-domain access
+                localStorage.setItem('gmail_session_token', data.sessionId);
+                console.log('Session token stored in localStorage');
+                
+                // Redirect to mail with valid session
+                console.log('Valid session established, redirecting to /mail');
+                navigate('/mail');
+                return;
+              }
+            } else {
+              const errorData = await response.json();
+              console.error('Exchange token failed:', errorData);
             }
+          } catch (error) {
+            console.error('Failed to exchange token:', error);
           }
-        } catch (error) {
-          console.error('Failed to validate session:', error);
         }
         
-        // If session validation fails, still redirect to mail (session will be checked there)
-        console.log('Redirecting to /mail');
-        navigate('/mail');
+        // If no exchange token or exchange fails, redirect to login
+        console.log('No exchange token or exchange failed, redirecting to login');
+        toast.error('Gmail authentication failed. Please try again.');
+        navigate('/login');
         return;
       }
 
       // If no specific parameters, try to get session info
       try {
         console.log('No callback parameters, checking existing session');
+        
+        // Get session token from localStorage
+        const sessionToken = localStorage.getItem('gmail_session_token');
+        
+        const headers: Record<string, string> = {};
+        if (sessionToken) {
+          headers['X-Session-Token'] = sessionToken;
+        }
+        
         const response = await fetch('/api/auth/get-session', {
           credentials: 'include',
+          headers,
         });
 
         if (response.ok) {

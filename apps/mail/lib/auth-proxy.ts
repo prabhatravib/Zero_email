@@ -12,13 +12,21 @@ export const authProxy = {
       try {
         console.log('Auth proxy - Making session request to: /api/auth/get-session');
         
-        // Session is now managed via HTTP-only cookies, so we just need to make the request
-        // The browser will automatically include the session cookie
+        // Get session token from localStorage for cross-domain access
+        const sessionToken = localStorage.getItem('gmail_session_token');
+        
+        const requestHeaders: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        
+        // Add session token to headers if available
+        if (sessionToken) {
+          requestHeaders['X-Session-Token'] = sessionToken;
+        }
+        
         const response = await fetch('/api/auth/get-session', {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: requestHeaders,
           credentials: 'include', // This ensures cookies are sent
         });
 

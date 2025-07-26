@@ -61,11 +61,21 @@ export const getSession = async () => {
   try {
     console.log('Making session request to: /api/auth/get-session');
     
+    // Get session token from localStorage for cross-domain access
+    const sessionToken = localStorage.getItem('gmail_session_token');
+    
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+    };
+    
+    // Add session token to headers if available
+    if (sessionToken) {
+      headers['X-Session-Token'] = sessionToken;
+    }
+    
     const response = await fetch(`/api/auth/get-session`, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
+      headers,
       credentials: 'include',
     });
 
@@ -144,8 +154,8 @@ export const handleAuthError = (error: any) => {
 export const signOut = async () => {
   try {
     console.log('Signing out...');
-    // For now, just clear any local session data
-    // You can add a server endpoint later if needed
+    // Clear session token from localStorage
+    localStorage.removeItem('gmail_session_token');
     console.log('Sign out successful');
   } catch (error) {
     console.error('Sign out error:', error);
