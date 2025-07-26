@@ -9,7 +9,12 @@ declare global {
     }
 }
 
-const env = process.env as any;
+// Environment variables will be accessed through the context
+// Temporary hardcoded values for testing
+const GOOGLE_CLIENT_ID = '363401296279-vo7al766jmct0gcat24rrn2grv2jh1p5.apps.googleusercontent.com';
+const GOOGLE_CLIENT_SECRET = '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';
+const VITE_PUBLIC_APP_URL = 'https://pitext-email.onrender.com';
+const GOOGLE_REDIRECT_URI = 'https://pitext-mail.prabhatravib.workers.dev/auth/callback/google';
 import { appRouter } from './trpc';
 import { createAuth } from './lib/auth';
 import { getZeroDB } from './lib/server-utils';
@@ -324,7 +329,7 @@ interface GoogleUserInfo {
     locale: string;
 }
 
-export default class {
+class WorkerClass {
     private app = new Hono<HonoContext>()
         .use('*', cors({
             origin: (origin) => {
@@ -389,8 +394,8 @@ export default class {
         .route('/ai', aiRouter)
         .get('/api/public/providers', async (c) => {
             // Return available authentication providers
-            const googleClientId = env.GOOGLE_CLIENT_ID;
-            const googleClientSecret = env.GOOGLE_CLIENT_SECRET;
+            const googleClientId = GOOGLE_CLIENT_ID;
+            const googleClientSecret = GOOGLE_CLIENT_SECRET;
 
             const allProviders = [
                 {
@@ -441,8 +446,8 @@ export default class {
         })
         .get('/auth/sign-in/social/google', async (c) => {
             // Simple Google OAuth redirect
-            const clientId = env.GOOGLE_CLIENT_ID;
-            const redirectUri = env.GOOGLE_REDIRECT_URI || `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`;
+            const clientId = GOOGLE_CLIENT_ID;
+            const redirectUri = GOOGLE_REDIRECT_URI || `${VITE_PUBLIC_APP_URL}/auth/callback/google`;
             const scope = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 
             const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
@@ -465,11 +470,11 @@ export default class {
             const error = c.req.query('error');
 
             if (error) {
-                return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=${encodeURIComponent(error)}`);
+                return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=${encodeURIComponent(error)}`);
             }
 
             if (!code) {
-                return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=no_code`);
+                return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=no_code`);
             }
 
             try {
@@ -490,7 +495,7 @@ export default class {
 
                 if (!tokenResponse.ok) {
                     console.error('Token exchange failed:', await tokenResponse.text());
-                    return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=token_exchange_failed`);
+                    return c.redirect(`${c.var.env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=token_exchange_failed`);
                 }
 
                 const tokenData = await tokenResponse.json() as GoogleTokenResponse;
@@ -504,7 +509,7 @@ export default class {
 
                 if (!userResponse.ok) {
                     console.error('User info fetch failed:', await userResponse.text());
-                    return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=user_info_failed`);
+                    return c.redirect(`${c.var.env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=user_info_failed`);
                 }
 
                 const userData = await userResponse.json() as GoogleUserInfo;
@@ -529,7 +534,7 @@ export default class {
                 }));
 
                 // Set session cookie and redirect to success
-                const redirectUrl = `${env.VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&session=${encodeURIComponent(sessionToken)}`;
+                const redirectUrl = `${c.var.env.VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&session=${encodeURIComponent(sessionToken)}`;
 
                 const response = c.redirect(redirectUrl);
                 // For cross-domain setup, we need to set the cookie on the frontend domain
@@ -540,15 +545,15 @@ export default class {
 
             } catch (error) {
                 console.error('OAuth callback error:', error);
-                return c.redirect(`${env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=callback_error`);
+                return c.redirect(`${c.var.env.VITE_PUBLIC_APP_URL}/auth/callback/google?error=callback_error`);
             }
         })
         .post('/api/auth/sign-in/social', async (c) => {
             // Handle social sign-in request
             const body = await c.req.json();
             if (body.provider === 'google') {
-                const clientId = env.GOOGLE_CLIENT_ID;
-                const redirectUri = env.GOOGLE_REDIRECT_URI || `${env.VITE_PUBLIC_APP_URL}/auth/callback/google`;
+                const clientId = c.var.env.GOOGLE_CLIENT_ID;
+                const redirectUri = c.var.env.GOOGLE_REDIRECT_URI || `${c.var.env.VITE_PUBLIC_APP_URL}/auth/callback/google`;
                 const scope = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 
                 const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
@@ -784,9 +789,18 @@ export default class {
             }),
         );
 
-    async fetch(request: Request): Promise<Response> {
-        return this.app.fetch(request);
+    async fetch(request: Request, env: any, ctx: any): Promise<Response> {
+        // Set environment variables in the context
+        const appWithEnv = this.app.use('*', async (c, next) => {
+            c.set('env', env);
+            await next();
+        });
+        return appWithEnv.fetch(request);
     }
 }
 
 export { ZeroAgent, ZeroMCP, ZeroDB, ZeroDriver };
+
+// Create and export the default worker instance
+const worker = new WorkerClass();
+export default worker;
