@@ -372,6 +372,8 @@ class WorkerClass {
             // Try to get session from custom session token first
             const sessionToken = c.req.header('X-Session-Token');
             console.log('🔍 tRPC middleware - Session token:', sessionToken ? 'present' : 'missing');
+            console.log('🔍 tRPC middleware - RAW X-Session-Token header:', sessionToken);
+            console.log('🔍 tRPC middleware - Session token length:', sessionToken?.length || 0);
             let sessionUser: any = null;
             
             if (sessionToken) {

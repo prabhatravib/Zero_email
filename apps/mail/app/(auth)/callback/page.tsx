@@ -52,6 +52,9 @@ export default function AuthCallback() {
         }));
         
         localStorage.setItem('gmail_session_token', sessionToken);
+        console.log('DEBUG: sessionToken stored:', sessionToken);
+        console.log('DEBUG: sessionToken length:', sessionToken.length);
+        console.log('DEBUG: sessionToken type:', typeof sessionToken);
         console.log('User data and session token stored in localStorage:', userData);
         
         // Redirect to mail with user data
