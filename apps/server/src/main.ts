@@ -154,7 +154,30 @@ class WorkerClass {
                     return c.json({ user: null });
                 }
                 
-                // Retrieve session data from ZeroDB Durable Object
+                // Try to decode session token from headers (base64 encoded JSON)
+                try {
+                    const sessionData = JSON.parse(atob(sessionId));
+                    
+                    // Check if session is expired
+                    if (sessionData.expires_at && Date.now() > sessionData.expires_at) {
+                        console.log('Session expired');
+                        return c.json({ user: null });
+                    }
+                    
+                    console.log('Valid session found for:', sessionData.email);
+                    return c.json({
+                        user: {
+                            id: sessionData.email,
+                            email: sessionData.email,
+                            name: sessionData.name,
+                            image: sessionData.picture,
+                        }
+                    });
+                } catch (decodeError) {
+                    console.log('Failed to decode session token as base64 JSON, trying Durable Object lookup');
+                }
+                
+                // Fallback: Try to retrieve session data from ZeroDB Durable Object
                 try {
                     const env = c.env as any;
                     const db = env.ZERO_DB;

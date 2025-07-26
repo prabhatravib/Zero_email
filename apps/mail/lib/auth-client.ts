@@ -61,7 +61,35 @@ export const getSession = async () => {
   try {
     console.log('Getting session from localStorage');
     
-    // Get user data from localStorage
+    // First try to get session token (preferred method)
+    const sessionToken = localStorage.getItem('gmail_session_token');
+    
+    if (sessionToken) {
+      try {
+        const sessionData = JSON.parse(atob(sessionToken));
+        
+        // Check if session is expired
+        if (sessionData.expires_at && Date.now() > sessionData.expires_at) {
+          console.log('Session token expired, clearing localStorage');
+          localStorage.removeItem('gmail_session_token');
+          localStorage.removeItem('gmail_user_data');
+          return null;
+        }
+        
+        console.log('Valid session token found:', sessionData.email);
+        return {
+          id: sessionData.email,
+          email: sessionData.email,
+          name: sessionData.name,
+          image: sessionData.picture,
+        };
+      } catch (decodeError) {
+        console.error('Failed to decode session token:', decodeError);
+        localStorage.removeItem('gmail_session_token');
+      }
+    }
+    
+    // Fallback: Get user data from localStorage (legacy method)
     const userDataStr = localStorage.getItem('gmail_user_data');
     
     if (!userDataStr) {
@@ -158,8 +186,9 @@ export const handleAuthError = (error: any) => {
 export const signOut = async () => {
   try {
     console.log('Signing out...');
-    // Clear user data from localStorage
+    // Clear all user data from localStorage
     localStorage.removeItem('gmail_user_data');
+    localStorage.removeItem('gmail_session_token');
     console.log('Sign out successful');
   } catch (error) {
     console.error('Sign out error:', error);

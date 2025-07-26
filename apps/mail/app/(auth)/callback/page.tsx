@@ -38,8 +38,21 @@ export default function AuthCallback() {
           timestamp: Date.now()
         };
         
+        // Store both user data and session token for compatibility
         localStorage.setItem('gmail_user_data', JSON.stringify(userData));
-        console.log('User data stored in localStorage:', userData);
+        
+        // Create a session token that the server can validate
+        const sessionToken = btoa(JSON.stringify({
+          email,
+          name: name || email,
+          picture: picture || '',
+          access_token: 'temp_token', // Placeholder for now
+          refresh_token: 'temp_refresh', // Placeholder for now
+          expires_at: Date.now() + (24 * 60 * 60 * 1000) // 24 hours from now
+        }));
+        
+        localStorage.setItem('gmail_session_token', sessionToken);
+        console.log('User data and session token stored in localStorage:', userData);
         
         // Redirect to mail with user data
         console.log('Authentication successful, redirecting to /mail');
