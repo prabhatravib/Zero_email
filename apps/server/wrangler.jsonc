@@ -44,6 +44,8 @@
     "VITE_PUBLIC_APP_URL": "https://pitext-email.onrender.com",
     "GOOGLE_REDIRECT_URI": "https://pitext-mail.prabhatravib.workers.dev/auth/callback/google",
     "VITE_PUBLIC_BACKEND_URL": "https://pitext-mail.prabhatravib.workers.dev",
-    "BETTER_AUTH_URL": "https://pitext-mail.prabhatravib.workers.dev"
+    "BETTER_AUTH_URL": "https://pitext-mail.prabhatravib.workers.dev",
+    "GOOGLE_CLIENT_ID": "363401296279-vo7al766jmct0gcat24rrn2grv2jh1p5.apps.googleusercontent.com",
+    "GOOGLE_CLIENT_SECRET": "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"
   }
 }
