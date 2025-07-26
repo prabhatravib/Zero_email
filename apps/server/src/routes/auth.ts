@@ -105,4 +105,48 @@ publicRouter.get('/debug-callbacks', async (c) => {
   return c.json(callbackUrls);
 });
 
+// Add detailed OAuth configuration debug endpoint
+publicRouter.get('/debug-oauth', async (c) => {
+  const env = c.env as unknown as Record<string, string>;
+  
+  // Create config to test OAuth URL generation
+  const { createConfig, getGoogleOAuthUrl } = await import('../config');
+  const config = createConfig(env);
+  
+  const debugInfo = {
+    environment: env.NODE_ENV || 'development',
+    googleConfig: {
+      clientId: env.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET',
+      clientSecret: env.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET',
+      redirectUri: config.google.redirectUri,
+      scopes: config.google.scopes,
+    },
+    appConfig: {
+      publicUrl: config.app.publicUrl,
+    },
+    generatedOAuthUrl: getGoogleOAuthUrl(env),
+    allEnvVars: Object.keys(env).filter(key => key.includes('GOOGLE') || key.includes('AUTH') || key.includes('VITE')),
+    issues: [] as string[],
+  };
+
+  // Check for common issues
+  if (!env.GOOGLE_CLIENT_ID) {
+    debugInfo.issues.push('GOOGLE_CLIENT_ID is not set');
+  }
+  
+  if (!env.GOOGLE_CLIENT_SECRET) {
+    debugInfo.issues.push('GOOGLE_CLIENT_SECRET is not set');
+  }
+  
+  if (!env.GOOGLE_REDIRECT_URI) {
+    debugInfo.issues.push('GOOGLE_REDIRECT_URI is not set');
+  }
+  
+  if (!env.VITE_PUBLIC_APP_URL) {
+    debugInfo.issues.push('VITE_PUBLIC_APP_URL is not set');
+  }
+
+  return c.json(debugInfo);
+});
+
 export { publicRouter };

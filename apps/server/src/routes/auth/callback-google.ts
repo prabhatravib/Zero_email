@@ -20,6 +20,12 @@ export const googleCallbackHandler = async (c: HonoContext) => {
 
     try {
         console.log('Processing Google OAuth callback with code:', code);
+        console.log('Using config:', {
+            clientId: config.google.clientId ? 'SET' : 'NOT SET',
+            clientSecret: config.google.clientSecret ? 'SET' : 'NOT SET',
+            redirectUri: config.google.redirectUri,
+            publicUrl: config.app.publicUrl
+        });
         
         // Exchange code for tokens
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -36,10 +42,28 @@ export const googleCallbackHandler = async (c: HonoContext) => {
             }),
         });
 
+        console.log('Token exchange response status:', tokenResponse.status);
+        console.log('Token exchange response headers:', Object.fromEntries(tokenResponse.headers.entries()));
+
         if (!tokenResponse.ok) {
             const errorText = await tokenResponse.text();
-            console.error('Token exchange failed:', errorText);
-            return c.redirect(`${config.app.publicUrl}/auth/callback/google?error=token_exchange_failed`);
+            console.error('Token exchange failed with status:', tokenResponse.status);
+            console.error('Token exchange error response:', errorText);
+            
+            // Try to parse the error response as JSON for more details
+            try {
+                const errorJson = JSON.parse(errorText);
+                console.error('Parsed error response:', errorJson);
+                
+                // Return more specific error based on Google's error response
+                if (errorJson.error) {
+                    return c.redirect(`${config.app.publicUrl}/auth/callback/google?error=${encodeURIComponent(errorJson.error)}&error_description=${encodeURIComponent(errorJson.error_description || '')}`);
+                }
+            } catch (parseError) {
+                console.error('Failed to parse error response as JSON:', parseError);
+            }
+            
+            return c.redirect(`${config.app.publicUrl}/auth/callback/google?error=token_exchange_failed&status=${tokenResponse.status}`);
         }
 
         const tokenData = await tokenResponse.json() as {
