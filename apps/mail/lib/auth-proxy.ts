@@ -12,41 +12,27 @@ export const authProxy = {
       try {
         console.log('Auth proxy - Making session request to: /api/auth/get-session');
         
-        // For cross-domain setup, we need to send the session token from the frontend cookie
-        const cookies = document.cookie;
-        console.log('Auth proxy - Frontend cookies:', cookies);
-        
-        const sessionCookie = cookies.split(';')
-          .find(cookie => cookie.trim().startsWith('session='))
-          ?.split('=')[1];
-        
-        console.log('Auth proxy - Session cookie from frontend:', sessionCookie ? 'found' : 'not found');
-        
-        // Create headers with the session token and proper content type
-        const requestHeaders = new Headers();
-        requestHeaders.set('Accept', 'application/json');
-        if (sessionCookie) {
-          requestHeaders.set('X-Session-Token', sessionCookie);
-        }
-        
-        const response = await fetch(`/api/auth/get-session`, {
+        // Session is now managed via HTTP-only cookies, so we just need to make the request
+        // The browser will automatically include the session cookie
+        const response = await fetch('/api/auth/get-session', {
           method: 'GET',
-          headers: requestHeaders,
-          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include', // This ensures cookies are sent
         });
 
-        console.log('Auth proxy - Response status:', response.status);
-
         if (!response.ok) {
-          console.error(`Failed to get session: HTTP ${response.status}`);
+          console.error('Auth proxy - Session request failed:', response.status, response.statusText);
           return null;
         }
 
         const data = await response.json();
-        console.log('Auth proxy - Response data:', data);
+        console.log('Auth proxy - Session response:', data);
+        
         return data.user;
       } catch (error) {
-        console.error('Failed to get session:', error);
+        console.error('Auth proxy - Error getting session:', error);
         return null;
       }
     },

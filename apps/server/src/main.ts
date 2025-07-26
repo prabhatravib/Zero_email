@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { contextStorage } from 'hono/context-storage';
+import { getZeroDB } from './lib/server-utils';
 
 // Cloudflare Workers types - simplified for build compatibility
 declare global {
@@ -62,8 +63,58 @@ class WorkerClass {
             c.header('Pragma', 'no-cache');
             c.header('Expires', '0');
             
-            // Simple session endpoint that always returns null for now
-            return c.json({ user: null });
+            try {
+                // Get session ID from cookies
+                const cookies = c.req.header('Cookie') || '';
+                const sessionMatch = cookies.match(/session=([^;]+)/);
+                
+                if (!sessionMatch) {
+                    console.log('No session cookie found');
+                    return c.json({ user: null });
+                }
+                
+                const sessionId = sessionMatch[1];
+                console.log('Session ID found:', sessionId);
+                
+                // Retrieve session data from ZeroDB Durable Object
+                try {
+                    const env = c.env as any;
+                    const db = env.ZERO_DB;
+                    const sessionObj = db.get(db.idFromName('sessions')); // Use same fixed ID
+                    
+                    const response = await sessionObj.fetch(`http://localhost/get?sessionId=${encodeURIComponent(sessionId)}`);
+                    
+                    if (response.ok) {
+                        const sessionData = await response.json();
+                        
+                        // Check if session is expired
+                        if (sessionData.expires_at && Date.now() > sessionData.expires_at) {
+                            console.log('Session expired');
+                            return c.json({ user: null });
+                        }
+                        
+                        console.log('Valid session found for:', sessionData.email);
+                        return c.json({
+                            user: {
+                                id: sessionData.email,
+                                email: sessionData.email,
+                                name: sessionData.name,
+                                image: sessionData.picture,
+                            }
+                        });
+                    } else {
+                        console.log('Session not found in ZeroDB');
+                        return c.json({ user: null });
+                    }
+                } catch (dbError) {
+                    console.error('Failed to retrieve session from ZeroDB:', dbError);
+                    return c.json({ user: null });
+                }
+                
+            } catch (error) {
+                console.error('Get session error:', error);
+                return c.json({ user: null });
+            }
         })
         .post('/api/auth/sign-in/social', async (c) => {
             try {
@@ -140,54 +191,80 @@ class WorkerClass {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
                     body: new URLSearchParams({
+                        code,
                         client_id: GOOGLE_CLIENT_ID,
                         client_secret: GOOGLE_CLIENT_SECRET,
-                        code: code,
-                        grant_type: 'authorization_code',
                         redirect_uri: GOOGLE_REDIRECT_URI,
+                        grant_type: 'authorization_code',
                     }),
                 });
 
                 if (!tokenResponse.ok) {
-                    const errorText = await tokenResponse.text();
-                    console.error('Token exchange failed:', errorText);
+                    console.error('Token exchange failed:', await tokenResponse.text());
                     return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=token_exchange_failed`);
                 }
 
-                const tokenData = await tokenResponse.json() as any;
+                const tokenData = await tokenResponse.json() as {
+                    access_token: string;
+                    refresh_token: string;
+                    expires_in: number;
+                };
                 console.log('Token exchange successful');
 
                 // Get user info
                 const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
                     headers: {
-                        'Authorization': `Bearer ${tokenData.access_token}`,
+                        Authorization: `Bearer ${tokenData.access_token}`,
                     },
                 });
 
                 if (!userResponse.ok) {
-                    const errorText = await userResponse.text();
-                    console.error('User info fetch failed:', errorText);
+                    console.error('User info fetch failed:', await userResponse.text());
                     return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=user_info_failed`);
                 }
 
-                const userData = await userResponse.json() as any;
-                console.log('User info retrieved:', userData.email);
+                const userData = await userResponse.json() as {
+                    email: string;
+                    name: string;
+                    picture: string;
+                };
+                console.log('User info fetched:', userData.email);
 
-                // Create a session token
-                const sessionToken = btoa(JSON.stringify({
-                    userId: userData.id,
-                    email: userData.email,
-                    name: userData.name,
-                    picture: userData.picture,
-                    access_token: tokenData.access_token,
-                    refresh_token: tokenData.refresh_token,
-                    exp: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
-                }));
+                // Create a session ID
+                const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                
+                // Store session data in ZeroDB Durable Object
+                try {
+                    const env = c.env as any;
+                    const db = env.ZERO_DB;
+                    const sessionObj = db.get(db.idFromName('sessions')); // Use fixed ID for sessions
+                    
+                    // Store session data
+                    const sessionData = {
+                        email: userData.email,
+                        name: userData.name,
+                        picture: userData.picture,
+                        access_token: tokenData.access_token,
+                        refresh_token: tokenData.refresh_token,
+                        expires_at: Date.now() + (tokenData.expires_in * 1000),
+                    };
+                    
+                    await sessionObj.fetch('http://localhost/store', {
+                        method: 'POST',
+                        body: JSON.stringify({ sessionId, sessionData }),
+                    });
+                    
+                    console.log('Session stored in ZeroDB');
+                } catch (dbError) {
+                    console.error('Failed to store session in ZeroDB:', dbError);
+                    // Continue anyway - session will be validated later
+                }
 
-                // Redirect to success with session token
-                const redirectUrl = `${VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&session=${encodeURIComponent(sessionToken)}`;
-                console.log('Redirecting to:', redirectUrl);
-                return c.redirect(redirectUrl);
+                // Set secure HTTP-only cookie with session ID
+                c.header('Set-Cookie', `session=${sessionId}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${tokenData.expires_in}`);
+
+                // Redirect to frontend with success (no sensitive data in URL)
+                return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}`);
 
             } catch (error) {
                 console.error('OAuth callback error:', error);
@@ -210,7 +287,56 @@ class ZeroMCP {
 }
 
 class ZeroDB {
-    constructor(state: any, env: any) {}
+    private state: any;
+    private env: any;
+    private sessions: Map<string, any>;
+
+    constructor(state: any, env: any) {
+        this.state = state;
+        this.env = env;
+        this.sessions = new Map();
+    }
+
+    async fetch(request: Request): Promise<Response> {
+        const url = new URL(request.url);
+        const path = url.pathname;
+
+        if (path === '/store' && request.method === 'POST') {
+            // Store session data
+            const body = await request.json() as { sessionId: string; sessionData: any };
+            const { sessionId, sessionData } = body;
+            if (!sessionId || !sessionData) {
+                return new Response('Session ID and data required', { status: 400 });
+            }
+            
+            // Store in persistent storage with session ID as key
+            await this.state.storage.put(sessionId, sessionData);
+            
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        if (path === '/get' && request.method === 'GET') {
+            // Retrieve session data
+            const sessionId = url.searchParams.get('sessionId');
+            if (!sessionId) {
+                return new Response('Session ID not provided', { status: 400 });
+            }
+            
+            const sessionData = await this.state.storage.get(sessionId);
+            
+            if (sessionData) {
+                return new Response(JSON.stringify(sessionData), {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            } else {
+                return new Response('Session not found', { status: 404 });
+            }
+        }
+
+        return new Response('Not found', { status: 404 });
+    }
 }
 
 class ZeroDriver {

@@ -27,31 +27,30 @@ export default function AuthCallback() {
       if (success === 'true' && email) {
         toast.success(`Successfully connected to Gmail as ${email}`);
         
-        // If we have a session token in the URL, set it as a cookie
-        if (sessionToken) {
-          console.log('Gmail session token found, setting cookie');
-          // Set cookie on the frontend domain (pitext-email.onrender.com)
-          document.cookie = `session=${sessionToken}; path=/; max-age=${24 * 60 * 60}; secure; samesite=strict`;
-          
-          // Verify the cookie was set
-          setTimeout(() => {
-            const cookies = document.cookie;
-            const sessionCookie = cookies.split(';')
-              .find(cookie => cookie.trim().startsWith('session='));
-            console.log('Cookie verification - All cookies:', cookies);
-            console.log('Cookie verification - Session cookie:', sessionCookie ? 'found' : 'not found');
-            
-            console.log('Redirecting to /mail after Gmail authentication');
-            navigate('/mail');
-          }, 1000);
-          return;
+        // Session is now managed via HTTP-only cookies set by the backend
+        // No need to store anything in localStorage
+        
+        // Check if we have a valid session
+        try {
+          const response = await fetch('/api/auth/get-session', {
+            credentials: 'include',
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.user) {
+              console.log('Valid session found, redirecting to /mail');
+              navigate('/mail');
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Failed to validate session:', error);
         }
         
-        // If no session token, try to redirect anyway
-        console.log('No session token, redirecting to /mail');
-        setTimeout(() => {
-          navigate('/mail');
-        }, 1000);
+        // If session validation fails, still redirect to mail (session will be checked there)
+        console.log('Redirecting to /mail');
+        navigate('/mail');
         return;
       }
 
@@ -67,9 +66,7 @@ export default function AuthCallback() {
           if (data.user) {
             toast.success('Gmail session found!');
             console.log('Existing Gmail session found, redirecting to /mail');
-            setTimeout(() => {
-              navigate('/mail');
-            }, 100);
+            navigate('/mail');
             return;
           }
         }
@@ -77,10 +74,10 @@ export default function AuthCallback() {
         console.error('Failed to get Gmail session:', error);
       }
 
-      // Fallback: redirect to home
-      console.log('No valid authentication found, redirecting to home');
+      // Fallback: redirect to login
+      console.log('No valid authentication found, redirecting to login');
       toast.error('Gmail authentication failed. Please try again.');
-      navigate('/');
+      navigate('/login');
     };
 
     handleCallback();
