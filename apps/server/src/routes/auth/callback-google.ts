@@ -1,7 +1,9 @@
-import { config } from '../../config';
+import { createConfig } from '../../config';
 import type { HonoContext } from '../../ctx';
 
 export const googleCallbackHandler = async (c: HonoContext) => {
+    const env = c.env as unknown as Record<string, string>;
+    const config = createConfig(env);
     // Handle Google OAuth callback
     const code = c.req.query('code');
     const error = c.req.query('error');

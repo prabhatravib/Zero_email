@@ -31,7 +31,8 @@ export const signInSocialHandler = async (c: HonoContext) => {
         }
         
         if (body.provider === 'google') {
-            const authUrl = getGoogleOAuthUrl();
+            const env = c.env as unknown as Record<string, string>;
+            const authUrl = getGoogleOAuthUrl(env);
             
             console.log('Generated Google OAuth URL:', authUrl);
             return c.json({ url: authUrl });
