@@ -13,13 +13,13 @@ class WorkerClass {
         this.app = new Hono<HonoContext>()
             .use('*', corsMiddleware)
             .use(contextStorageMiddleware);
+        
+        // Register all routes once during initialization
+        registerAuthRoutes(this.app);
+        registerRoutes(this.app);
     }
 
     async fetch(request: Request, env: any, ctx: any): Promise<Response> {
-        // Register all routes
-        registerAuthRoutes(this.app);
-        registerRoutes(this.app);
-
         return this.app.fetch(request, env, ctx);
     }
 }
