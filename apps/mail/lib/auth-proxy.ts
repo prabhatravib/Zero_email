@@ -1,4 +1,4 @@
-// Custom auth proxy for our new endpoints
+// Custom auth proxy for Gmail OAuth only
 // Use relative URLs to go through the frontend proxy
 const BACKEND_URL = ''; // Empty string means relative URLs
 
@@ -22,8 +22,9 @@ export const authProxy = {
         
         console.log('Auth proxy - Session cookie from frontend:', sessionCookie ? 'found' : 'not found');
         
-        // Create headers with the session token
+        // Create headers with the session token and proper content type
         const requestHeaders = new Headers();
+        requestHeaders.set('Accept', 'application/json');
         if (sessionCookie) {
           requestHeaders.set('X-Session-Token', sessionCookie);
         }

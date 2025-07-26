@@ -4,11 +4,9 @@ import { useLoaderData } from 'react-router';
 export async function clientLoader() {
   const isProd = !import.meta.env.DEV;
 
-  const response = await fetch(import.meta.env.VITE_PUBLIC_BACKEND_URL + '/api/public/providers');
-  const data = (await response.json()) as { allProviders: any[] };
-
+  // Simplified loader - just return basic info for Gmail auth
   return {
-    allProviders: data.allProviders,
+    allProviders: [{ id: 'google', name: 'Gmail', enabled: true }],
     isProd,
   };
 }

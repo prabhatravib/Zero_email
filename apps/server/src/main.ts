@@ -56,17 +56,39 @@ class WorkerClass {
             origin: c.req.header('Origin')
         }))
         .get('/api/auth/get-session', async (c) => {
+            // Set proper headers to prevent content decoding issues
+            c.header('Content-Type', 'application/json');
+            c.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+            c.header('Pragma', 'no-cache');
+            c.header('Expires', '0');
+            
             // Simple session endpoint that always returns null for now
             return c.json({ user: null });
         })
         .post('/api/auth/sign-in/social', async (c) => {
-            // Simple social sign-in endpoint
-            const body = await c.req.json();
-            if (body.provider === 'google') {
-                const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent('https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email')}&access_type=offline`;
-                return c.json({ url: authUrl });
+            try {
+                // Set proper headers to prevent content decoding issues
+                c.header('Content-Type', 'application/json');
+                c.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+                c.header('Pragma', 'no-cache');
+                c.header('Expires', '0');
+                
+                const body = await c.req.json();
+                console.log('Social sign-in request:', body);
+                
+                if (body.provider === 'google') {
+                    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent('https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email')}&access_type=offline`;
+                    
+                    console.log('Generated Google OAuth URL:', authUrl);
+                    return c.json({ url: authUrl });
+                }
+                
+                return c.json({ error: 'Unsupported provider' }, 400);
+            } catch (error) {
+                console.error('Social sign-in error:', error);
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                return c.json({ error: 'Internal server error', details: errorMessage }, 500);
             }
-            return c.json({ error: 'Unsupported provider' }, 400);
         })
         .get('/auth/callback/google', async (c) => {
             // Handle Google OAuth callback
@@ -82,6 +104,8 @@ class WorkerClass {
             }
 
             try {
+                console.log('Processing Google OAuth callback with code:', code);
+                
                 // Exchange code for tokens
                 const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
                     method: 'POST',
@@ -98,11 +122,13 @@ class WorkerClass {
                 });
 
                 if (!tokenResponse.ok) {
-                    console.error('Token exchange failed:', await tokenResponse.text());
+                    const errorText = await tokenResponse.text();
+                    console.error('Token exchange failed:', errorText);
                     return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=token_exchange_failed`);
                 }
 
                 const tokenData = await tokenResponse.json() as any;
+                console.log('Token exchange successful');
 
                 // Get user info
                 const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
@@ -112,11 +138,13 @@ class WorkerClass {
                 });
 
                 if (!userResponse.ok) {
-                    console.error('User info fetch failed:', await userResponse.text());
+                    const errorText = await userResponse.text();
+                    console.error('User info fetch failed:', errorText);
                     return c.redirect(`${VITE_PUBLIC_APP_URL}/auth/callback/google?error=user_info_failed`);
                 }
 
                 const userData = await userResponse.json() as any;
+                console.log('User info retrieved:', userData.email);
 
                 // Create a session token
                 const sessionToken = btoa(JSON.stringify({
@@ -131,6 +159,7 @@ class WorkerClass {
 
                 // Redirect to success with session token
                 const redirectUrl = `${VITE_PUBLIC_APP_URL}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&session=${encodeURIComponent(sessionToken)}`;
+                console.log('Redirecting to:', redirectUrl);
                 return c.redirect(redirectUrl);
 
             } catch (error) {

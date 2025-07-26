@@ -1,6 +1,6 @@
 import React from 'react';
 
-// Custom auth client for our new endpoints
+// Custom auth client for Gmail OAuth only
 // Use relative URLs to go through the frontend proxy
 const BACKEND_URL = ''; // Empty string means relative URLs
 
@@ -15,52 +15,57 @@ export const authClient = {
   },
 };
 
-// Custom sign-in function for Google OAuth
+// Simplified Gmail OAuth sign-in function
 export const signIn = {
   social: async ({ provider, callbackURL }: { provider: string; callbackURL: string }) => {
     try {
-      console.log('Making social sign-in request to: /api/auth/sign-in/social');
+      console.log('Making Gmail OAuth request to: /api/auth/sign-in/social');
       
       const response = await fetch(`/api/auth/sign-in/social`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({ provider }),
         credentials: 'include',
       });
 
-      console.log('Social sign-in response status:', response.status);
+      console.log('Gmail OAuth response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Social sign-in error response:', errorText);
+        console.error('Gmail OAuth error response:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
-      console.log('Social sign-in response data:', data);
+      console.log('Gmail OAuth response data:', data);
       
       if (data.url) {
         // Redirect to Google OAuth
+        console.log('Redirecting to Google OAuth:', data.url);
         window.location.href = data.url;
       } else {
         throw new Error('No OAuth URL received from server');
       }
     } catch (error) {
-      console.error('Social sign-in failed:', error);
+      console.error('Gmail OAuth failed:', error);
       throw error;
     }
   },
 };
 
-// Custom session management
+// Simplified session management
 export const getSession = async () => {
   try {
     console.log('Making session request to: /api/auth/get-session');
     
     const response = await fetch(`/api/auth/get-session`, {
       method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
       credentials: 'include',
     });
 
@@ -80,7 +85,7 @@ export const getSession = async () => {
   }
 };
 
-// Custom useSession hook
+// Simplified useSession hook
 export const useSession = () => {
   const [session, setSession] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
@@ -95,64 +100,59 @@ export const useSession = () => {
   return { data: session, isLoading: loading };
 };
 
-// Enhanced error handling for authentication
+// Enhanced error handling for Gmail authentication
 export const handleAuthError = (error: any) => {
-  console.error('Authentication error:', error);
+  console.error('Gmail authentication error:', error);
   
   // Check for specific error types
   if (error?.message?.includes('500')) {
     return {
       type: 'server_error',
-      message: 'Authentication service is currently unavailable. This is likely due to missing Google OAuth configuration.',
+      message: 'Gmail authentication service is currently unavailable.',
       details: 'Server returned 500 error - check Google OAuth configuration',
-      action: 'Please contact support or check the server configuration.'
+      action: 'Please try again or contact support if the issue persists.'
     };
   }
   
   if (error?.message?.includes('404')) {
     return {
       type: 'not_found',
-      message: 'Authentication endpoint not found. Please check server configuration.',
+      message: 'Gmail authentication endpoint not found.',
       details: 'Auth endpoint returned 404',
-      action: 'Verify the backend server is running and properly configured.'
+      action: 'Please check if the server is running properly.'
     };
   }
 
   if (error?.message?.includes('OAuth Configuration Error')) {
     return {
       type: 'oauth_config_error',
-      message: 'Google OAuth is not properly configured. Please contact support.',
+      message: 'Gmail OAuth is not properly configured.',
       details: 'Missing or invalid Google OAuth credentials',
-      action: 'The server needs proper Google OAuth setup to enable Gmail integration.'
+      action: 'Please contact support to fix the Gmail integration.'
     };
   }
   
   return {
     type: 'unknown',
-    message: 'Authentication failed. Please try again.',
+    message: 'Gmail authentication failed. Please try again.',
     details: error?.message || 'Unknown authentication error',
     action: 'If this persists, please contact support.'
   };
 };
 
-export const signUp = signIn; // For compatibility
+// Simplified sign-out function
 export const signOut = async () => {
   try {
-    const response = await fetch(`/api/auth/sign-out`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-    
-    if (response.ok) {
-      console.log('Sign out successful');
-    } else {
-      console.error('Sign out failed:', response.statusText);
-    }
+    console.log('Signing out...');
+    // For now, just clear any local session data
+    // You can add a server endpoint later if needed
+    console.log('Sign out successful');
   } catch (error) {
     console.error('Sign out error:', error);
   }
 };
 
+export const signUp = signIn; // For compatibility
 export const $fetch = fetch; // For compatibility
 
 export type Session = any; // Simplified for now

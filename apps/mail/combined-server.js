@@ -25,9 +25,15 @@ app.use('/api', async (req, res) => {
     
     console.log(`Proxying ${req.method} ${req.originalUrl} -> ${upstreamUrl}`);
     
-    // Prepare headers - remove host header to avoid conflicts
+    // Prepare headers - remove problematic headers to prevent content decoding issues
     const headers = { ...req.headers };
     delete headers.host;
+    delete headers['accept-encoding']; // Prevent compression issues
+    delete headers['content-encoding'];
+    
+    // Set explicit headers for better compatibility
+    headers['accept'] = 'application/json, text/plain, */*';
+    headers['content-type'] = headers['content-type'] || 'application/json';
     
     // Prepare request options
     const requestOptions = {
@@ -38,14 +44,38 @@ app.use('/api', async (req, res) => {
     
     const upstreamResp = await fetch(upstreamUrl, requestOptions);
     
-    // Forward status and headers
+    // Forward status
     res.status(upstreamResp.status);
+    
+    // Forward headers but exclude problematic ones
     upstreamResp.headers.forEach((value, key) => {
-      res.set(key, value);
+      const lowerKey = key.toLowerCase();
+      if (!['content-encoding', 'content-length', 'transfer-encoding'].includes(lowerKey)) {
+        res.set(key, value);
+      }
     });
     
-    // Stream the response body
-    upstreamResp.body.pipe(res);
+    // Set explicit content type for JSON responses
+    if (upstreamResp.headers.get('content-type')?.includes('application/json')) {
+      res.set('Content-Type', 'application/json');
+    }
+    
+    // Handle response body properly to avoid content decoding issues
+    const responseText = await upstreamResp.text();
+    
+    // Try to parse as JSON if it looks like JSON
+    if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
+      try {
+        const jsonData = JSON.parse(responseText);
+        res.json(jsonData);
+      } catch (parseError) {
+        // If JSON parsing fails, send as text
+        res.send(responseText);
+      }
+    } else {
+      // Send as text for non-JSON responses
+      res.send(responseText);
+    }
     
   } catch (error) {
     console.error('Proxy error:', error);

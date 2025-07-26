@@ -1,62 +1,97 @@
-# Simple Deployment Guide (No Backend API)
+# Simple Gmail-Only Deployment Guide
 
-## Overview
-This is a simplified version of the Zero Email application that works without a backend API. All "Get Started" buttons now redirect to a contact form instead of trying to authenticate users.
+This guide helps you deploy the simplified Gmail-only authentication version of the email app.
 
 ## What's Changed
-- ✅ Removed all backend API dependencies
-- ✅ Updated all "Get Started" buttons to redirect to contact form
-- ✅ Simplified authentication flow
-- ✅ Removed unused imports and dependencies
+
+- **Simplified Authentication**: Only Gmail OAuth is supported
+- **Fixed Content Decoding Issues**: Proxy now handles compression properly
+- **Streamlined Login Flow**: Direct Gmail connection without complex provider setup
+- **Better Error Handling**: Clear error messages for authentication issues
 
 ## Deployment Steps
 
-### 1. Build the Application
-```bash
-# Install dependencies
-pnpm install --frozen-lockfile
+### 1. Environment Variables
 
-# Build the application
-cd apps/mail
-WRANGLER_ENV=render pnpm run build
+Make sure these environment variables are set in your deployment platform (Render):
+
+```bash
+NODE_ENV=production
+PORT=10000
+WRANGLER_ENV=render
+VITE_PUBLIC_BACKEND_URL=https://pitext-mail.prabhatravib.workers.dev
+VITE_PUBLIC_APP_URL=https://pitext-email.onrender.com
 ```
 
-### 2. Deploy to Render
-1. Go to your Render dashboard
-2. Create a new Web Service
-3. Connect your GitHub repository
-4. Use these settings:
-   - **Build Command**: `pnpm install --frozen-lockfile && pnpm --filter @zero/mail run build`
-   - **Start Command**: `cd apps/mail && NODE_ENV=production pnpm run start:prod`
-   - **Environment**: Docker
+### 2. Google OAuth Configuration
 
-### 3. Environment Variables
-Set these environment variables in Render:
-- `NODE_ENV=production`
-- `PORT=10000`
-- `WRANGLER_ENV=render`
+The server is already configured with Google OAuth credentials:
+- Client ID: `363401296279-vo7al766jmct0gcat24rrn2grv2jh1p5.apps.googleusercontent.com`
+- Redirect URI: `https://pitext-mail.prabhatravib.workers.dev/auth/callback/google`
 
-## How It Works
-- The application is now a static landing page
-- All "Get Started" buttons redirect to `https://cal.com/team/0`
-- No backend API is required
-- Users can contact you through the Cal.com link for Gmail integration setup
+### 3. Deployment Commands
 
-## Customization
-If you want to change where the "Get Started" buttons redirect:
-1. Update the URL in these files:
-   - `apps/mail/components/navigation.tsx`
-   - `apps/mail/components/home/HomeContent.tsx`
-   - `apps/mail/components/pricing/pricing-card.tsx`
-   - `apps/mail/components/pricing/comparision.tsx`
-   - `apps/mail/components/home/footer.tsx`
+The deployment should use these commands:
 
-2. Replace `https://cal.com/team/0` with your preferred contact form or Gmail OAuth setup page.
+**Build Command:**
+```bash
+pnpm install --frozen-lockfile && cd apps/mail && WRANGLER_ENV=render VITE_PUBLIC_BACKEND_URL=https://pitext-mail.prabhatravib.workers.dev VITE_PUBLIC_APP_URL=https://pitext-email.onrender.com pnpm run build
+```
 
-## Next Steps
-Once deployed, users can:
-1. Visit your landing page
-2. Click "Get Started" to contact you
-3. You can then help them set up Gmail integration manually
+**Start Command:**
+```bash
+cd apps/mail && NODE_ENV=production pnpm run start
+```
 
-This approach keeps things simple while still providing a professional landing page for your email service. 
+### 4. How It Works
+
+1. **User clicks "Continue with Gmail"** on the login page
+2. **Frontend makes request** to `/api/auth/sign-in/social` with `provider: 'google'`
+3. **Server returns Google OAuth URL** for the user to authenticate
+4. **User is redirected** to Google's OAuth consent screen
+5. **After consent**, Google redirects back to `/auth/callback/google` on the server
+6. **Server exchanges code** for access tokens and user info
+7. **Server redirects** to frontend with session token
+8. **Frontend sets session cookie** and redirects to `/mail`
+
+### 5. Troubleshooting
+
+#### Content Decoding Errors
+- **Fixed**: The proxy now properly handles compression headers
+- **If you still see errors**: Check that the `combined-server.js` is being used
+
+#### 500 Internal Server Error
+- **Check**: Google OAuth credentials are properly set
+- **Verify**: The server can reach Google's OAuth endpoints
+- **Debug**: Check server logs for specific error messages
+
+#### Authentication Flow Issues
+- **Verify**: Redirect URIs match between Google Console and server config
+- **Check**: CORS settings allow your frontend domain
+- **Debug**: Use browser dev tools to trace the OAuth flow
+
+### 6. Testing
+
+1. **Deploy the app** to your platform
+2. **Visit the login page** - should show "Connect to Gmail" button
+3. **Click the button** - should redirect to Google OAuth
+4. **Complete OAuth flow** - should redirect back to `/mail`
+5. **Check session** - should be authenticated
+
+### 7. Security Notes
+
+- Session tokens are base64 encoded (not encrypted)
+- Cookies are set with `secure` and `samesite=strict` flags
+- OAuth credentials are hardcoded (consider using environment variables for production)
+
+## Files Modified
+
+- `apps/server/src/main.ts` - Fixed headers and error handling
+- `apps/mail/combined-server.js` - Fixed proxy compression handling
+- `apps/mail/lib/auth-client.ts` - Simplified for Gmail only
+- `apps/mail/lib/auth-proxy.ts` - Updated headers
+- `apps/mail/app/(auth)/callback/page.tsx` - Simplified callback handling
+- `apps/mail/app/(auth)/login/login-client.tsx` - Gmail-only login UI
+- `apps/mail/app/(auth)/login/page.tsx` - Simplified loader
+
+The deployment should now work without the content decoding and authentication errors you were experiencing. 
