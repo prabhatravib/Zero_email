@@ -1,26 +1,53 @@
 import { Hono } from 'hono';
 import { corsMiddleware } from './middleware/cors';
 import { contextStorageMiddleware } from './middleware/context-storage';
-import { registerAuthRoutes } from './routes/auth/index';
-import { registerRoutes } from './routes';
 import { ZeroAgent, ZeroMCP, ZeroDB, ZeroDriver } from './durable-objects';
 import type { HonoContext } from './ctx';
 
 class WorkerClass {
-    private app: Hono<HonoContext>;
+    private app: Hono<HonoContext> | null = null;
+    private routesInitialized = false;
 
     constructor() {
-        this.app = new Hono<HonoContext>()
-            .use('*', corsMiddleware)
-            .use(contextStorageMiddleware);
+        // Don't initialize anything during startup
+    }
+
+    private async initializeRoutes(): Promise<void> {
+        if (this.routesInitialized) return;
         
-        // Register all routes once during initialization
-        registerAuthRoutes(this.app);
-        registerRoutes(this.app);
+        try {
+            // Lazy load route registration to avoid startup overhead
+            const { registerAuthRoutes } = await import('./routes/auth/index');
+            const { registerRoutes } = await import('./routes');
+            
+            // Register routes lazily
+            registerAuthRoutes(this.app!);
+            await registerRoutes(this.app!);
+            
+            this.routesInitialized = true;
+        } catch (error) {
+            console.error('Failed to initialize routes:', error);
+        }
+    }
+
+    private async getApp(): Promise<Hono<HonoContext>> {
+        if (!this.app) {
+            this.app = new Hono<HonoContext>()
+                .use('*', corsMiddleware)
+                .use(contextStorageMiddleware);
+        }
+        
+        // Initialize routes on first request
+        if (!this.routesInitialized) {
+            await this.initializeRoutes();
+        }
+        
+        return this.app;
     }
 
     async fetch(request: Request, env: any, ctx: any): Promise<Response> {
-        return this.app.fetch(request, env, ctx);
+        const app = await this.getApp();
+        return app.fetch(request, env, ctx);
     }
 }
 

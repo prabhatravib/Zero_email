@@ -398,7 +398,7 @@ export class ZeroDriver extends DurableObject {
     }
 
     if (this.syncThreadsInProgress.has(threadId)) {
-      console.log(`Sync already in progress for thread ${threadId}, skipping...`);
+              console.log(`Sync already in progress for thread ${threadId}`);
       return;
     }
     this.syncThreadsInProgress.set(threadId, true);
@@ -414,7 +414,7 @@ export class ZeroDriver extends DurableObject {
         try {
           normalizedReceivedOn = new Date(latest.receivedOn).toISOString();
         } catch (error) {
-          console.log('Here!', error);
+          console.log('Date parsing error');
           normalizedReceivedOn = new Date().toISOString();
         }
 
@@ -583,12 +583,7 @@ export class ZeroDriver extends DurableObject {
     }
 
     try {
-      console.log(`[inboxRag] Executing AI search with parameters:`, {
-        query,
-        max_num_results: 3,
-        score_threshold: 0.3,
-        folder_filter: `${this.name}/`,
-      });
+      console.log(`[inboxRag] Executing AI search for query: ${query}`);
 
       const answer = await env.AI.autorag(env.AUTORAG_ID).aiSearch({
         query: query,
@@ -1006,7 +1001,7 @@ export class ZeroAgent extends DurableObject {
 
   async broadcastChatMessage(message: any, exclude?: string[]) {
     // Broadcast message to connected clients
-    console.log('Broadcasting message:', message);
+    console.log('Broadcasting message');
   }
 
   async reply(id: string, response: Response) {
@@ -1016,25 +1011,28 @@ export class ZeroAgent extends DurableObject {
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    console.log('ZeroAgent fetch called for:', url.pathname);
     
     // Handle WebSocket upgrade requests
-    if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-      console.log('WebSocket upgrade request detected');
-      
+    const upgradeHeader = request.headers.get('Upgrade');
+    const connectionHeader = request.headers.get('Connection');
+    
+    if (upgradeHeader?.toLowerCase() === 'websocket') {
       try {
+        // Check if this is a valid WebSocket upgrade request
+        if (!connectionHeader?.toLowerCase().includes('upgrade')) {
+          return new Response('Invalid WebSocket upgrade request', { status: 400 });
+        }
+        
         const webSocketPair = new WebSocketPair();
         const [client, server] = Object.values(webSocketPair);
         
         // Accept the WebSocket connection
         server.accept();
-        console.log('WebSocket connection accepted');
         
         // Handle WebSocket messages
         server.addEventListener('message', async (event) => {
           try {
             const message = JSON.parse(event.data as string);
-            console.log('WebSocket message received:', message);
             
             // Echo back for now - you can add more sophisticated message handling here
             server.send(JSON.stringify({
@@ -1042,33 +1040,35 @@ export class ZeroAgent extends DurableObject {
               data: message
             }));
           } catch (error) {
-            console.error('Error handling WebSocket message:', error);
+            console.error('WebSocket message error');
           }
         });
         
         // Handle WebSocket close
         server.addEventListener('close', () => {
-          console.log('WebSocket connection closed');
+          // Connection closed
         });
         
         // Handle WebSocket error
         server.addEventListener('error', (error) => {
-          console.error('WebSocket error:', error);
+          console.error('WebSocket error');
         });
         
-        console.log('Returning WebSocket response');
         return new Response(null, {
           status: 101,
           webSocket: client,
+          headers: {
+            'Upgrade': 'websocket',
+            'Connection': 'Upgrade',
+          }
         });
       } catch (error) {
-        console.error('Error setting up WebSocket:', error);
+        console.error('WebSocket setup failed');
         return new Response('WebSocket setup failed', { status: 500 });
       }
     }
     
     // Handle HTTP requests
-    console.log('Handling HTTP request');
     return new Response(JSON.stringify({ message: 'ZeroAgent is running' }), {
       headers: { 'Content-Type': 'application/json' }
     });
