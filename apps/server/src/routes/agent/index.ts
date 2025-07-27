@@ -1024,17 +1024,14 @@ export class ZeroAgent extends DurableObject {
 
       // Handle WebSocket upgrade requests
       if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-        const pair = new WebSocketPair();
-        const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
+        // ✅ Use the socket the Worker passed in
+        const ws = request.webSocket as WebSocket;
+        ws.accept();                       // completes the handshake
 
-        // Accept immediately, do not await any work before responding
-        server.accept();
+        this.handleSession(ws, request);   // no await needed – run async
 
-        // Defer the rest of the setup; do NOT await it
-        this.state.waitUntil(this.handleSession(server, request));
-
-        // Return 101 now so the browser completes the handshake
-        return new Response(null, { status: 101, webSocket: client });
+        // Return the SAME socket so the edge Worker can pipe it to the browser
+        return new Response(null, { status: 101, webSocket: ws });
       }
       
       // Handle HTTP requests
@@ -1054,7 +1051,6 @@ export class ZeroAgent extends DurableObject {
   async handleSession(server: WebSocket, request: Request) {
     try {
       console.log('[ZeroAgent.handleSession] Starting session setup');
-      server.accept();                  // ✅ RE-ENABLE: completes the 101 upgrade
       
       // Extract query parameters from request
       const url = new URL(request.url);
