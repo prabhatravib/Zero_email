@@ -33,7 +33,17 @@ export const getSessionHandler = async (c: HonoContext) => {
         
         // Try to decode session token from headers (base64 encoded JSON)
         try {
-            const sessionData = JSON.parse(atob(sessionId));
+            // Safely decode base64 session token
+            let sessionData;
+            try {
+                // Ensure the base64 string is properly padded
+                const paddedToken = sessionId + '='.repeat((4 - sessionId.length % 4) % 4);
+                const decodedToken = atob(paddedToken);
+                sessionData = JSON.parse(decodedToken);
+            } catch (error) {
+                console.error('Failed to decode session token:', error);
+                throw new Error('Invalid session token format');
+            }
             
             // Check if session is expired
             if (sessionData.expires_at && Date.now() > sessionData.expires_at) {
@@ -44,7 +54,7 @@ export const getSessionHandler = async (c: HonoContext) => {
             console.log('Valid session found for:', sessionData.email);
             return c.json({
                 user: {
-                    id: sessionData.email,
+                    id: sessionData.userId || sessionData.email, // Use userId if available, fallback to email
                     email: sessionData.email,
                     name: sessionData.name,
                     image: sessionData.picture,
@@ -74,7 +84,7 @@ export const getSessionHandler = async (c: HonoContext) => {
                 console.log('Valid session found for:', sessionData.email);
                 return c.json({
                     user: {
-                        id: sessionData.email,
+                        id: sessionData.userId || sessionData.email, // Use userId if available, fallback to email
                         email: sessionData.email,
                         name: sessionData.name,
                         image: sessionData.picture,

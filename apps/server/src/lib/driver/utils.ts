@@ -23,8 +23,22 @@ export const deleteActiveConnection = async () => {
 
 export const fromBase64Url = (str: string) => str.replace(/-/g, '+').replace(/_/g, '/');
 
-export const fromBinary = (str: string) =>
-  new TextDecoder().decode(toByteArray(str.replace(/-/g, '+').replace(/_/g, '/')));
+export const fromBinary = (str: string) => {
+  try {
+    // Handle empty or invalid strings
+    if (!str || typeof str !== 'string') {
+      return '';
+    }
+    
+    // Clean the string and decode
+    const cleanedStr = str.replace(/-/g, '+').replace(/_/g, '/');
+    const byteArray = toByteArray(cleanedStr);
+    return new TextDecoder().decode(byteArray);
+  } catch (error) {
+    console.error('Failed to decode base64 string:', error);
+    return ''; // Return empty string on error
+  }
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const findHtmlBody = (parts: any[]): string => {

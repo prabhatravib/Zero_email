@@ -75,7 +75,7 @@ export const trpcContextMiddleware = async (c: HonoContext, next: () => Promise<
             
             // Create session user from JWT payload
             sessionUser = {
-                id: payload.email,
+                id: payload.userId || payload.email, // Use userId if available, fallback to email
                 email: payload.email,
                 name: payload.name || payload.email,
                 emailVerified: true,
@@ -102,11 +102,20 @@ export const trpcContextMiddleware = async (c: HonoContext, next: () => Promise<
             // Fallback: try to decode as base64 (for backward compatibility)
             try {
                 console.log('🔍 tRPC middleware - Trying fallback base64 decode');
-                const decodedToken = atob(sessionToken);
-                const userData = JSON.parse(decodedToken);
+                // Safely decode base64 session token
+                let userData;
+                try {
+                    // Ensure the base64 string is properly padded
+                    const paddedToken = sessionToken + '='.repeat((4 - sessionToken.length % 4) % 4);
+                    const decodedToken = atob(paddedToken);
+                    userData = JSON.parse(decodedToken);
+                } catch (error) {
+                    console.error('Failed to decode session token:', error);
+                    throw new Error('Invalid session token format');
+                }
                 
                 sessionUser = {
-                    id: userData.email,
+                    id: userData.userId || userData.email, // Use userId if available, fallback to email
                     email: userData.email,
                     name: userData.name || userData.email,
                     emailVerified: true,

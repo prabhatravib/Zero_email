@@ -51,7 +51,17 @@ export const getActiveConnection = async () => {
       throw new Error('No session token found');
     }
 
-    const sessionData = JSON.parse(atob(sessionToken));
+    // Safely decode base64 session token
+    let sessionData;
+    try {
+      // Ensure the base64 string is properly padded
+      const paddedToken = sessionToken + '='.repeat((4 - sessionToken.length % 4) % 4);
+      const decodedToken = atob(paddedToken);
+      sessionData = JSON.parse(decodedToken);
+    } catch (error) {
+      console.error('Failed to decode session token:', error);
+      throw new Error('Invalid session token format');
+    }
     console.log('getActiveConnection - Session data:', { 
       userId: sessionData.userId, 
       email: sessionData.email,
