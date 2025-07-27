@@ -365,6 +365,12 @@ export class ZeroDriver extends DurableObject {
     }
   }
 
+  // Database operations disabled - using direct Gmail API instead
+  async initializeTables() {
+    // No database tables needed - we're using direct Gmail API
+    console.log('Database operations disabled - using direct Gmail API');
+  }
+
   async dropTables() {
     return this.sql`
         DROP TABLE IF EXISTS threads;`;
