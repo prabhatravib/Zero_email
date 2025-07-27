@@ -23,23 +23,23 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
         import('./auth/sign-in-social')
     ]);
 
-    app.get('/test', testHandler)
-       .get('/debug', debugHandler)
-       .get('/debug-env', debugEnvHandler)
-       .get('/health', healthHandler)
-       .get('/api/test', testTrpcHandler)
-       .get('/test-jwt', testJwtHandler)
-       .get('/test-decode', testDecodeHandler)
-       .get('/test-jwt-verify', testJwtVerifyHandler)
-       .get('/test-trpc-auth', testTrpcAuthHandler)
-       .get('/api/auth/check', authCheckHandler)
-       .post('/api/auth/sign-in/social', signInSocialHandler);
+    app.get('/test', testHandler as any)
+       .get('/debug', debugHandler as any)
+       .get('/debug-env', debugEnvHandler as any)
+       .get('/health', healthHandler as any)
+       .get('/api/test', testTrpcHandler as any)
+       .get('/test-jwt', testJwtHandler as any)
+       .get('/test-decode', testDecodeHandler as any)
+       .get('/test-jwt-verify', testJwtVerifyHandler as any)
+       .get('/test-trpc-auth', testTrpcAuthHandler as any)
+       .get('/api/auth/check', authCheckHandler as any)
+       .post('/api/auth/sign-in/social', signInSocialHandler as any);
     
     // WebSocket route for agents
-    app.get('/agents/:agentId/:channel', (c) => {
-        const { agentId } = c.req.param();
+    app.get('/agents/zero-agent/:channel', (c) => {
+        const { channel } = c.req.param();
         const env = c.env as any;
-        const agent = env.ZERO_AGENT.get(env.ZERO_AGENT.idFromName(agentId));
+        const agent = env.ZERO_AGENT.get(env.ZERO_AGENT.idFromName(channel));
         // Do not declare this function as async, and return the promise directly
         return agent.fetch(c.req.raw);
     });
