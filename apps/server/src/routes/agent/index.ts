@@ -1016,48 +1016,59 @@ export class ZeroAgent extends DurableObject {
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
+    console.log('ZeroAgent fetch called for:', url.pathname);
     
     // Handle WebSocket upgrade requests
-    if (request.headers.get('Upgrade') === 'websocket') {
-      const webSocketPair = new WebSocketPair();
-      const [client, server] = Object.values(webSocketPair);
+    if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
+      console.log('WebSocket upgrade request detected');
       
-      // Accept the WebSocket connection
-      server.accept();
-      
-      // Handle WebSocket messages
-      server.addEventListener('message', async (event) => {
-        try {
-          const message = JSON.parse(event.data as string);
-          console.log('WebSocket message received:', message);
-          
-          // Echo back for now - you can add more sophisticated message handling here
-          server.send(JSON.stringify({
-            type: 'echo',
-            data: message
-          }));
-        } catch (error) {
-          console.error('Error handling WebSocket message:', error);
-        }
-      });
-      
-      // Handle WebSocket close
-      server.addEventListener('close', () => {
-        console.log('WebSocket connection closed');
-      });
-      
-      // Handle WebSocket error
-      server.addEventListener('error', (error) => {
-        console.error('WebSocket error:', error);
-      });
-      
-      return new Response(null, {
-        status: 101,
-        webSocket: client,
-      });
+      try {
+        const webSocketPair = new WebSocketPair();
+        const [client, server] = Object.values(webSocketPair);
+        
+        // Accept the WebSocket connection
+        server.accept();
+        console.log('WebSocket connection accepted');
+        
+        // Handle WebSocket messages
+        server.addEventListener('message', async (event) => {
+          try {
+            const message = JSON.parse(event.data as string);
+            console.log('WebSocket message received:', message);
+            
+            // Echo back for now - you can add more sophisticated message handling here
+            server.send(JSON.stringify({
+              type: 'echo',
+              data: message
+            }));
+          } catch (error) {
+            console.error('Error handling WebSocket message:', error);
+          }
+        });
+        
+        // Handle WebSocket close
+        server.addEventListener('close', () => {
+          console.log('WebSocket connection closed');
+        });
+        
+        // Handle WebSocket error
+        server.addEventListener('error', (error) => {
+          console.error('WebSocket error:', error);
+        });
+        
+        console.log('Returning WebSocket response');
+        return new Response(null, {
+          status: 101,
+          webSocket: client,
+        });
+      } catch (error) {
+        console.error('Error setting up WebSocket:', error);
+        return new Response('WebSocket setup failed', { status: 500 });
+      }
     }
     
     // Handle HTTP requests
+    console.log('Handling HTTP request');
     return new Response(JSON.stringify({ message: 'ZeroAgent is running' }), {
       headers: { 'Content-Type': 'application/json' }
     });

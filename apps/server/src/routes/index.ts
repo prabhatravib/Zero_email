@@ -23,9 +23,25 @@ export const registerRoutes = (app: Hono<HonoContext>) => {
         const { agentId, channel } = c.req.param();
         const env = c.env as any;
         
+        console.log('WebSocket route hit:', { agentId, channel, url: c.req.url });
+        console.log('Upgrade header:', c.req.header('Upgrade'));
+        console.log('Connection header:', c.req.header('Connection'));
+        
         // Forward to Durable Object
         const agent = env.ZERO_AGENT.get(env.ZERO_AGENT.idFromName(agentId));
-        return agent.fetch(c.req.raw);
+        
+        // Create a new request with the same headers and method
+        const request = new Request(c.req.url, {
+            method: c.req.method,
+            headers: c.req.raw.headers,
+            body: c.req.raw.body,
+        });
+        
+        console.log('Forwarding request to Durable Object');
+        const response = await agent.fetch(request);
+        console.log('Durable Object response status:', response.status);
+        
+        return response;
     });
     
     // Register auth routes
