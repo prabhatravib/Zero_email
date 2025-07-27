@@ -33,6 +33,17 @@ import type { WSMessage } from 'partyserver';
 import type { Connection } from 'agents';
 import { DurableObject } from "cloudflare:workers";
 import { env } from 'cloudflare:workers';
+import { anthropic } from '@ai-sdk/anthropic';
+import { openai } from '@ai-sdk/openai';
+import { streamText, createDataStreamResponse } from 'ai';
+import { appendResponseMessages } from 'ai';
+import type { StreamTextOnFinishCallback } from 'ai';
+import { getPrompt } from '../../lib/brain';
+import { getPromptName } from '../../pipelines';
+import { AiChatPrompt } from '../../lib/prompts';
+import { authTools } from './auth-tools';
+import { ToolOrchestrator } from './orchestrator';
+import { processToolCalls } from './utils';
 
 // Heavy imports will be dynamically imported when needed
 
@@ -498,7 +509,7 @@ export class ZeroDriver extends DurableObject {
     }
 
     const threadCount = await this.getThreadCount();
-    if (threadCount >= maxCount && !shouldLoop) {
+    if (threadCount >= maxCount && !getShouldLoop()) {
       console.log('Threads already synced, skipping...');
       return { synced: 0, message: 'Threads already synced' };
     }
@@ -989,6 +1000,7 @@ export class ZeroAgent extends DurableObject {
     super(state, env);
     this.state = state;
     this.env = env;
+    console.log('[ZeroAgent] Constructor called');
   }
 
   async setName(name: string) {
@@ -1012,6 +1024,7 @@ export class ZeroAgent extends DurableObject {
 
   async fetch(request: Request): Promise<Response> {
     try {
+      console.log('[ZeroAgent.fetch] Constructor called, fetch method invoked');
       console.log('[ZeroAgent.fetch] Received request:', {
         url: request.url,
         method: request.method,
@@ -1030,17 +1043,29 @@ export class ZeroAgent extends DurableObject {
 
       // Handle WebSocket upgrade requests
       if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
+        console.log('[ZeroAgent.fetch] WebSocket upgrade detected');
+        
         // ✅ Use the socket the Worker passed in
         const ws = request.webSocket as WebSocket;
-        ws.accept();                       // completes the handshake
-
-        this.handleSession(ws, request);   // no await needed – run async
-
-        // Debug: check WebSocket state before returning
-        if (!ws.accepted) console.log('WS state before return:', ws.readyState);  // 0=open, 3=closed
-
-        // Return the SAME socket so the edge Worker can pipe it to the browser
-        return new Response(null, { status: 101, webSocket: ws });
+        
+        if (!ws) {
+          console.error('[ZeroAgent.fetch] No WebSocket available in request');
+          return new Response('WebSocket not available', { status: 400 });
+        }
+        
+        try {
+          ws.accept();                       // completes the handshake
+          console.log('[ZeroAgent.fetch] WebSocket accepted successfully');
+          
+          // Start the session handling
+          this.handleSession(ws, request);   // no await needed – run async
+          
+          // Return the SAME socket so the edge Worker can pipe it to the browser
+          return new Response(null, { status: 101, webSocket: ws });
+        } catch (error) {
+          console.error('[ZeroAgent.fetch] Error accepting WebSocket:', error);
+          return new Response('WebSocket acceptance failed', { status: 500 });
+        }
       }
       
       // Handle HTTP requests
@@ -1060,9 +1085,9 @@ export class ZeroAgent extends DurableObject {
   async handleSession(server: WebSocket, request: Request) {
     try {
       console.log('[ZeroAgent.handleSession] Starting session setup');
+      console.log('[ZeroAgent.handleSession] WebSocket state:', server.readyState);
       
-      // Accept immediately or CF will close the connection
-      await this.state.acceptWebSocket(server);
+      // WebSocket is already accepted in fetch method, no need to accept again
       
       // Extract query parameters from request
       const url = new URL(request.url);
