@@ -1,146 +1,67 @@
 import React from 'react';
 
-// Custom auth client for Gmail OAuth only
-// Use relative URLs to go through the frontend proxy
+// Custom auth client for unified Google OAuth flow
 const BACKEND_URL = 'https://pitext-mail.prabhatravib.workers.dev';
-
-// Debug: Log the backend URL being used
-console.log('Auth client - Using relative URLs for frontend proxy');
-console.log('Auth client - All env vars:', import.meta.env);
 
 export const authClient = {
   baseURL: BACKEND_URL,
   fetchOptions: {
     credentials: 'include',
   },
-};
-
-// Simplified Gmail OAuth sign-in function
-export const signIn = {
-  social: async ({ provider, callbackURL }: { provider: string; callbackURL: string }) => {
-    try {
-      console.log('Making Gmail OAuth request to: /api/auth/sign-in/social');
-      
-      const response = await fetch(`/api/auth/sign-in/social`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ provider }),
-        credentials: 'include',
-      });
-
-      console.log('Gmail OAuth response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Gmail OAuth error response:', errorText);
-        
-        // Try to parse error response as JSON for better error details
-        try {
-          const errorData = JSON.parse(errorText);
-          if (errorData.error && errorData.details) {
-            throw new Error(`${errorData.error}: ${errorData.details}`);
-          }
-        } catch (parseError) {
-          // If JSON parsing fails, use the raw error text
-        }
-        
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log('Gmail OAuth response data:', data);
-      
-      if (data.url) {
-        // Redirect to Google OAuth
-        console.log('Redirecting to Google OAuth:', data.url);
-        window.location.href = data.url;
-      } else {
-        throw new Error('No OAuth URL received from server');
-      }
-    } catch (error) {
-      console.error('Gmail OAuth failed:', error);
-      throw error;
+  
+  // Add linkSocial method for Gmail-only support
+  linkSocial: async ({ provider, callbackURL }: { provider: string; callbackURL: string }) => {
+    if (provider === 'google') {
+      // Use the unified Google OAuth flow
+      window.location.href = `${BACKEND_URL}/auth/google/login`;
+    } else {
+      throw new Error(`Provider ${provider} is not supported. Only Gmail is currently available.`);
     }
   },
 };
 
-// Simplified session management
+// Simplified unified Google OAuth sign-in function
+export const signIn = {
+  google: async () => {
+    try {
+      console.log('Redirecting to unified Google OAuth...');
+      window.location.href = `${BACKEND_URL}/auth/google/login`;
+    } catch (error) {
+      console.error('Google OAuth redirect failed:', error);
+      throw error;
+    }
+  },
+  
+  // Keep social for backward compatibility
+  social: async ({ provider, callbackURL }: { provider: string; callbackURL: string }) => {
+    if (provider === 'google') {
+      return signIn.google();
+    }
+    throw new Error(`Unsupported provider: ${provider}`);
+  },
+};
+
+// Session management using cookies
 export const getSession = async () => {
   try {
-    // Get JWT session token from localStorage
-    const sessionToken = localStorage.getItem('gmail_session_token');
-    
-    if (sessionToken) {
-      try {
-        // For JWT tokens, we can't decode them on the frontend without the secret
-        // So we'll just check if the token exists and let the backend verify it
-        console.log('JWT session token found in localStorage');
-        
-        // Get user data from localStorage for display purposes
-        const userDataStr = localStorage.getItem('gmail_user_data');
-        if (userDataStr) {
-          const userData = JSON.parse(userDataStr);
-          return {
-            id: userData.email,
-            email: userData.email,
-            name: userData.name,
-            image: userData.picture,
-          };
-        }
-        
-        // If no user data, return a basic session object
-        // The backend will verify the actual JWT token
-        return {
-          id: 'unknown',
-          email: 'unknown',
-          name: 'Unknown User',
-          image: null,
-        };
-      } catch (error) {
-        console.error('Failed to get session data:', error);
-        localStorage.removeItem('gmail_session_token');
-        localStorage.removeItem('gmail_user_data');
-        return null;
-      }
+    // Check if we have a session cookie by making a request to the backend
+    const response = await fetch(`${BACKEND_URL}/auth/session`, {
+      method: 'GET',
+      credentials: 'include', // This will include the session cookie
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      const sessionData = await response.json();
+      return sessionData;
     }
-    
-    // Fallback: Get user data from localStorage (legacy method)
-    const userDataStr = localStorage.getItem('gmail_user_data');
-    
-    if (!userDataStr) {
-      console.log('No user data found in localStorage');
-      return null;
-    }
-    
-    const userData = JSON.parse(userDataStr);
-    
-    // Check if user data is still valid (not expired)
-    if (userData.authenticated && userData.timestamp) {
-      const now = Date.now();
-      const age = now - userData.timestamp;
-      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-      
-      if (age < maxAge) {
-        console.log('Valid user session found:', userData.email);
-        return {
-          id: userData.email,
-          email: userData.email,
-          name: userData.name,
-          image: userData.picture,
-        };
-      } else {
-        console.log('User session expired, clearing localStorage');
-        localStorage.removeItem('gmail_user_data');
-        return null;
-      }
-    }
-    
+
+    // If no valid session, return null
     return null;
   } catch (error) {
-    console.error('Failed to get session from localStorage:', error);
+    console.error('Failed to get session:', error);
     return null;
   }
 };
@@ -160,15 +81,15 @@ export const useSession = () => {
   return { data: session, isLoading: loading };
 };
 
-// Enhanced error handling for Gmail authentication
+// Enhanced error handling for Google authentication
 export const handleAuthError = (error: any) => {
-  console.error('Gmail authentication error:', error);
+  console.error('Google authentication error:', error);
   
   // Check for specific error types
   if (error?.message?.includes('500')) {
     return {
       type: 'server_error',
-      message: 'Gmail authentication service is currently unavailable.',
+      message: 'Google authentication service is currently unavailable.',
       details: 'Server returned 500 error - check Google OAuth configuration',
       action: 'Please try again or contact support if the issue persists.'
     };
@@ -177,7 +98,7 @@ export const handleAuthError = (error: any) => {
   if (error?.message?.includes('404')) {
     return {
       type: 'not_found',
-      message: 'Gmail authentication endpoint not found.',
+      message: 'Google authentication endpoint not found.',
       details: 'Auth endpoint returned 404',
       action: 'Please check if the server is running properly.'
     };
@@ -186,7 +107,7 @@ export const handleAuthError = (error: any) => {
   if (error?.message?.includes('OAuth Configuration Error')) {
     return {
       type: 'oauth_config_error',
-      message: 'Gmail OAuth is not properly configured.',
+      message: 'Google OAuth is not properly configured.',
       details: 'Missing or invalid Google OAuth credentials',
       action: 'Please contact support to fix the Gmail integration.'
     };
@@ -203,7 +124,7 @@ export const handleAuthError = (error: any) => {
   
   return {
     type: 'unknown',
-    message: 'Gmail authentication failed. Please try again.',
+    message: 'Google authentication failed. Please try again.',
     details: error?.message || 'Unknown authentication error',
     action: 'If this persists, please contact support.'
   };
@@ -213,9 +134,17 @@ export const handleAuthError = (error: any) => {
 export const signOut = async () => {
   try {
     console.log('Signing out...');
-    // Clear all user data from localStorage
+    
+    // Call backend to invalidate session
+    await fetch(`${BACKEND_URL}/auth/signout`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    
+    // Clear any local storage
     localStorage.removeItem('gmail_user_data');
     localStorage.removeItem('gmail_session_token');
+    
     console.log('Sign out successful');
   } catch (error) {
     console.error('Sign out error:', error);

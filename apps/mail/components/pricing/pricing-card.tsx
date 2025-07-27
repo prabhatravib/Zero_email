@@ -47,16 +47,9 @@ const handleGoogleSignIn = (
   callbackURL: string,
   options?: { loading?: string; success?: string },
 ) => {
-  return toast.promise(
-    signIn.social({
-      provider: 'google',
-      callbackURL,
-    }),
-    {
-      success: options?.success || 'Redirecting to login...',
-      error: 'Login redirect failed',
-    },
-  );
+  // Use the unified Google OAuth flow
+  const backendUrl = 'https://pitext-mail.prabhatravib.workers.dev';
+  window.location.href = `${backendUrl}/auth/google/login`;
 };
 
 interface FeatureItemProps {

@@ -130,15 +130,9 @@ export default function HomeContent() {
               if (session) {
                 navigate('/mail/inbox');
               } else {
-                toast.promise(
-                  signIn.social({
-                    provider: 'google',
-                    callbackURL: `${window.location.origin}/mail`,
-                  }),
-                  {
-                    error: 'Login redirect failed',
-                  },
-                );
+                // Use the unified Google OAuth flow
+                const backendUrl = 'https://pitext-mail.prabhatravib.workers.dev';
+                window.location.href = `${backendUrl}/auth/google/login`;
               }
             }}
           >

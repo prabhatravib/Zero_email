@@ -4,7 +4,6 @@ import { Google } from '@/components/icons/icons';
 import ErrorMessage from '@/app/(auth)/login/error-message';
 import { Button } from '@/components/ui/button';
 import { TriangleAlert } from 'lucide-react';
-import { signIn } from '@/lib/auth-client';
 import { useNavigate } from 'react-router';
 import { useQueryState } from 'nuqs';
 import { toast } from 'sonner';
@@ -30,15 +29,16 @@ function LoginClientContent({ providers, isProd }: LoginClientProps) {
   const [error, _] = useQueryState('error');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleGmailLogin = async () => {
+  const handleGoogleLogin = async () => {
     try {
       setIsLoading(true);
-      await signIn.social({
-        provider: 'google',
-        callbackURL: `${window.location.origin}/auth/google/callback`,
-      });
+      
+      // Use the unified Google OAuth endpoint
+      const backendUrl = 'https://pitext-mail.prabhatravib.workers.dev';
+      window.location.href = `${backendUrl}/auth/google/login`;
+      
     } catch (error) {
-      console.error('Gmail login failed:', error);
+      console.error('Google login failed:', error);
       toast.error('Failed to connect to Gmail. Please try again.');
       setIsLoading(false);
     }
@@ -48,12 +48,12 @@ function LoginClientContent({ providers, isProd }: LoginClientProps) {
     <div className="flex min-h-screen w-full flex-col items-center justify-between bg-[#111111]">
       <div className="animate-in slide-in-from-bottom-4 mx-auto flex max-w-[600px] flex-grow items-center justify-center space-y-8 px-4 duration-500 sm:px-12 md:px-0">
         <div className="w-full space-y-4">
-          <p className="text-center text-4xl font-bold text-white md:text-5xl">Connect to Gmail</p>
+          <p className="text-center text-4xl font-bold text-white md:text-5xl">Sign in with Google</p>
 
           {error && (
             <Alert variant="default" className="border-orange-500/40 bg-orange-500/10">
               <AlertTitle className="text-orange-400">Error</AlertTitle>
-              <AlertDescription>Failed to connect to Gmail. Please try again.</AlertDescription>
+              <AlertDescription>Failed to sign in with Google. Please try again.</AlertDescription>
             </Alert>
           )}
 
@@ -61,7 +61,7 @@ function LoginClientContent({ providers, isProd }: LoginClientProps) {
             <div className="flex items-center">
               <TriangleAlert size={28} />
               <p className="ml-2 text-sm text-black/80 dark:text-white/80">
-                Connect your Gmail account to access your emails
+                Sign in with your Google account to access your Gmail
               </p>
             </div>
           </div>
@@ -70,22 +70,12 @@ function LoginClientContent({ providers, isProd }: LoginClientProps) {
 
           <div className="relative z-10 mx-auto flex w-full flex-col items-center justify-center gap-2">
             <Button
-              onClick={() => {
-                const params = new URLSearchParams({
-                  client_id: '363401296279-vo7al766jmct0gcat24rrn2grv2jh1p5.apps.googleusercontent.com',
-                  redirect_uri: `${window.location.origin}/auth/google/callback`,
-                  response_type: 'code',
-                  scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
-                  prompt: 'consent',
-                });
-                const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-                window.location.href = googleAuthUrl;
-              }}
+              onClick={handleGoogleLogin}
               disabled={isLoading}
               className="border-input bg-background text-primary hover:bg-accent hover:text-accent-foreground h-12 w-full rounded-lg border-2"
             >
               {getProviderIcon('google')}
-              {isLoading ? 'Connecting...' : 'Continue with Gmail'}
+              {isLoading ? 'Signing in...' : 'Sign in with Google (Gmail)'}
             </Button>
           </div>
         </div>

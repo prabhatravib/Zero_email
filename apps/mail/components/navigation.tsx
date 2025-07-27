@@ -196,20 +196,9 @@ export function Navigation() {
                 if (session) {
                   navigate('/mail/inbox');
                 } else {
-                  try {
-                    await signIn.social({
-                      provider: 'google',
-                      callbackURL: `${window.location.origin}/mail`,
-                    });
-                  } catch (error) {
-                    console.error('Authentication failed:', error);
-                    toast.error('Authentication service is currently unavailable. Please try again later or contact support.');
-                    
-                    // Fallback: redirect to contact form
-                    setTimeout(() => {
-                      window.open('https://cal.com/team/0', '_blank');
-                    }, 2000);
-                  }
+                  // Use the unified Google OAuth flow
+                  const backendUrl = 'https://pitext-mail.prabhatravib.workers.dev';
+                  window.location.href = `${backendUrl}/auth/google/login`;
                 }
               }}
             >
