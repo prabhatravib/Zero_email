@@ -64,6 +64,7 @@ export default defineConfig(({ mode }) => {
       headers: {
         'Cross-Origin-Embedder-Policy': 'unsafe-none',
         'Cross-Origin-Opener-Policy': 'unsafe-none',
+        'Content-Security-Policy': "default-src 'self'; connect-src 'self' https: wss:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;",
       },
       // Ensure proper MIME types for JavaScript files
       fs: {
