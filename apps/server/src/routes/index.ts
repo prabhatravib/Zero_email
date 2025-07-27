@@ -1,6 +1,6 @@
 import type { HonoContext } from '../ctx';
 import type { Hono } from 'hono';
-import party from 'hono-party';
+import { party } from 'hono-party';
 
 export const registerRoutes = async (app: Hono<HonoContext>) => {
     // 1️⃣ Party router must be first so /agents/* routes exist before anything else
