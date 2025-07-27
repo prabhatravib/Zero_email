@@ -1024,18 +1024,16 @@ export class ZeroAgent extends DurableObject {
 
       // Handle WebSocket upgrade requests
       if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-        console.log('[ZeroAgent.fetch] WebSocket upgrade detected, creating WebSocket pair');
         const pair = new WebSocketPair();
         const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
 
-        // Accept the server socket immediately
+        // Accept immediately, do not await any work before responding
         server.accept();
 
-        // Defer the rest of the session setup; do NOT await
-        // If you want to keep the object alive for async work, use waitUntil on state
+        // Defer the rest of the setup; do NOT await it
         this.state.waitUntil(this.handleSession(server, request));
 
-        // Return 101 immediately so the browser sees the upgrade
+        // Return 101 now so the browser completes the handshake
         return new Response(null, { status: 101, webSocket: client });
       }
       
