@@ -1007,16 +1007,8 @@ export class ZeroAgent extends DurableObject {
     const url = new URL(request.url);
     
     // Handle WebSocket upgrade requests
-    const upgradeHeader = request.headers.get('Upgrade');
-    const connectionHeader = request.headers.get('Connection');
-    
-    if (upgradeHeader?.toLowerCase() === 'websocket') {
+    if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
       try {
-        // Check if this is a valid WebSocket upgrade request
-        if (!connectionHeader?.toLowerCase().includes('upgrade')) {
-          return new Response('Invalid WebSocket upgrade request', { status: 400 });
-        }
-        
         const webSocketPair = new WebSocketPair();
         const [client, server] = Object.values(webSocketPair);
         
@@ -1033,12 +1025,12 @@ export class ZeroAgent extends DurableObject {
               type: 'echo',
               data: message
             }));
-                  } catch (error) {
-          // Only log in debug mode to avoid startup overhead
-          if (env.DEBUG === 'true') {
-            console.error('WebSocket message error');
+          } catch (error) {
+            // Only log in debug mode to avoid startup overhead
+            if (env.DEBUG === 'true') {
+              console.error('WebSocket message error');
+            }
           }
-        }
         });
         
         // Handle WebSocket close
@@ -1054,13 +1046,10 @@ export class ZeroAgent extends DurableObject {
           }
         });
         
+        // Return WebSocket response - let Cloudflare handle the headers
         return new Response(null, {
           status: 101,
-          webSocket: client,
-          headers: {
-            'Upgrade': 'websocket',
-            'Connection': 'Upgrade',
-          }
+          webSocket: client
         });
       } catch (error) {
         // Only log in debug mode to avoid startup overhead

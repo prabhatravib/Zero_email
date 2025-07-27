@@ -33,17 +33,15 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
        .get('/api/auth/check', authCheckHandler);
     
     // WebSocket route for agents
-    app.get('/agents/:agentId/:channel', async (c) => {
+    app.get('/agents/:agentId/:channel', (c) => {
         const { agentId, channel } = c.req.param();
         const env = c.env as any;
         
         // Forward to Durable Object
         const agent = env.ZERO_AGENT.get(env.ZERO_AGENT.idFromName(agentId));
         
-        // Forward the original request directly to avoid body cloning
-        const response = await agent.fetch(c.req.raw);
-        
-        return response;
+        // Return the promise directly to preserve WebSocket upgrade
+        return agent.fetch(c.req.raw);
     });
     
     // Register auth routes
