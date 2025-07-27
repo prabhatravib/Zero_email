@@ -1,4 +1,4 @@
-import { testHandler, testTrpcHandler, testJwtHandler, testDecodeHandler } from './test';
+import { testHandler, testTrpcHandler, testJwtHandler, testDecodeHandler, testJwtVerifyHandler, testTrpcAuthHandler } from './test';
 import { debugHandler } from './debug';
 import { publicRouter } from './auth';
 import { debugEnvHandler } from './debug-env';
@@ -14,7 +14,9 @@ export const registerRoutes = (app: Hono<HonoContext>) => {
        .get('/health', healthHandler)
        .get('/api/test', testTrpcHandler)
        .get('/test-jwt', testJwtHandler)
-       .get('/test-decode', testDecodeHandler);
+       .get('/test-decode', testDecodeHandler)
+       .get('/test-jwt-verify', testJwtVerifyHandler)
+       .get('/test-trpc-auth', testTrpcAuthHandler);
     
     // WebSocket route for agents
     app.get('/agents/:agentId/:channel', async (c) => {

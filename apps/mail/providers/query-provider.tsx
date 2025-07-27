@@ -37,14 +37,9 @@ export const makeQueryClient = (connectionId: string | null) =>
           err.message === 'Required scopes missing' ||
           err.message.includes('Invalid connection')
         ) {
-          signOut({
-            fetchOptions: {
-              onSuccess: () => {
-                if (window.location.href.includes('/login')) return;
-                window.location.href = '/login?error=required_scopes_missing';
-              },
-            },
-          });
+          signOut();
+          if (window.location.href.includes('/login')) return;
+          window.location.href = '/login?error=required_scopes_missing';
         } else console.error(err.message || 'Something went wrong');
       },
     }),

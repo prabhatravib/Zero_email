@@ -12,6 +12,16 @@ export const registerTrpcRoutes = (app: Hono<HonoContext>) => {
            .use('/api/trpc/*', trpcServer({
                router: appRouter,
                endpoint: '/api/trpc',
+               createContext: (_opts, c) => {
+                   console.log('🔍 tRPC createContext - Reading session from Hono context');
+                   const sessionUser = c.get('sessionUser');
+                   console.log('🔍 tRPC createContext - Session user:', sessionUser ? 'present' : 'null');
+                   
+                   return {
+                       c,
+                       sessionUser: sessionUser || undefined,
+                   };
+               },
            }));
         
         console.log('✅ tRPC routes registered successfully');
