@@ -7,12 +7,12 @@ export const resend = () =>
     : { emails: { send: async (...args: unknown[]) => console.log(args) } };
 
 export const redis = () => {
-  // Redis disabled - no Redis storage
+  // Mock Redis - allows all requests (no rate limiting)
   return {
     get: async () => null,
     set: async () => null,
     del: async () => null,
-    // Mock rate limiting - always allow requests
     eval: async () => [1, 0, 0], // [success, limit, remaining]
+    evalsha: async () => [1, 0, 0], // Add missing evalsha method
   };
 };

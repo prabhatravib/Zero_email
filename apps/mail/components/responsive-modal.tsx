@@ -26,7 +26,7 @@ export default function ResponsiveModal({
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full overflow-y-auto border-none p-0 [-ms-overflow-style:none] [scrollbar-width:none] sm:max-w-lg [&::-webkit-scrollbar]:hidden" aria-describedby="responsive-modal-description">
+        <DialogContent className="w-full overflow-y-auto border-none p-0 [-ms-overflow-style:none] [scrollbar-width:none] sm:max-w-lg [&::-webkit-scrollbar]:hidden">
           <VisuallyHidden.VisuallyHidden>
             <DialogHeader>
               <DialogTitle>Title</DialogTitle>

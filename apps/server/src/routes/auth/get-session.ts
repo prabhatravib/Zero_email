@@ -1,4 +1,5 @@
 import type { HonoContext } from '../../ctx';
+import jwt from '@tsndr/cloudflare-worker-jwt';
 
 export const getSessionHandler = async (c: HonoContext) => {
     // Set proper headers to prevent content decoding issues
@@ -31,7 +32,40 @@ export const getSessionHandler = async (c: HonoContext) => {
             return c.json({ user: null });
         }
         
-        // Try to decode session token from headers (base64 encoded JSON)
+        // Try to decode JWT session token first
+        try {
+            // Verify and decode the JWT token
+            const env = c.env as any;
+            const verified = await jwt.verify(sessionId, env.JWT_SECRET);
+            if (!verified) {
+                console.log('JWT token verification failed');
+                return c.json({ user: null });
+            }
+            
+            // Decode the JWT payload
+            const decoded = jwt.decode(sessionId);
+            const sessionData = decoded.payload;
+            
+            // Check if session is expired (JWT exp is in seconds, Date.now() is in milliseconds)
+            if (sessionData.exp && Date.now() > sessionData.exp * 1000) {
+                console.log('Session expired');
+                return c.json({ user: null });
+            }
+            
+            console.log('Valid JWT session found for:', sessionData.email);
+            return c.json({
+                user: {
+                    id: sessionData.userId || sessionData.email, // Use Google's user ID, fallback to email
+                    email: sessionData.email,
+                    name: sessionData.name,
+                    image: sessionData.picture,
+                }
+            });
+        } catch (jwtError) {
+            console.log('Failed to decode session token as JWT, trying base64 fallback');
+        }
+        
+        // Fallback: Try to decode session token from headers (base64 encoded JSON)
         try {
             // Safely decode base64 session token
             let sessionData;
@@ -51,7 +85,7 @@ export const getSessionHandler = async (c: HonoContext) => {
                 return c.json({ user: null });
             }
             
-            console.log('Valid session found for:', sessionData.email);
+            console.log('Valid base64 session found for:', sessionData.email);
             return c.json({
                 user: {
                     id: sessionData.userId || sessionData.email, // Use Google's user ID, fallback to email
@@ -64,7 +98,7 @@ export const getSessionHandler = async (c: HonoContext) => {
             console.log('Failed to decode session token as base64 JSON, trying Durable Object lookup');
         }
         
-        // Fallback: Try to retrieve session data from ZeroDB Durable Object
+        // Final fallback: Try to retrieve session data from ZeroDB Durable Object
         try {
             const env = c.env as any;
             const db = env.ZERO_DB;

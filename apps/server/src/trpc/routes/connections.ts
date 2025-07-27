@@ -1,6 +1,5 @@
 import { createRateLimiterMiddleware, privateProcedure, publicProcedure, router } from '../trpc';
 import { getActiveConnection, getZeroDB } from '../../lib/server-utils';
-import { Ratelimit } from '@upstash/ratelimit';
 
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -9,7 +8,7 @@ export const connectionsRouter = router({
   list: privateProcedure
     .use(
       createRateLimiterMiddleware({
-        limiter: Ratelimit.slidingWindow(120, '1m'),
+        limiter: { window: '1m', limit: 120 },
         generatePrefix: ({ sessionUser }) => `ratelimit:get-connections-${sessionUser?.id || 'anonymous'}`,
       }),
     )

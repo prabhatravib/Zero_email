@@ -3,6 +3,7 @@ import { connection } from '../db/schema';
 import type { HonoContext } from '../ctx';
 import { env } from 'cloudflare:workers';
 import { createDriver } from './driver';
+import jwt from '@tsndr/cloudflare-worker-jwt';
 
 export const getZeroDB = async (userId: string) => {
   const stub = env.ZERO_DB.get(env.ZERO_DB.idFromName(userId));
@@ -51,17 +52,54 @@ export const getActiveConnection = async () => {
       throw new Error('No session token found');
     }
 
-    // Safely decode base64 session token
+    // Try to decode JWT session token first
     let sessionData;
     try {
-      // Ensure the base64 string is properly padded
-      const paddedToken = sessionToken + '='.repeat((4 - sessionToken.length % 4) % 4);
-      const decodedToken = atob(paddedToken);
-      sessionData = JSON.parse(decodedToken);
-    } catch (error) {
-      console.error('Failed to decode session token:', error);
-      throw new Error('Invalid session token format');
+      // Verify and decode the JWT token
+      const env = c.env as any;
+      const verified = await jwt.verify(sessionToken, env.JWT_SECRET);
+      if (!verified) {
+        throw new Error('JWT token verification failed');
+      }
+      
+      // Decode the JWT payload
+      const decoded = jwt.decode(sessionToken);
+      sessionData = decoded.payload;
+      console.log('getActiveConnection - Decoded JWT session token');
+    } catch (jwtError) {
+      console.log('Failed to decode session token as JWT, trying base64 fallback');
+      
+      // Fallback: Try to decode as base64 JSON (for backward compatibility)
+      try {
+        // Ensure the base64 string is properly padded
+        const paddedToken = sessionToken + '='.repeat((4 - sessionToken.length % 4) % 4);
+        const decodedToken = atob(paddedToken);
+        sessionData = JSON.parse(decodedToken);
+        console.log('getActiveConnection - Decoded base64 session token (fallback)');
+      } catch (base64Error) {
+        console.log('Failed to decode session token as base64, trying Durable Object lookup');
+        
+        // Final fallback: Try to retrieve session data from ZeroDB Durable Object
+        try {
+          const env = c.env as any;
+          const db = env.ZERO_DB;
+          const sessionObj = db.get(db.idFromName('sessions'));
+          
+          const response = await sessionObj.fetch(`http://localhost/get?sessionId=${encodeURIComponent(sessionToken)}`);
+          
+          if (response.ok) {
+            sessionData = await response.json();
+            console.log('getActiveConnection - Retrieved session from Durable Object');
+          } else {
+            throw new Error('Session not found in Durable Object');
+          }
+        } catch (dbError) {
+          console.error('Failed to retrieve session from Durable Object:', dbError);
+          throw new Error('Invalid session token format');
+        }
+      }
     }
+
     console.log('getActiveConnection - Session data:', { 
       userId: sessionData.userId, 
       email: sessionData.email,
@@ -69,8 +107,8 @@ export const getActiveConnection = async () => {
       hasAccessToken: !!sessionData.access_token
     });
 
-    // Check if session is expired
-    if (sessionData.exp && Date.now() > sessionData.exp) {
+    // Check if session is expired (JWT exp is in seconds, Date.now() is in milliseconds)
+    if (sessionData.exp && Date.now() > sessionData.exp * 1000) {
       throw new Error('Session expired');
     }
 
