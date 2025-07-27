@@ -1030,6 +1030,9 @@ export class ZeroAgent extends DurableObject {
 
         this.handleSession(ws, request);   // no await needed – run async
 
+        // Debug: check WebSocket state before returning
+        if (!ws.accepted) console.log('WS state before return:', ws.readyState);  // 0=open, 3=closed
+
         // Return the SAME socket so the edge Worker can pipe it to the browser
         return new Response(null, { status: 101, webSocket: ws });
       }
