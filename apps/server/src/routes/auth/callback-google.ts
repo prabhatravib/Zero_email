@@ -1,87 +1,64 @@
-import { createConfig } from '../../config';
 import type { HonoContext } from '../../ctx';
 import jwt from '@tsndr/cloudflare-worker-jwt';
-import { google } from 'googleapis';
-import { env } from 'cloudflare:workers';
 import { getConfig } from '../../config.js';
 
 export const googleCallbackHandler = async (c: HonoContext) => {
   const config = getConfig(c.env as any);
+  const code = c.req.query('code');
+  const errorQuery = c.req.query('error');
+
+  if (errorQuery) {
+    console.error('OAuth Error from Google:', errorQuery);
+    return c.redirect(`${config.app.publicUrl}/auth/google/callback?error=${encodeURIComponent(errorQuery)}`);
+  }
+
+  if (!code) {
+    console.error('No authorization code provided.');
+    return c.redirect(`${config.app.publicUrl}/auth/google/callback?error=no_code`);
+  }
 
   try {
-    if (!config.google.clientId || !config.google.clientSecret || !config.google.redirectUri) {
-      console.error("Google OAuth configuration is missing required fields.");
-      return c.redirect(`${config.app.publicUrl}/auth/google/callback?error=${encodeURIComponent('oauth_config_error')}`);
-    }
-    
-    if (!config.jwt.secret) {
-      console.error("JWT secret is not configured.");
-      return c.redirect(`${config.app.publicUrl}/auth/google/callback?error=${encodeURIComponent('jwt_config_error')}`);
-    }
+    // 1. Exchange authorization code for tokens
+    const tokenParams = new URLSearchParams({
+      client_id: config.google.clientId,
+      client_secret: config.google.clientSecret,
+      redirect_uri: config.google.redirectUri,
+      grant_type: 'authorization_code',
+      code,
+    });
 
-    const oauth2Client = new google.auth.OAuth2(
-      config.google.clientId,
-      config.google.clientSecret,
-      config.google.redirectUri,
-    );
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: tokenParams.toString(),
+    });
 
-    const code = c.req.query('code');
-    const error = c.req.query('error');
-
-    if (error) {
-      console.error('OAuth Error:', error);
-      return c.redirect(`${config.app.publicUrl}/auth/google/callback?error=${encodeURIComponent(error)}`);
-    }
-
-    if (!code) {
-      console.error('No authorization code provided.');
-      return c.redirect(`${config.app.publicUrl}/auth/google/callback?error=no_code`);
-    }
-
-    const { tokens } = await oauth2Client.getToken(code);
-    oauth2Client.setCredentials(tokens);
-
-    if (!tokens.access_token || !tokens.refresh_token) {
-      let errorJson;
-      try {
-        const tokenResponseText = await (await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            code,
-            client_id: config.google.clientId,
-            client_secret: config.google.clientSecret,
-            redirect_uri: config.google.redirectUri,
-            grant_type: 'authorization_code',
-          }),
-        })).text();
-        errorJson = JSON.parse(tokenResponseText);
-      } catch (e) {
-        // ignore if parsing fails
-      }
-
-      if (errorJson && errorJson.error) {
-        console.error('Token exchange error:', errorJson);
-        return c.redirect(`${config.app.publicUrl}/auth/google/callback?error=${encodeURIComponent(errorJson.error)}&error_description=${encodeURIComponent(errorJson.error_description || '')}`);
-      }
-
-      console.error('Token exchange failed without a specific error message.');
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      console.error('Token exchange failed:', { status: tokenResponse.status, body: errorText });
       return c.redirect(`${config.app.publicUrl}/auth/google/callback?error=token_exchange_failed`);
     }
 
-    const oauth2 = google.oauth2({
-      auth: oauth2Client,
-      version: 'v2',
+    const tokens = await tokenResponse.json() as { access_token: string; refresh_token: string; expiry_date: number; scope: string };
+
+    // 2. Use access token to get user info
+    const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
 
-    const userInfoResponse = await oauth2.userinfo.get();
-    const userData = userInfoResponse.data;
-
-    if (!userData || !userData.email || !userData.id) {
-      console.error('Failed to retrieve valid user info from Google.');
+    if (!userInfoResponse.ok) {
+      console.error('Failed to fetch user info:', { status: userInfoResponse.status });
       return c.redirect(`${config.app.publicUrl}/auth/google/callback?error=user_info_failed`);
     }
 
+    const userData = await userInfoResponse.json() as { id: string; email: string; name?: string; picture?: string; };
+
+    if (!userData || !userData.email || !userData.id) {
+        console.error('Invalid user data received from Google.');
+        return c.redirect(`${config.app.publicUrl}/auth/google/callback?error=invalid_user_data`);
+    }
+
+    // 3. Create a session JWT for our application
     const sessionPayload = {
       userId: userData.id,
       email: userData.email,
@@ -91,59 +68,26 @@ export const googleCallbackHandler = async (c: HonoContext) => {
       refreshToken: tokens.refresh_token,
       scope: tokens.scope,
       expiresAt: Date.now() + (tokens.expiry_date || 3600) * 1000,
+      iat: Math.floor(Date.now() / 1000),
     };
-    
-    let session;
-    let errorType = '';
-    
-    try {
-      const jwtPayload = {
-        userId: sessionPayload.userId,
-        email: sessionPayload.email,
-        name: sessionPayload.name,
-        picture: sessionPayload.picture,
-        access_token: sessionPayload.accessToken,
-        refresh_token: sessionPayload.refreshToken,
-        scope: sessionPayload.scope,
-        expiresAt: sessionPayload.expiresAt,
-        iat: Math.floor(Date.now() / 1000),
-      };
 
-      const signedJwt = await jwt.sign(jwtPayload, config.jwt.secret);
-      
-      const sessionData = {
-        ...sessionPayload,
-        jwt: signedJwt,
-      };
+    const sessionToken = await jwt.sign(sessionPayload, config.jwt.secret);
 
-      const serializedSession = JSON.stringify(sessionData);
-      session = btoa(serializedSession);
-    } catch (e) {
-      if (e instanceof Error && e.message.includes('Key must be type')) {
-        errorType = 'jwt_secret_invalid';
-      } else {
-        errorType = 'jwt_signing_error';
-      }
-      console.error(`JWT Signing Error (${errorType}):`, e);
-    }
+    // 4. Redirect back to the frontend with the session token
+    const successUrlParams = new URLSearchParams({
+      success: 'true',
+      email: userData.email,
+      name: userData.name || '',
+      picture: userData.picture || '',
+      session: sessionToken,
+    });
 
-    if (errorType || !session) {
-      return c.redirect(`${config.app.publicUrl}/auth/google/callback?error=${encodeURIComponent(errorType)}`);
-    }
-
-    const successUrl = `${config.app.publicUrl}/auth/google/callback?success=true&email=${encodeURIComponent(userData.email)}&name=${encodeURIComponent(userData.name || '')}&picture=${encodeURIComponent(userData.picture || '')}&session=${encodeURIComponent(session)}`;
+    const successUrl = `${config.app.publicUrl}/auth/google/callback?${successUrlParams.toString()}`;
     
     return c.redirect(successUrl);
 
-  } catch (err: unknown) {
-    const error = err as Error & { code?: string; errors?: any[] };
-    let errorType = 'unknown_error';
-    if (error.code === 'ENOTFOUND') {
-      errorType = 'dns_error';
-    } else if (error.message.includes('invalid_grant')) {
-      errorType = 'invalid_grant';
-    }
-    console.error(`Google Callback Handler Error (${errorType}):`, error);
-    return c.redirect(`${config.app.publicUrl}/auth/google/callback?error=${encodeURIComponent(errorType)}`);
+  } catch (err) {
+    console.error('Google Callback Handler unexpected error:', err);
+    return c.redirect(`${config.app.publicUrl}/auth/google/callback?error=unknown_error`);
   }
 }; 

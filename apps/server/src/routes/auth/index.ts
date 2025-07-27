@@ -1,20 +1,23 @@
-import { exchangeTokenHandler } from './exchange-token';
-import { getSessionHandler } from './get-session';
-import { signInSocialHandler } from './sign-in-social';
-import { googleCallbackHandler } from './callback-google';
-import type { HonoContext } from '../../ctx';
-import type { Hono } from 'hono';
-import { googleAuth } from '@hono/auth-js/providers/google';
 import { Hono } from 'hono';
+import { auth } from '@hono/auth';
+import Google from '@auth/core/providers/google';
+import { googleCallbackHandler } from './callback-google.js';
+import type { HonoContext } from '../../ctx';
 
-export const registerAuthRoutes = (app: Hono<any>) => {
-    app.get('/auth/login/google', async (c) => {
-        const auth = googleAuth({
-            clientId: c.env.GOOGLE_CLIENT_ID,
-            clientSecret: c.env.GOOGLE_CLIENT_SECRET,
-            scope: ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'],
-        });
-        return auth(c);
-    })
-    .get('/auth/google/callback', googleCallbackHandler);
+export const registerAuthRoutes = (app: Hono<HonoContext>) => {
+  // The @hono/auth middleware handles the /auth/login/google route automatically
+  app.use('/auth/*', auth({
+    // It's important that the secret is a string of at least 32 characters.
+    secret: c => c.env.JWT_SECRET,
+    providers: [
+      Google({
+        clientId: c => c.env.GOOGLE_CLIENT_ID,
+        clientSecret: c => c.env.GOOGLE_CLIENT_SECRET,
+        scope: ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'],
+      }),
+    ],
+  }));
+
+  // We still need our custom callback handler to manage session creation
+  app.get('/auth/google/callback', googleCallbackHandler);
 }; 
