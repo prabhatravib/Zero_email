@@ -9,6 +9,7 @@ export const registerAuthRoutes = (app: Hono<HonoContext>) => {
     const googleAuthMiddleware = googleAuth({
       client_id: c.env.GOOGLE_CLIENT_ID,
       client_secret: c.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: 'https://pitext-mail.prabhatravib.workers.dev/auth/google/callback',
       scope: [
         'https://www.googleapis.com/auth/userinfo.email',
         'https://www.googleapis.com/auth/userinfo.profile',
