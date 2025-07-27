@@ -17,10 +17,10 @@
 // Only import lightweight types and utilities at startup
 import type {
   IncomingMessageType,
-  OutgoingMessageType,
   IncomingMessage,
   OutgoingMessage,
 } from './types';
+import { OutgoingMessageType } from './types';
 import type {
   EPrompts,
   IOutgoingMessage,
@@ -977,6 +977,7 @@ export class ZeroAgent extends DurableObject {
   private env: any;
   private name: string = 'general';
   private messages: any[] = [];
+  private parties: Set<Connection> = new Set();
 
   constructor(state: DurableObjectState, env: any) {
     super(state, env);
@@ -1008,25 +1009,42 @@ export class ZeroAgent extends DurableObject {
     if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
       const pair = new WebSocketPair();
       const [client, server] = Object.values(pair);
-      server.accept();
-      
-      server.addEventListener('message', async (event) => {
-          try {
-            const message = JSON.parse(event.data as string);
-            server.send(JSON.stringify({ type: 'echo', data: message }));
-          } catch (error) {
-            if (this.env.DEBUG === 'true') {
-              console.error('WebSocket message error', error);
-            }
-          }
-      });
-
+      await this.handleSession(server);
       return new Response(null, { status: 101, webSocket: client });
     }
     
     // Handle HTTP requests
     return new Response(JSON.stringify({ message: 'ZeroAgent is running' }), {
       headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  async handleSession(server: WebSocket) {
+    server.accept();
+    const connection = {
+      id: Math.random().toString(36).substring(2),
+      send: (message: string) => server.send(message),
+      state: {},
+      close: () => server.close(),
+    };
+    this.parties.add(connection);
+
+    server.addEventListener('message', async (event) => {
+      try {
+        await this.onMessage(connection, event.data as string | ArrayBuffer);
+      } catch (error) {
+        if (this.env.DEBUG === 'true') {
+          console.error('WebSocket message error', error);
+        }
+      }
+    });
+
+    server.addEventListener('close', () => {
+      this.parties.delete(connection);
+    });
+
+    server.addEventListener('error', () => {
+      this.parties.delete(connection);
     });
   }
 
