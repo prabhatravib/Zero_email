@@ -1,4 +1,3 @@
-import { type Context } from 'hono';
 import type { HonoContext } from '../../ctx';
 import jwt from '@tsndr/cloudflare-worker-jwt';
 
@@ -18,8 +17,8 @@ type GoogleToken = {
   expires_in: number;
 };
 
-export const googleCallbackHandler = async (c: Context<HonoContext>) => {
-  const env = c.env;
+export const googleCallbackHandler = async (c: HonoContext) => {
+  const env = c.env as any;
   const publicUrl = env.VITE_PUBLIC_APP_URL || 'https://pitext-email.onrender.com';
 
   // Data is placed in context by the googleAuth middleware

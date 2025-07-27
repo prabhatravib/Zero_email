@@ -2,7 +2,7 @@ import React from 'react';
 
 // Custom auth client for Gmail OAuth only
 // Use relative URLs to go through the frontend proxy
-const BACKEND_URL = ''; // Empty string means relative URLs
+const BACKEND_URL = 'https://pitext-mail.prabhatravib.workers.dev';
 
 // Debug: Log the backend URL being used
 console.log('Auth client - Using relative URLs for frontend proxy');
