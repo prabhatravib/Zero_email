@@ -1,9 +1,12 @@
-export class ZeroDB {
-    private state: any;
+import { DurableObject } from "cloudflare:workers";
+
+export class ZeroDB extends DurableObject {
+    private state: DurableObjectState;
     private env: any;
     private sessions: Map<string, any>;
 
-    constructor(state: any, env: any) {
+    constructor(state: DurableObjectState, env: any) {
+        super(state, env);
         this.state = state;
         this.env = env;
         this.sessions = new Map();
