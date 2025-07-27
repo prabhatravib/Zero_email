@@ -14,48 +14,27 @@
  * Reuse or distribution of this file requires a license from Zero Email Inc.
  */
 
-import {
-  appendResponseMessages,
-  createDataStreamResponse,
-  generateText,
-  streamText,
-  type StreamTextOnFinishCallback,
-} from 'ai';
-import {
+// Only import lightweight types and utilities at startup
+import type {
   IncomingMessageType,
   OutgoingMessageType,
-  type IncomingMessage,
-  type OutgoingMessage,
+  IncomingMessage,
+  OutgoingMessage,
 } from './types';
-import {
+import type {
   EPrompts,
-  type IOutgoingMessage,
-  type ISnoozeBatch,
-  type ParsedMessage,
+  IOutgoingMessage,
+  ISnoozeBatch,
+  ParsedMessage,
 } from '../../types';
 import type { IGetThreadResponse, IGetThreadsResponse, MailManager } from '../../lib/driver/types';
-import { DurableObjectOAuthClientProvider } from 'agents/mcp/do-oauth-client-provider';
-import { AiChatPrompt, GmailSearchAssistantSystemPrompt } from '../../lib/prompts';
-import { connectionToDriver, getZeroSocketAgent } from '../../lib/server-utils';
 import type { CreateDraftData } from '../../lib/schemas';
-import { withRetry } from '../../lib/gmail-rate-limit';
-import { getPrompt } from '../../pipelines.effect';
-import { DurableObject } from "cloudflare:workers";
-import { ToolOrchestrator } from './orchestrator';
-import { getPromptName } from '../../pipelines';
-import { anthropic } from '@ai-sdk/anthropic';
-import { connection } from '../../db/schema';
 import type { WSMessage } from 'partyserver';
-import { tools as authTools } from './tools';
-import { processToolCalls } from './utils';
-import { env } from 'cloudflare:workers';
 import type { Connection } from 'agents';
-import { openai } from '@ai-sdk/openai';
-import { createDb } from '../../db';
-import { DriverRpcDO } from './rpc';
-import { getConnectionFromDurableObject } from '../../lib/server-utils';
-import { eq } from 'drizzle-orm';
-import { Effect } from 'effect';
+import { DurableObject } from "cloudflare:workers";
+import { env } from 'cloudflare:workers';
+
+// Heavy imports will be dynamically imported when needed
 
 const decoder = new TextDecoder();
 
@@ -94,6 +73,9 @@ export class ZeroDriver extends DurableObject {
 
   async setMetaData(connectionId: string) {
     await this.setName(connectionId);
+    // Dynamic import to avoid startup overhead
+    const { getZeroSocketAgent } = await import('../../lib/server-utils');
+    const { DriverRpcDO } = await import('./rpc');
     this.agent = await getZeroSocketAgent(connectionId);
     return new DriverRpcDO(this, connectionId);
   }
@@ -169,6 +151,8 @@ export class ZeroDriver extends DurableObject {
     if (this.name === 'general') return;
     if (!this.driver) {
       try {
+        // Dynamic import to avoid startup overhead
+        const { getConnectionFromDurableObject, connectionToDriver } = await import('../../lib/server-utils');
         // Use Durable Objects instead of Hyperdrive
         const connectionData = await getConnectionFromDurableObject(this.name);
         if (connectionData) {
@@ -178,7 +162,10 @@ export class ZeroDriver extends DurableObject {
           this.ctx.waitUntil(this.syncThreads('spam'));
         }
       } catch (error) {
-        console.error('Error setting up auth with Durable Objects:', error);
+        // Only log in debug mode to avoid startup overhead
+        if (env.DEBUG === 'true') {
+          console.error('Error setting up auth with Durable Objects:', error);
+        }
       }
     }
   }
@@ -335,12 +322,18 @@ export class ZeroDriver extends DurableObject {
   private async listWithRetry(params: Parameters<MailManager['list']>[0]) {
     if (!this.driver) throw new Error('No driver available');
 
+    // Dynamic import to avoid startup overhead
+    const { Effect } = await import('effect');
+    const { withRetry } = await import('../../lib/gmail-rate-limit');
     return Effect.runPromise(withRetry(Effect.tryPromise(() => this.driver!.list(params))));
   }
 
   private async getWithRetry(threadId: string): Promise<IGetThreadResponse> {
     if (!this.driver) throw new Error('No driver available');
 
+    // Dynamic import to avoid startup overhead
+    const { Effect } = await import('effect');
+    const { withRetry } = await import('../../lib/gmail-rate-limit');
     return Effect.runPromise(withRetry(Effect.tryPromise(() => this.driver!.get(threadId))));
   }
 
@@ -368,7 +361,7 @@ export class ZeroDriver extends DurableObject {
       }
 
       pageToken = result.nextPageToken;
-      hasMore = pageToken !== null && shouldLoop;
+      hasMore = pageToken !== null && getShouldLoop();
     }
   }
 

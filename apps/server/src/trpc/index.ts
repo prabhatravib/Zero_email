@@ -8,18 +8,22 @@ import { getContext } from 'hono/context-storage';
 import { draftsRouter } from './routes/drafts';
 import { labelsRouter } from './routes/label';
 import { notesRouter } from './routes/notes';
-import { brainRouter } from './routes/brain';
+// Temporarily disabled brain router to fix Cloudflare startup timeout
+// import { brainRouter } from './routes/brain';
 import { userRouter } from './routes/user';
 import { mailRouter } from './routes/mail';
 import { bimiRouter } from './routes/bimi';
 import type { HonoContext } from '../ctx';
-import { aiRouter } from './routes/ai';
+// Temporarily disabled AI router to fix Cloudflare startup timeout
+// import { aiRouter } from './routes/ai';
 import { router } from './trpc';
 
 export const appRouter = router({
-  ai: aiRouter,
+  // Temporarily disabled AI functionality to fix Cloudflare startup timeout
+  // ai: aiRouter,
   bimi: bimiRouter,
-  brain: brainRouter,
+  // Temporarily disabled brain functionality to fix Cloudflare startup timeout
+  // brain: brainRouter,
   categories: categoriesRouter,
   connections: connectionsRouter,
   cookiePreferences: cookiePreferencesRouter,
