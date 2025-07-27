@@ -7,6 +7,11 @@
   "ai": {
     "binding": "AI",
   },
+  "observability": {
+    "logs": {
+      "enabled": true
+    }
+  },
 
   "durable_objects": {
     "bindings": [
