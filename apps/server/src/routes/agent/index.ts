@@ -33,19 +33,10 @@ import type { WSMessage } from 'partyserver';
 import type { Connection } from 'agents';
 import { DurableObject } from "cloudflare:workers";
 import { env } from 'cloudflare:workers';
-import { anthropic } from '@ai-sdk/anthropic';
-import { openai } from '@ai-sdk/openai';
-import { streamText, createDataStreamResponse } from 'ai';
-import { appendResponseMessages } from 'ai';
-import type { StreamTextOnFinishCallback } from 'ai';
-import { getPrompt } from '../../lib/brain';
-import { getPromptName } from '../../pipelines';
-import { AiChatPrompt } from '../../lib/prompts';
+import { Effect } from 'effect';
 import { authTools } from './auth-tools';
 import { ToolOrchestrator } from './orchestrator';
 import { processToolCalls } from './utils';
-
-// Heavy imports will be dynamically imported when needed
 
 const decoder = new TextDecoder();
 
@@ -1169,8 +1160,8 @@ export class ZeroAgent extends DurableObject {
     // this.registerZeroMCP();
   }
 
-  private getDataStreamResponse(
-    onFinish: StreamTextOnFinishCallback<{}>,
+  private async getDataStreamResponse(
+    onFinish: any,
     _?: {
       abortSignal: AbortSignal | undefined;
     },
