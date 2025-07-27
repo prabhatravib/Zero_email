@@ -61,7 +61,8 @@ const decoder = new TextDecoder();
 
 const shouldDropTables = false;
 const maxCount = 20;
-const shouldLoop = env.THREAD_SYNC_LOOP !== 'false';
+// Move environment variable access to runtime to avoid startup overhead
+const getShouldLoop = () => env.THREAD_SYNC_LOOP !== 'false';
 export class ZeroDriver extends DurableObject {
   private foldersInSync: Map<string, boolean> = new Map();
   private syncThreadsInProgress: Map<string, boolean> = new Map();
@@ -547,7 +548,7 @@ export class ZeroDriver extends DurableObject {
 
           totalSynced += result.threads.length;
           pageToken = result.nextPageToken;
-          hasMore = pageToken !== null && shouldLoop;
+          hasMore = pageToken !== null && getShouldLoop();
         }
 
         return { synced: totalSynced };
@@ -1039,9 +1040,12 @@ export class ZeroAgent extends DurableObject {
               type: 'echo',
               data: message
             }));
-          } catch (error) {
+                  } catch (error) {
+          // Only log in debug mode to avoid startup overhead
+          if (env.DEBUG === 'true') {
             console.error('WebSocket message error');
           }
+        }
         });
         
         // Handle WebSocket close
@@ -1051,7 +1055,10 @@ export class ZeroAgent extends DurableObject {
         
         // Handle WebSocket error
         server.addEventListener('error', (error) => {
-          console.error('WebSocket error');
+          // Only log in debug mode to avoid startup overhead
+          if (env.DEBUG === 'true') {
+            console.error('WebSocket error');
+          }
         });
         
         return new Response(null, {
@@ -1063,7 +1070,10 @@ export class ZeroAgent extends DurableObject {
           }
         });
       } catch (error) {
-        console.error('WebSocket setup failed');
+        // Only log in debug mode to avoid startup overhead
+        if (env.DEBUG === 'true') {
+          console.error('WebSocket setup failed');
+        }
         return new Response('WebSocket setup failed', { status: 500 });
       }
     }
@@ -1123,7 +1133,10 @@ export class ZeroAgent extends DurableObject {
           tools,
           onFinish,
           onError: (error) => {
-            console.error('Error in streamText', error);
+            // Only log in debug mode to avoid startup overhead
+            if (env.DEBUG === 'true') {
+              console.error('Error in streamText', error);
+            }
           },
           system: await getPrompt(getPromptName(connectionId, EPrompts.Chat), AiChatPrompt('')),
         });
@@ -1176,10 +1189,13 @@ export class ZeroAgent extends DurableObject {
       try {
         data = JSON.parse(message) as IncomingMessage;
       } catch (error) {
-        console.warn(error);
-        // silently ignore invalid messages for now
-        // TODO: log errors with log levels
-        return;
+                  // Only log in debug mode to avoid startup overhead
+          if (env.DEBUG === 'true') {
+            console.warn(error);
+          }
+          // silently ignore invalid messages for now
+          // TODO: log errors with log levels
+          return;
       }
       switch (data.type) {
         case IncomingMessageType.UseChatRequest: {
@@ -1217,9 +1233,12 @@ export class ZeroAgent extends DurableObject {
             if (response) {
               await this.reply(data.id, response);
             } else {
-              console.warn(
-                `[AIChatAgent] onChatMessage returned no response for chatMessageId: ${chatMessageId}`,
-              );
+              // Only log in debug mode to avoid startup overhead
+              if (env.DEBUG === 'true') {
+                console.warn(
+                  `[AIChatAgent] onChatMessage returned no response for chatMessageId: ${chatMessageId}`,
+                );
+              }
               this.broadcastChatMessage(
                 {
                   id: data.id,
