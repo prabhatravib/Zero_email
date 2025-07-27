@@ -37,6 +37,7 @@ import { Effect } from 'effect';
 import { authTools } from './auth-tools';
 import { ToolOrchestrator } from './orchestrator';
 import { processToolCalls } from './utils';
+import { openai } from '@ai-sdk/openai';
 
 const decoder = new TextDecoder();
 
@@ -1187,7 +1188,7 @@ export class ZeroAgent extends DurableObject {
         );
 
         const result = streamText({
-          model: anthropic(env.OPENAI_MODEL || 'claude-3-5-haiku-latest'),
+          model: openai(env.OPENAI_MODEL || 'claude-3-5-haiku-latest'),
           maxSteps: 10,
           messages: processedMessages,
           tools,
