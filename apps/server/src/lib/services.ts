@@ -1,5 +1,4 @@
 import { env } from 'cloudflare:workers';
-import { Redis } from '@upstash/redis';
 import { Resend } from 'resend';
 
 export const resend = () =>
@@ -14,7 +13,6 @@ export const redis = () => {
     set: async () => null,
     del: async () => null,
     // Mock rate limiting - always allow requests
-    // Note: Upstash Redis doesn't support evalsha, so we use eval instead
     eval: async () => [1, 0, 0], // [success, limit, remaining]
   };
 };

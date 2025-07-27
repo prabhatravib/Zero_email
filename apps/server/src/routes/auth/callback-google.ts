@@ -120,17 +120,21 @@ export const googleCallbackHandler = async (c: any) => {
         }
 
         const userData = await userResponse.json() as {
+            id: string;           // Google's unique user ID
             email: string;
             name: string;
             picture: string;
+            verified_email: boolean;
         };
         console.log('User info fetched:', userData.email);
 
         // Generate a proper JWT session token
         const sessionPayload = {
+            userId: userData.id,        // Use Google's unique user ID
             email: userData.email,
             name: userData.name,
             picture: userData.picture,
+            verified_email: userData.verified_email,
             access_token: tokenData.access_token,
             refresh_token: tokenData.refresh_token,
             exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours in seconds

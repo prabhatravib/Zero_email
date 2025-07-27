@@ -7,7 +7,7 @@ import { createTRPCClient, httpBatchLink, loggerLink } from '@trpc/client';
 import { QueryCache, QueryClient, hashKey } from '@tanstack/react-query';
 import { createTRPCContext } from '@trpc/tanstack-react-query';
 import { useMemo, type PropsWithChildren } from 'react';
-import type { AppRouter } from '@zero/server/trpc';
+import type { AppRouter } from '@zero/server/trpc/types';
 import { CACHE_BURST_KEY } from '@/lib/constants';
 import { signOut } from '@/lib/auth-client';
 import { get, set, del } from 'idb-keyval';

@@ -81,16 +81,16 @@ export const getActiveConnection = async () => {
 
     // Create connection object from session data
     const connection = {
-      id: sessionData.connectionId,
-      userId: sessionData.userId,
+      id: sessionData.connectionId || `${sessionData.email}_${Date.now()}`,
+      userId: sessionData.userId || sessionData.email, // Use email as userId if not provided
       email: sessionData.email,
       name: sessionData.name,
       picture: sessionData.picture,
       accessToken: sessionData.access_token,
       refreshToken: sessionData.refresh_token,
       scope: sessionData.scope,
-      providerId: sessionData.providerId,
-      expiresAt: new Date(sessionData.expiresAt),
+      providerId: sessionData.providerId || 'google',
+      expiresAt: new Date(sessionData.expiresAt || Date.now() + 24 * 60 * 60 * 1000),
       createdAt: new Date(),
       updatedAt: new Date(),
     };

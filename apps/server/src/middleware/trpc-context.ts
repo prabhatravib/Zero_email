@@ -75,10 +75,10 @@ export const trpcContextMiddleware = async (c: HonoContext, next: () => Promise<
             
             // Create session user from JWT payload
             sessionUser = {
-                id: payload.userId || payload.email, // Use userId if available, fallback to email
+                id: payload.userId || payload.email, // Use Google's user ID, fallback to email
                 email: payload.email,
                 name: payload.name || payload.email,
-                emailVerified: true,
+                emailVerified: payload.verified_email || true,
                 createdAt: new Date(),
                 updatedAt: new Date(),
                 image: payload.picture || null,
@@ -115,10 +115,10 @@ export const trpcContextMiddleware = async (c: HonoContext, next: () => Promise<
                 }
                 
                 sessionUser = {
-                    id: userData.userId || userData.email, // Use userId if available, fallback to email
+                    id: userData.userId || userData.email, // Use Google's user ID, fallback to email
                     email: userData.email,
                     name: userData.name || userData.email,
-                    emailVerified: true,
+                    emailVerified: userData.verified_email || true,
                     createdAt: new Date(),
                     updatedAt: new Date(),
                     image: userData.picture || null,

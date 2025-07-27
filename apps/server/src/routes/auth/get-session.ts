@@ -54,7 +54,7 @@ export const getSessionHandler = async (c: HonoContext) => {
             console.log('Valid session found for:', sessionData.email);
             return c.json({
                 user: {
-                    id: sessionData.userId || sessionData.email, // Use userId if available, fallback to email
+                    id: sessionData.userId || sessionData.email, // Use Google's user ID, fallback to email
                     email: sessionData.email,
                     name: sessionData.name,
                     image: sessionData.picture,
@@ -84,7 +84,7 @@ export const getSessionHandler = async (c: HonoContext) => {
                 console.log('Valid session found for:', sessionData.email);
                 return c.json({
                     user: {
-                        id: sessionData.userId || sessionData.email, // Use userId if available, fallback to email
+                        id: sessionData.userId || sessionData.email, // Use Google's user ID, fallback to email
                         email: sessionData.email,
                         name: sessionData.name,
                         image: sessionData.picture,
