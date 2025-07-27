@@ -39,16 +39,6 @@
       ]
     }
   ],
-  "vectorize": [
-    {
-      "binding": "VECTORIZE",
-      "index_name": "pitext-vectorize"
-    },
-    {
-      "binding": "VECTORIZE_MESSAGE",
-      "index_name": "pitext-message-vectorize"
-    }
-  ],
   "vars": {
     "VITE_PUBLIC_APP_URL": "https://pitext-email.onrender.com",
     "GOOGLE_REDIRECT_URI": "https://pitext-mail.prabhatravib.workers.dev/auth/callback/google",

@@ -1110,10 +1110,6 @@ export class ZeroAgent extends DurableObject {
     this.chatMessageAbortControllers.delete(id);
   }
 
-  broadcastChatMessage(message: OutgoingMessage, exclude?: string[]) {
-    this.broadcast(JSON.stringify(message), exclude);
-  }
-
   private cancelChatRequest(id: string) {
     if (this.chatMessageAbortControllers.has(id)) {
       const abortController = this.chatMessageAbortControllers.get(id);
@@ -1233,29 +1229,6 @@ export class ZeroAgent extends DurableObject {
         // }
       }
     }
-  }
-
-  private async reply(id: string, response: Response) {
-    // now take chunks out from dataStreamResponse and send them to the client
-    return this.tryCatchChat(async () => {
-      for await (const chunk of response.body!) {
-        const body = decoder.decode(chunk);
-
-        this.broadcastChatMessage({
-          id,
-          type: OutgoingMessageType.UseChatResponse,
-          body,
-          done: false,
-        });
-      }
-
-      this.broadcastChatMessage({
-        id,
-        type: OutgoingMessageType.UseChatResponse,
-        body: '',
-        done: true,
-      });
-    });
   }
 
   private destroyAbortControllers() {
