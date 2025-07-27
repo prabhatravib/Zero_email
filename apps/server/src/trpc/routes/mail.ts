@@ -33,7 +33,7 @@ const getFolderLabelId = (folder: string) => {
 };
 
 export const mailRouter = router({
-  get: activeDriverProcedure
+  get: privateProcedure
     .input(
       z.object({
         id: z.string(),
@@ -41,11 +41,32 @@ export const mailRouter = router({
     )
     .output(IGetThreadResponseSchema)
     .query(async ({ input, ctx }) => {
-      const { activeConnection } = ctx;
-      const agent = await getZeroAgent(activeConnection.id);
-      return await agent.getThread(input.id);
+      try {
+        const { sessionUser } = ctx;
+        if (!sessionUser) {
+          throw new TRPCError({ code: 'UNAUTHORIZED' });
+        }
+
+        // Try to get active connection, but don't fail if none exists
+        try {
+          const { getActiveConnection } = await import('../../lib/server-utils');
+          const activeConnection = await getActiveConnection();
+          const agent = await getZeroAgent(activeConnection.id);
+          return await agent.getThread(input.id);
+        } catch (connectionError) {
+          console.log('No active connection found for mail.get');
+          throw new TRPCError({ 
+            code: 'NOT_FOUND', 
+            message: 'No email connection found. Please connect your email account first.' 
+          });
+        }
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error('Error in mail.get:', error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      }
     }),
-  count: activeDriverProcedure
+  count: privateProcedure
     .output(
       z.array(
         z.object({
@@ -55,11 +76,28 @@ export const mailRouter = router({
       ),
     )
     .query(async ({ ctx }) => {
-      const { activeConnection } = ctx;
-      const agent = await getZeroAgent(activeConnection.id);
-      return await agent.count();
+      try {
+        const { sessionUser } = ctx;
+        if (!sessionUser) {
+          return [];
+        }
+
+        // Try to get active connection, but don't fail if none exists
+        try {
+          const { getActiveConnection } = await import('../../lib/server-utils');
+          const activeConnection = await getActiveConnection();
+          const agent = await getZeroAgent(activeConnection.id);
+          return await agent.count();
+        } catch (connectionError) {
+          console.log('No active connection found, returning empty count');
+          return [];
+        }
+      } catch (error) {
+        console.error('Error in mail.count:', error);
+        return [];
+      }
     }),
-  listThreads: activeDriverProcedure
+  listThreads: privateProcedure
     .input(
       z.object({
         folder: z.string().optional().default('inbox'),
@@ -71,93 +109,65 @@ export const mailRouter = router({
     )
     .output(IGetThreadsResponseSchema)
     .query(async ({ ctx, input }) => {
-      const { folder, maxResults, cursor, q, labelIds } = input;
-      const { activeConnection } = ctx;
-      const agent = await getZeroAgent(activeConnection.id);
+      try {
+        const { folder, maxResults, cursor, q, labelIds } = input;
+        const { sessionUser } = ctx;
+        
+        if (!sessionUser) {
+          return { threads: [], nextPageToken: null };
+        }
 
-      console.debug('[listThreads] input:', { folder, maxResults, cursor, q, labelIds });
+        // Try to get active connection, but don't fail if none exists
+        try {
+          const { getActiveConnection } = await import('../../lib/server-utils');
+          const activeConnection = await getActiveConnection();
+          const agent = await getZeroAgent(activeConnection.id);
 
-      if (folder === FOLDERS.DRAFT) {
-        console.debug('[listThreads] Listing drafts');
-        const drafts = await agent.listDrafts({
-          q,
-          maxResults,
-          pageToken: cursor,
-        });
-        console.debug('[listThreads] Drafts result:', drafts);
-        return drafts;
+          console.debug('[listThreads] input:', { folder, maxResults, cursor, q, labelIds });
+
+          if (folder === FOLDERS.DRAFT) {
+            console.debug('[listThreads] Listing drafts');
+            const drafts = await agent.listDrafts({
+              q,
+              maxResults,
+              pageToken: cursor,
+            });
+            console.debug('[listThreads] Drafts result:', drafts);
+            return drafts;
+          }
+
+          type ThreadItem = { id: string; historyId: string | null; $raw?: unknown };
+
+          let threadsResponse: IGetThreadsResponse;
+
+          if (q) {
+            console.debug('[listThreads] Performing search with query:', q);
+            threadsResponse = await agent.rawListThreads({
+              folder,
+              query: q,
+              maxResults,
+              labelIds,
+              pageToken: cursor,
+            });
+          } else {
+            console.debug('[listThreads] Getting threads from database');
+            threadsResponse = await agent.getThreadsFromDB({
+              folder,
+              maxResults,
+              pageToken: cursor,
+              labelIds,
+            });
+          }
+
+          return threadsResponse;
+        } catch (connectionError) {
+          console.log('No active connection found, returning empty threads list');
+          return { threads: [], nextPageToken: null };
+        }
+      } catch (error) {
+        console.error('Error in mail.listThreads:', error);
+        return { threads: [], nextPageToken: null };
       }
-
-      type ThreadItem = { id: string; historyId: string | null; $raw?: unknown };
-
-      let threadsResponse: IGetThreadsResponse;
-
-      if (q) {
-        console.debug('[listThreads] Performing search with query:', q);
-        threadsResponse = await agent.rawListThreads({
-          folder,
-          query: q,
-          maxResults,
-          labelIds,
-          pageToken: cursor,
-        });
-        console.debug('[listThreads] Search result:', threadsResponse);
-      } else {
-        const folderLabelId = getFolderLabelId(folder);
-        const labelIdsToUse = folderLabelId ? [...labelIds, folderLabelId] : labelIds;
-        console.debug('[listThreads] Listing with labelIds:', labelIdsToUse, 'for folder:', folder);
-
-        threadsResponse = await agent.listThreads({
-          folder,
-          labelIds: labelIdsToUse,
-          maxResults,
-          pageToken: cursor,
-        });
-        console.debug('[listThreads] List result:', threadsResponse);
-      }
-
-      if (folder === FOLDERS.SNOOZED) {
-        const nowTs = Date.now();
-        const filtered: ThreadItem[] = [];
-
-        console.debug('[listThreads] Filtering snoozed threads at', new Date(nowTs).toISOString());
-
-        await Promise.all(
-          threadsResponse.threads.map(async (t: ThreadItem) => {
-            const keyName = `${t.id}__${activeConnection.id}`;
-            try {
-              // Snoozing disabled - no KV storage
-      const wakeAtIso = null;
-              if (!wakeAtIso) {
-                filtered.push(t);
-                return;
-              }
-
-              const wakeAt = new Date(wakeAtIso).getTime();
-              if (wakeAt > nowTs) {
-                filtered.push(t);
-                return;
-              }
-
-              console.debug('[UNSNOOZE_ON_ACCESS] Expired thread', t.id, {
-                wakeAtIso,
-                now: new Date(nowTs).toISOString(),
-              });
-
-              await agent.modifyLabels([t.id], ['INBOX'], ['SNOOZED']);
-              // Snoozing disabled - no KV storage
-            } catch (error) {
-              console.error('[UNSNOOZE_ON_ACCESS] Failed for', t.id, error);
-              filtered.push(t);
-            }
-          }),
-        );
-
-        threadsResponse.threads = filtered;
-        console.debug('[listThreads] Snoozed threads after filtering:', filtered);
-      }
-      console.debug('[listThreads] Returning threadsResponse:', threadsResponse);
-      return threadsResponse;
     }),
   markAsRead: activeDriverProcedure
     .input(

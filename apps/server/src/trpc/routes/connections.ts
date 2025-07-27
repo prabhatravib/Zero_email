@@ -13,27 +13,36 @@ export const connectionsRouter = router({
       }),
     )
     .query(async ({ ctx }) => {
-      const { sessionUser } = ctx;
-      const db = await getZeroDB(sessionUser.id);
-      const connections = await db.findManyConnections();
+      try {
+        const { sessionUser } = ctx;
+        if (!sessionUser) {
+          return { connections: [], disconnectedIds: [] };
+        }
 
-      const disconnectedIds = connections
-        .filter((c) => !c.accessToken || !c.refreshToken)
-        .map((c) => c.id);
+        const db = await getZeroDB(sessionUser.id);
+        const connections = await db.findManyConnections();
 
-      return {
-        connections: connections.map((connection) => {
-          return {
-            id: connection.id,
-            email: connection.email,
-            name: connection.name,
-            picture: connection.picture,
-            createdAt: connection.createdAt,
-            providerId: connection.providerId,
-          };
-        }),
-        disconnectedIds,
-      };
+        const disconnectedIds = connections
+          .filter((c) => !c.accessToken || !c.refreshToken)
+          .map((c) => c.id);
+
+        return {
+          connections: connections.map((connection) => {
+            return {
+              id: connection.id,
+              email: connection.email,
+              name: connection.name,
+              picture: connection.picture,
+              createdAt: connection.createdAt,
+              providerId: connection.providerId,
+            };
+          }),
+          disconnectedIds,
+        };
+      } catch (error) {
+        console.error('Error in connections.list:', error);
+        return { connections: [], disconnectedIds: [] };
+      }
     }),
   setDefault: privateProcedure
     .input(z.object({ connectionId: z.string() }))
@@ -57,15 +66,21 @@ export const connectionsRouter = router({
       if (connectionId === activeConnection.id) await db.updateUser({ defaultConnectionId: null });
     }),
   getDefault: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.sessionUser) return null;
-    const connection = await getActiveConnection();
-    return {
-      id: connection.id,
-      email: connection.email,
-      name: connection.name,
-      picture: connection.picture,
-      createdAt: connection.createdAt,
-      providerId: connection.providerId,
-    };
+    try {
+      if (!ctx.sessionUser) return null;
+      
+      const connection = await getActiveConnection();
+      return {
+        id: connection.id,
+        email: connection.email,
+        name: connection.name,
+        picture: connection.picture,
+        createdAt: connection.createdAt,
+        providerId: connection.providerId,
+      };
+    } catch (error) {
+      console.log('No active connection found in getDefault');
+      return null;
+    }
   }),
 });

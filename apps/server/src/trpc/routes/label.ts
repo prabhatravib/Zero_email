@@ -1,9 +1,9 @@
-import { activeDriverProcedure, createRateLimiterMiddleware, router } from '../trpc';
+import { activeDriverProcedure, createRateLimiterMiddleware, router, privateProcedure } from '../trpc';
 import { getZeroAgent } from '../../lib/server-utils';
 import { z } from 'zod';
 
 export const labelsRouter = router({
-  list: activeDriverProcedure
+  list: privateProcedure
     .use(
       createRateLimiterMiddleware({
         generatePrefix: ({ sessionUser }) => `ratelimit:get-labels-${sessionUser?.id || 'anonymous'}`,
@@ -26,9 +26,26 @@ export const labelsRouter = router({
       ),
     )
     .query(async ({ ctx }) => {
-      const { activeConnection } = ctx;
-      const agent = await getZeroAgent(activeConnection.id);
-      return await agent.getUserLabels();
+      try {
+        const { sessionUser } = ctx;
+        if (!sessionUser) {
+          return [];
+        }
+
+        // Try to get active connection, but don't fail if none exists
+        try {
+          const { getActiveConnection } = await import('../../lib/server-utils');
+          const activeConnection = await getActiveConnection();
+          const agent = await getZeroAgent(activeConnection.id);
+          return await agent.getUserLabels();
+        } catch (connectionError) {
+          console.log('No active connection found, returning empty labels list');
+          return [];
+        }
+      } catch (error) {
+        console.error('Error in labels.list:', error);
+        return [];
+      }
     }),
   create: activeDriverProcedure
     .use(
