@@ -489,9 +489,24 @@ importers:
 
   apps/server:
     dependencies:
+      '@ai-sdk/anthropic':
+        specifier: ^1.2.12
+        version: 1.2.12(zod@3.25.67)
+      '@ai-sdk/google':
+        specifier: ^1.2.19
+        version: 1.2.19(zod@3.25.67)
+      '@ai-sdk/groq':
+        specifier: ^1.2.9
+        version: 1.2.9(zod@3.25.67)
       '@ai-sdk/openai':
         specifier: ^1.3.21
         version: 1.3.22(zod@3.25.67)
+      '@ai-sdk/perplexity':
+        specifier: 1.1.9
+        version: 1.1.9(zod@3.25.67)
+      '@ai-sdk/ui-utils':
+        specifier: 1.2.11
+        version: 1.2.11(zod@3.25.67)
       '@arcadeai/arcadejs':
         specifier: 1.8.1
         version: 1.8.1
@@ -582,6 +597,9 @@ importers:
       hono-agents:
         specifier: 0.0.83
         version: 0.0.83(agents@0.0.106(@cloudflare/workers-types@4.20250628.0)(react@19.1.0))(hono@4.8.3)
+      hono-party:
+        specifier: ^0.0.12
+        version: 0.0.12(@cloudflare/workers-types@4.20250628.0)(hono@4.8.3)(partyserver@0.0.71(@cloudflare/workers-types@4.20250628.0))
       jose:
         specifier: 6.0.11
         version: 6.0.11
@@ -722,6 +740,24 @@ importers:
   packages/tsconfig: {}
 
 packages:
+
+  '@ai-sdk/anthropic@1.2.12':
+    resolution: {integrity: sha512-YSzjlko7JvuiyQFmI9RN1tNZdEiZxc+6xld/0tq/VkJaHpEzGAb1yiNxxvmYVcjvfu/PcvCxAAYXmTYQQ63IHQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
+
+  '@ai-sdk/google@1.2.19':
+    resolution: {integrity: sha512-Xgl6eftIRQ4srUdCzxM112JuewVMij5q4JLcNmHcB68Bxn9dpr3MVUSPlJwmameuiQuISIA8lMB+iRiRbFsaqA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
+
+  '@ai-sdk/groq@1.2.9':
+    resolution: {integrity: sha512-7MoDaxm8yWtiRbD1LipYZG0kBl+Xe0sv/EeyxnHnGPZappXdlgtdOgTZVjjXkT3nWP30jjZi9A45zoVrBMb3Xg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
 
   '@ai-sdk/openai@1.3.22':
     resolution: {integrity: sha512-QwA+2EkG0QyjVR+7h6FE7iOu2ivNqAVMm9UJZkVxxTk5OIq5fFJDTEI/zICEMuHImTTXR2JjsL6EirJ28Jc4cw==}
@@ -5865,6 +5901,13 @@ packages:
       agents: ^0.0.93
       hono: ^4.6.17
 
+  hono-party@0.0.12:
+    resolution: {integrity: sha512-mvjPDel2GcI93dJ6sreCn3Jx+ta3aw4JFGWwwNYwK7wYpjJG8pqiwVhEnbcneXl+TPheyq0uykQpgNVkruF1Yg==}
+    peerDependencies:
+      '@cloudflare/workers-types': ^4.20240729.0
+      hono: ^4.6.17
+      partyserver: ^0.0.71
+
   hono@4.8.3:
     resolution: {integrity: sha512-jYZ6ZtfWjzBdh8H/0CIFfCBHaFL75k+KMzaM177hrWWm2TWL39YMYaJgB74uK/niRc866NMlH9B8uCvIo284WQ==}
     engines: {node: '>=16.9.0'}
@@ -8781,6 +8824,24 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
+
+  '@ai-sdk/anthropic@1.2.12(zod@3.25.67)':
+    dependencies:
+      '@ai-sdk/provider': 1.1.3
+      '@ai-sdk/provider-utils': 2.2.8(zod@3.25.67)
+      zod: 3.25.67
+
+  '@ai-sdk/google@1.2.19(zod@3.25.67)':
+    dependencies:
+      '@ai-sdk/provider': 1.1.3
+      '@ai-sdk/provider-utils': 2.2.8(zod@3.25.67)
+      zod: 3.25.67
+
+  '@ai-sdk/groq@1.2.9(zod@3.25.67)':
+    dependencies:
+      '@ai-sdk/provider': 1.1.3
+      '@ai-sdk/provider-utils': 2.2.8(zod@3.25.67)
+      zod: 3.25.67
 
   '@ai-sdk/openai@1.3.22(zod@3.25.67)':
     dependencies:
@@ -14346,6 +14407,12 @@ snapshots:
     dependencies:
       agents: 0.0.106(@cloudflare/workers-types@4.20250628.0)(react@19.1.0)
       hono: 4.8.3
+
+  hono-party@0.0.12(@cloudflare/workers-types@4.20250628.0)(hono@4.8.3)(partyserver@0.0.71(@cloudflare/workers-types@4.20250628.0)):
+    dependencies:
+      '@cloudflare/workers-types': 4.20250628.0
+      hono: 4.8.3
+      partyserver: 0.0.71(@cloudflare/workers-types@4.20250628.0)
 
   hono@4.8.3: {}
 

@@ -33,17 +33,6 @@
       },
     ],
   },
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_classes": [
-        "ZeroAgent",
-        "ZeroMCP", 
-        "ZeroDB",
-        "ZeroDriver"
-      ]
-    }
-  ],
 
   "vars": {
     "VITE_PUBLIC_APP_URL": "https://pitext-email.onrender.com",

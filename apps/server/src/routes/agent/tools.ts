@@ -1,6 +1,6 @@
 import { composeEmail } from '../../trpc/routes/ai/compose';
+import { perplexity } from '@ai-sdk/perplexity';
 import { generateText, tool } from 'ai';
-import { openai } from '@ai-sdk/openai';
 
 import { getZeroAgent } from '../../lib/server-utils';
 import { colors } from '../../lib/prompts';
@@ -359,7 +359,7 @@ export const webSearch = () =>
     execute: async ({ query }) => {
       try {
         const response = await generateText({
-          model: openai('gpt-4o-mini'),
+          model: perplexity('sonar'),
           messages: [
             { role: 'system', content: 'Be precise and concise.' },
             { role: 'system', content: 'Do not include sources in your response.' },

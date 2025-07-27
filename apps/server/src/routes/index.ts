@@ -2,21 +2,6 @@ import type { HonoContext } from '../ctx';
 import type { Hono } from 'hono';
 
 export const registerRoutes = async (app: Hono<HonoContext>) => {
-    // WebSocket routes are handled by Durable Objects at /agents/*
-    app.all("/agents/*", async (c) => {
-        const env = c.env as any;
-        const url = new URL(c.req.url);
-        const pathParts = url.pathname.split('/');
-        const agentName = pathParts[pathParts.length - 1] || 'general';
-        
-        // Create or get the Durable Object
-        const id = env.ZERO_AGENT.idFromName(agentName);
-        const obj = env.ZERO_AGENT.get(id);
-        
-        // Forward the request to the Durable Object
-        return obj.fetch(c.req.raw);
-    });
-    
     // Lazy load route handlers to avoid startup overhead
     const [
         { testHandler, testTrpcHandler, testJwtHandler, testDecodeHandler, testJwtVerifyHandler, testTrpcAuthHandler },
@@ -74,7 +59,72 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
         return c.json(debugInfo);
     });
     
-    // WebSocket routes are now handled by Durable Objects at /agents/*
+    // WebSocket route for agents
+    app.get('/agents/zero-agent/:channel', (c) => {
+        try {
+            const { channel } = c.req.param();
+            console.log('[Route] WebSocket request for channel:', channel);
+            
+            const env = c.env as any;
+            console.log('[Route] Environment bindings:', Object.keys(env));
+            
+            if (!env.ZERO_AGENT) {
+                console.error('[Route] ZERO_AGENT binding not found!');
+                return new Response('ZERO_AGENT binding not configured', { status: 500 });
+            }
+            
+            try {
+                console.log('[Route] About to call idFromName with channel:', channel);
+                const agentId = env.ZERO_AGENT.idFromName(channel);
+                console.log('[Route] Created agent ID:', agentId.toString());
+                
+                console.log('[Route] About to get agent stub');
+                const agent = env.ZERO_AGENT.get(agentId);
+                console.log('[Route] Got agent stub, forwarding request');
+                
+                // Add logging before fetch
+                console.log('[Route] About to call agent.fetch with request:', {
+                    url: c.req.raw.url,
+                    headers: Object.fromEntries(c.req.raw.headers.entries())
+                });
+                
+                // Do not declare this function as async, and return the promise directly
+                return agent.fetch(c.req.raw).catch((error: any) => {
+                    console.error('[Route] Agent fetch error:', error);
+                    console.error('[Route] Error stack:', error.stack);
+                    // Return error details in response for debugging
+                    return new Response(JSON.stringify({ 
+                        error: 'Agent fetch failed', 
+                        details: error instanceof Error ? error.message : String(error),
+                        stack: error instanceof Error ? error.stack : undefined
+                    }), {
+                        status: 500,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                });
+            } catch (error) {
+                console.error('[Route] Error creating agent:', error);
+                return new Response(JSON.stringify({ 
+                    error: 'Failed to create agent', 
+                    details: error instanceof Error ? error.message : String(error),
+                    stack: error instanceof Error ? error.stack : undefined
+                }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        } catch (outerError) {
+            console.error('[Route] Outer error in WebSocket route:', outerError);
+            return new Response(JSON.stringify({ 
+                error: 'WebSocket route error', 
+                details: outerError instanceof Error ? outerError.message : String(outerError),
+                stack: outerError instanceof Error ? outerError.stack : undefined
+            }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+    });
     
     // Register auth routes
     app.route('/auth', publicRouter);
