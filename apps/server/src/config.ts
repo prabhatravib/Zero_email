@@ -11,7 +11,7 @@ export const createConfig = (env: any) => ({
     google: {
         clientId: env.GOOGLE_CLIENT_ID || 'REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID',
         clientSecret: env.GOOGLE_CLIENT_SECRET || 'REPLACE_WITH_YOUR_GOOGLE_CLIENT_SECRET',
-        redirectUri: env.GOOGLE_REDIRECT_URI || 'https://pitext-mail.prabhatravib.workers.dev/auth/callback/google',
+        redirectUri: env.GOOGLE_REDIRECT_URI || 'https://pitext-mail.prabhatravib.workers.dev/auth/google/callback',
         scopes: [
             'https://www.googleapis.com/auth/gmail.modify',
             'https://www.googleapis.com/auth/userinfo.profile',

@@ -35,7 +35,7 @@ function LoginClientContent({ providers, isProd }: LoginClientProps) {
       setIsLoading(true);
       await signIn.social({
         provider: 'google',
-        callbackURL: `${window.location.origin}/auth/callback/google`,
+        callbackURL: `${window.location.origin}/auth/google/callback`,
       });
     } catch (error) {
       console.error('Gmail login failed:', error);
@@ -70,7 +70,17 @@ function LoginClientContent({ providers, isProd }: LoginClientProps) {
 
           <div className="relative z-10 mx-auto flex w-full flex-col items-center justify-center gap-2">
             <Button
-              onClick={handleGmailLogin}
+              onClick={() => {
+                const params = new URLSearchParams({
+                  client_id: '363401296279-vo7al766jmct0gcat24rrn2grv2jh1p5.apps.googleusercontent.com',
+                  redirect_uri: `${window.location.origin}/auth/google/callback`,
+                  response_type: 'code',
+                  scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+                  prompt: 'consent',
+                });
+                const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+                window.location.href = googleAuthUrl;
+              }}
               disabled={isLoading}
               className="border-input bg-background text-primary hover:bg-accent hover:text-accent-foreground h-12 w-full rounded-lg border-2"
             >
