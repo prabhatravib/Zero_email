@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "pitext-mail",
   "compatibility_date": "2025-05-01",
-  "compatibility_flags": ["nodejs_compat", "websocket"],
+  "compatibility_flags": ["nodejs_compat"],
   "main": "src/main.ts",
   "ai": {
     "binding": "AI",
