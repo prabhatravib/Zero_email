@@ -1,26 +1,25 @@
-import jwt from '@tsndr/cloudflare-worker-jwt';
+import { jwtVerify } from 'jose';
+import { getCookie } from 'hono/cookie';
 import type { HonoContext } from '../../ctx';
 
 export const sessionHandler = async (c: any) => {
   const env = c.env as any;
   
   try {
-    // Get session cookie
-    const sessionCookie = c.req.header('Cookie')?.match(/session=([^;]+)/)?.[1];
+    // Get session cookie using Hono's getCookie helper
+    const token = getCookie(c, 'zero_session');
     
-    if (!sessionCookie) {
+    if (!token) {
       return c.json({ error: 'No session found' }, 401);
     }
     
     // Verify and decode the JWT token
-    const verified = await jwt.verify(sessionCookie, env.JWT_SECRET);
-    if (!verified) {
-      return c.json({ error: 'Invalid session' }, 401);
-    }
+    const payload = await jwtVerify(
+      token,
+      new TextEncoder().encode(env.JWT_SECRET),
+    );
     
-    // Decode the JWT payload
-    const decoded = jwt.decode(sessionCookie);
-    const sessionData = decoded.payload;
+    const sessionData = payload.payload as any;
     
     // Check if session is expired
     if (sessionData.expiresAt && Date.now() > sessionData.expiresAt) {
@@ -28,13 +27,14 @@ export const sessionHandler = async (c: any) => {
     }
     
     // Return user data (without sensitive tokens)
-    return c.json({
-      id: sessionData.userId,
-      email: sessionData.email,
-      name: sessionData.name,
-      picture: sessionData.picture,
-      scope: sessionData.scope,
-    });
+    return c.json(
+      { user: sessionData }, 
+      200,
+      {
+        'Access-Control-Allow-Origin': env.VITE_PUBLIC_APP_URL || 'https://pitext-email.onrender.com',
+        'Access-Control-Allow-Credentials': 'true',
+      },
+    );
     
   } catch (error) {
     console.error('Session verification error:', error);
@@ -44,9 +44,9 @@ export const sessionHandler = async (c: any) => {
 
 export const signOutHandler = async (c: any) => {
   try {
-    // Create a response that clears the session cookie
+    // Clear the session cookie
     const response = c.json({ success: true });
-    response.headers.set('Set-Cookie', 'session=; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=0');
+    response.headers.set('Set-Cookie', 'zero_session=; HttpOnly; Secure; Path=/; SameSite=None; Max-Age=0');
     return response;
   } catch (error) {
     console.error('Sign out error:', error);

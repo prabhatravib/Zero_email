@@ -55,7 +55,7 @@ export const getSession = async () => {
 
     if (response.ok) {
       const sessionData = await response.json();
-      return sessionData;
+      return sessionData.user; // Return the user data from the response
     }
 
     // If no valid session, return null

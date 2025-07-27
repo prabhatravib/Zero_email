@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { googleAuth } from '@hono/oauth-providers/google';
-import jwt from '@tsndr/cloudflare-worker-jwt';
+import { SignJWT } from 'jose';
 import { setCookie } from 'hono/cookie';
 import type { HonoContext } from '../../ctx';
 
@@ -102,19 +102,24 @@ export const registerGoogleAuthRoutes = (app: Hono<HonoContext>) => {
         return c.redirect(`${publicUrl}/auth/google/callback?error=token_exchange_failed`);
       }
       
-      // Get user info from ID token
-      const userInfo = jwt.decode(tokenResponse.id_token) as { payload: GoogleUserInfo };
-      
-      if (!userInfo || !userInfo.payload) {
-        console.error('Failed to decode ID token');
+      // Get user info from ID token - decode the JWT manually since we're using jose
+      const idTokenParts = tokenResponse.id_token.split('.');
+      if (idTokenParts.length !== 3) {
+        console.error('Invalid ID token format');
         return c.redirect(`${publicUrl}/auth/google/callback?error=invalid_id_token`);
       }
       
-      const user = userInfo.payload;
+      const payload = JSON.parse(atob(idTokenParts[1]));
+      const user = {
+        sub: payload.sub,
+        email: payload.email,
+        name: payload.name,
+        picture: payload.picture,
+      };
       
-      // Create session with all necessary data
-      const sessionPayload = {
-        userId: user.sub,
+      // Create JWT payload for our session
+      const jwtPayload = {
+        sub: user.sub,
         email: user.email,
         name: user.name,
         picture: user.picture,
@@ -125,7 +130,10 @@ export const registerGoogleAuthRoutes = (app: Hono<HonoContext>) => {
         iat: Math.floor(Date.now() / 1000),
       };
       
-      const sessionToken = await jwt.sign(sessionPayload, env.JWT_SECRET);
+      const jwt = await new SignJWT(jwtPayload)
+        .setProtectedHeader({ alg: 'HS256' })
+        .setExpirationTime('30d')
+        .sign(new TextEncoder().encode(env.JWT_SECRET));
       
       // Store refresh token securely (in production, use a secure storage)
       if (tokenResponse.refresh_token) {
@@ -133,12 +141,12 @@ export const registerGoogleAuthRoutes = (app: Hono<HonoContext>) => {
       }
       
       // Use Hono's setCookie helper for proper cookie formatting
-      setCookie(c, 'session', sessionToken, {
+      setCookie(c, 'zero_session', jwt, {
         httpOnly: true,
         secure: true,
         sameSite: 'None',
         path: '/',
-        maxAge: tokenResponse.expires_in || 3600,
+        maxAge: 60 * 60 * 24 * 30, // 30 days
       });
 
       // Clear the PKCE verifier cookie
