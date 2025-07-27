@@ -1004,60 +1004,24 @@ export class ZeroAgent extends DurableObject {
   }
 
   async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url);
-    
     // Handle WebSocket upgrade requests
     if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-      try {
-        const webSocketPair = new WebSocketPair();
-        const [client, server] = Object.values(webSocketPair);
-        
-        // Accept the WebSocket connection
-        server.accept();
-        
-        // Handle WebSocket messages
-        server.addEventListener('message', async (event) => {
+      const pair = new WebSocketPair();
+      const [client, server] = Object.values(pair);
+      server.accept();
+      
+      server.addEventListener('message', async (event) => {
           try {
             const message = JSON.parse(event.data as string);
-            
-            // Echo back for now - you can add more sophisticated message handling here
-            server.send(JSON.stringify({
-              type: 'echo',
-              data: message
-            }));
+            server.send(JSON.stringify({ type: 'echo', data: message }));
           } catch (error) {
-            // Only log in debug mode to avoid startup overhead
-            if (env.DEBUG === 'true') {
-              console.error('WebSocket message error');
+            if (this.env.DEBUG === 'true') {
+              console.error('WebSocket message error', error);
             }
           }
-        });
-        
-        // Handle WebSocket close
-        server.addEventListener('close', () => {
-          // Connection closed
-        });
-        
-        // Handle WebSocket error
-        server.addEventListener('error', (error) => {
-          // Only log in debug mode to avoid startup overhead
-          if (env.DEBUG === 'true') {
-            console.error('WebSocket error');
-          }
-        });
-        
-        // Return WebSocket response - let Cloudflare handle the headers
-        return new Response(null, {
-          status: 101,
-          webSocket: client
-        });
-      } catch (error) {
-        // Only log in debug mode to avoid startup overhead
-        if (env.DEBUG === 'true') {
-          console.error('WebSocket setup failed');
-        }
-        return new Response('WebSocket setup failed', { status: 500 });
-      }
+      });
+
+      return new Response(null, { status: 101, webSocket: client });
     }
     
     // Handle HTTP requests
