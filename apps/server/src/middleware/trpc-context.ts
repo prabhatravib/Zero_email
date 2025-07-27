@@ -1,4 +1,5 @@
 import type { HonoContext } from '../ctx';
+import jwt from '@tsndr/cloudflare-worker-jwt';
 
 export const trpcContextMiddleware = async (c: HonoContext, next: () => Promise<void>) => {
     // Set up session and auth context for tRPC
@@ -11,58 +12,45 @@ export const trpcContextMiddleware = async (c: HonoContext, next: () => Promise<
     
     if (sessionToken) {
         try {
-            console.log('🔍 tRPC middleware - Attempting to get session data for token:', sessionToken);
+            console.log('🔍 tRPC middleware - Attempting to verify JWT session token');
             
-            // Decode the session token to get user data
-            let userData;
-            try {
-                // Use atob for base64 decoding in Cloudflare Workers (no Buffer available)
-                const decodedToken = atob(sessionToken);
-                userData = JSON.parse(decodedToken);
-                console.log('🔍 tRPC middleware - Decoded session token successfully');
-            } catch (decodeError) {
-                console.error('🔍 tRPC middleware - Failed to decode session token:', decodeError);
-                // Fallback: try to use the token as email directly
-                userData = { email: sessionToken };
+            // Verify the JWT token
+            const isValid = await jwt.verify(sessionToken, env.JWT_SECRET);
+            
+            if (!isValid) {
+                console.error('🔍 tRPC middleware - JWT token verification failed');
+                throw new Error('Invalid JWT token');
             }
             
-            // Use the email from the decoded token to get session data from Durable Object
-            const env = c.env as any;
-            const db = env.ZERO_DB;
-            if (db && userData.email) {
-                const sessionObj = db.get(db.idFromName('sessions'));
-                const response = await sessionObj.fetch(`http://localhost/get?sessionId=${encodeURIComponent(userData.email)}`, {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+            // Decode the JWT payload
+            const payload = jwt.decode(sessionToken);
+            console.log('🔍 tRPC middleware - JWT token verified successfully');
+            
+            // Create session user from JWT payload
+            sessionUser = {
+                id: payload.email,
+                email: payload.email,
+                name: payload.name || payload.email,
+                emailVerified: true,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                image: payload.picture || null,
+                // Include access token for API calls
+                accessToken: payload.access_token,
+                refreshToken: payload.refresh_token
+            };
+            
+            console.log('🔍 tRPC middleware - Session user created from JWT:', sessionUser.email);
+            
+        } catch (error) {
+            console.error('🔍 tRPC middleware - Error verifying JWT token:', error);
+            
+            // Fallback: try to decode as base64 (for backward compatibility)
+            try {
+                console.log('🔍 tRPC middleware - Trying fallback base64 decode');
+                const decodedToken = atob(sessionToken);
+                const userData = JSON.parse(decodedToken);
                 
-                if (response.ok) {
-                    const sessionData = await response.json();
-                    console.log('🔍 tRPC middleware - Session data retrieved successfully');
-                    sessionUser = {
-                        id: sessionData.email,
-                        email: sessionData.email,
-                        name: sessionData.name || sessionData.email,
-                        emailVerified: true,
-                        createdAt: new Date(),
-                        updatedAt: new Date(),
-                        image: sessionData.picture || null
-                    };
-                } else {
-                    console.log('🔍 tRPC middleware - Failed to get session data, status:', response.status);
-                    // Fallback: use data from the decoded token
-                    sessionUser = {
-                        id: userData.email,
-                        email: userData.email,
-                        name: userData.name || userData.email,
-                        emailVerified: true,
-                        createdAt: new Date(),
-                        updatedAt: new Date(),
-                        image: userData.picture || null
-                    };
-                }
-            } else {
-                // Fallback: use data from the decoded token
                 sessionUser = {
                     id: userData.email,
                     email: userData.email,
@@ -70,11 +58,16 @@ export const trpcContextMiddleware = async (c: HonoContext, next: () => Promise<
                     emailVerified: true,
                     createdAt: new Date(),
                     updatedAt: new Date(),
-                    image: userData.picture || null
+                    image: userData.picture || null,
+                    accessToken: userData.access_token,
+                    refreshToken: userData.refresh_token
                 };
+                
+                console.log('🔍 tRPC middleware - Fallback session user created:', sessionUser.email);
+            } catch (fallbackError) {
+                console.error('🔍 tRPC middleware - Fallback decode also failed:', fallbackError);
+                sessionUser = null;
             }
-        } catch (error) {
-            console.error('Error getting session from token:', error);
         }
     }
     

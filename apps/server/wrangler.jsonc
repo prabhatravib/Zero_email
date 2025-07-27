@@ -46,6 +46,7 @@
     "VITE_PUBLIC_BACKEND_URL": "https://pitext-mail.prabhatravib.workers.dev",
     "BETTER_AUTH_URL": "https://pitext-mail.prabhatravib.workers.dev",
     "GOOGLE_CLIENT_ID": "363401296279-vo7al766jmct0gcat24rrn2grv2jh1p5.apps.googleusercontent.com",
-    "GOOGLE_CLIENT_SECRET": "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"
+    "GOOGLE_CLIENT_SECRET": "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",
+    "JWT_SECRET": "egwrgwrgndnznzgnfhnzxdgnnethzhnzhtyjtudi5e6u4u75tei6"
   }
 }

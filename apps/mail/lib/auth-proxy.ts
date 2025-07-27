@@ -12,35 +12,39 @@ export const authProxy = {
       try {
         console.log('Auth proxy - Making session request to: /api/auth/get-session');
         
-        // Get session token from localStorage for cross-domain access
+        // Get JWT session token from localStorage
         const sessionToken = localStorage.getItem('gmail_session_token');
         
         const requestHeaders: Record<string, string> = {
           'Content-Type': 'application/json',
         };
         
-        // Add session token to headers if available
+        // Add JWT session token to headers if available
         if (sessionToken) {
           requestHeaders['X-Session-Token'] = sessionToken;
+          console.log('Auth proxy - Sending JWT session token in headers');
+        } else {
+          console.log('Auth proxy - No session token found');
         }
-        
+  
         const response = await fetch('/api/auth/get-session', {
           method: 'GET',
           headers: requestHeaders,
-          credentials: 'include', // This ensures cookies are sent
+          credentials: 'include',
         });
+
+        console.log('Auth proxy - Session response status:', response.status);
 
         if (!response.ok) {
           console.error('Auth proxy - Session request failed:', response.status, response.statusText);
           return null;
         }
 
-        const data = await response.json();
-        console.log('Auth proxy - Session response:', data);
-        
-        return data.user;
+        const sessionData = await response.json();
+        console.log('Auth proxy - Session data received:', sessionData);
+        return sessionData;
       } catch (error) {
-        console.error('Auth proxy - Error getting session:', error);
+        console.error('Auth proxy - Session request error:', error);
         return null;
       }
     },

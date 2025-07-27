@@ -1,5 +1,6 @@
 import { createConfig } from '../../config';
 import type { HonoContext } from '../../ctx';
+import jwt from '@tsndr/cloudflare-worker-jwt';
 
 export const googleCallbackHandler = async (c: any) => {
     const env = c.env as unknown as Record<string, string>;
@@ -9,11 +10,17 @@ export const googleCallbackHandler = async (c: any) => {
     console.log('env.GOOGLE_CLIENT_ID:', env?.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET');
     console.log('env.GOOGLE_CLIENT_SECRET:', env?.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET');
     console.log('env.GOOGLE_REDIRECT_URI:', env?.GOOGLE_REDIRECT_URI);
+    console.log('env.JWT_SECRET:', env?.JWT_SECRET ? 'SET' : 'NOT SET');
     
     // Check if environment variables are accessible
     if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
         console.error('Google OAuth credentials not accessible in callback handler');
         return c.redirect(`https://pitext-email.onrender.com/auth/callback/google?error=${encodeURIComponent('oauth_config_error')}`);
+    }
+    
+    if (!env.JWT_SECRET) {
+        console.error('JWT_SECRET not configured');
+        return c.redirect(`https://pitext-email.onrender.com/auth/callback/google?error=${encodeURIComponent('jwt_config_error')}`);
     }
     
     const config = createConfig(env);
@@ -119,23 +126,26 @@ export const googleCallbackHandler = async (c: any) => {
         };
         console.log('User info fetched:', userData.email);
 
-        // Create a proper session token with the actual access token
-        const sessionData = {
+        // Generate a proper JWT session token
+        const sessionPayload = {
             email: userData.email,
             name: userData.name,
             picture: userData.picture,
             access_token: tokenData.access_token,
             refresh_token: tokenData.refresh_token,
-            expires_at: Date.now() + (tokenData.expires_in * 1000)
+            exp: Math.floor(Date.now() / 1000) + (tokenData.expires_in), // JWT exp is in seconds
+            iat: Math.floor(Date.now() / 1000), // issued at
         };
         
-        // Encode the session data as base64 for the frontend
-        const sessionToken = btoa(JSON.stringify(sessionData));
+        // Sign the JWT token with the server's secret
+        const sessionToken = await jwt.sign(sessionPayload, env.JWT_SECRET);
         
-        // Redirect with the actual session token
+        console.log('Generated JWT session token successfully');
+        
+        // Redirect with the JWT session token
         const successUrl = `${config.app.publicUrl}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&name=${encodeURIComponent(userData.name)}&picture=${encodeURIComponent(userData.picture)}&session=${encodeURIComponent(sessionToken)}`;
         
-        console.log('Redirecting to frontend with success and session token');
+        console.log('Redirecting to frontend with success and JWT session token');
         return c.redirect(successUrl);
 
     } catch (error) {
@@ -147,6 +157,8 @@ export const googleCallbackHandler = async (c: any) => {
                 errorType = 'network_error';
             } else if (error.message.includes('JSON')) {
                 errorType = 'parse_error';
+            } else if (error.message.includes('jwt')) {
+                errorType = 'jwt_error';
             }
         }
         return c.redirect(`${config.app.publicUrl}/auth/callback/google?error=${encodeURIComponent(errorType)}`);

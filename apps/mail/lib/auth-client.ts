@@ -70,31 +70,40 @@ export const signIn = {
 // Simplified session management
 export const getSession = async () => {
   try {
-    // First try to get session token (preferred method)
+    // Get JWT session token from localStorage
     const sessionToken = localStorage.getItem('gmail_session_token');
     
     if (sessionToken) {
       try {
-        const sessionData = JSON.parse(atob(sessionToken));
+        // For JWT tokens, we can't decode them on the frontend without the secret
+        // So we'll just check if the token exists and let the backend verify it
+        console.log('JWT session token found in localStorage');
         
-        // Check if session is expired
-        if (sessionData.expires_at && Date.now() > sessionData.expires_at) {
-          console.log('Session token expired, clearing localStorage');
-          localStorage.removeItem('gmail_session_token');
-          localStorage.removeItem('gmail_user_data');
-          return null;
+        // Get user data from localStorage for display purposes
+        const userDataStr = localStorage.getItem('gmail_user_data');
+        if (userDataStr) {
+          const userData = JSON.parse(userDataStr);
+          return {
+            id: userData.email,
+            email: userData.email,
+            name: userData.name,
+            image: userData.picture,
+          };
         }
         
-        console.log('Valid session token found:', sessionData.email);
+        // If no user data, return a basic session object
+        // The backend will verify the actual JWT token
         return {
-          id: sessionData.email,
-          email: sessionData.email,
-          name: sessionData.name,
-          image: sessionData.picture,
+          id: 'unknown',
+          email: 'unknown',
+          name: 'Unknown User',
+          image: null,
         };
-      } catch (decodeError) {
-        console.error('Failed to decode session token:', decodeError);
+      } catch (error) {
+        console.error('Failed to get session data:', error);
         localStorage.removeItem('gmail_session_token');
+        localStorage.removeItem('gmail_user_data');
+        return null;
       }
     }
     
@@ -180,6 +189,15 @@ export const handleAuthError = (error: any) => {
       message: 'Gmail OAuth is not properly configured.',
       details: 'Missing or invalid Google OAuth credentials',
       action: 'Please contact support to fix the Gmail integration.'
+    };
+  }
+  
+  if (error?.message?.includes('jwt_config_error')) {
+    return {
+      type: 'jwt_config_error',
+      message: 'Session token configuration error.',
+      details: 'JWT secret not configured on server',
+      action: 'Please contact support to fix the session configuration.'
     };
   }
   
