@@ -5,17 +5,31 @@ export const trpcContextMiddleware = async (c: HonoContext, next: () => Promise<
     // Set up session and auth context for tRPC
     const env = c.env as any;
     
-    // Try to get session from custom session token first
-    const sessionToken = c.req.header('X-Session-Token');
+    // Try to get session from multiple possible headers
+    let sessionToken = c.req.header('X-Session-Token');
+    if (!sessionToken) {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            sessionToken = authHeader.substring(7); // Remove 'Bearer ' prefix
+        }
+    }
+    
     console.log('🔍 tRPC middleware - Session token:', sessionToken ? 'present' : 'missing');
+    console.log('🔍 tRPC middleware - JWT_SECRET available:', !!env.JWT_SECRET);
+    console.log('🔍 tRPC middleware - JWT_SECRET length:', env.JWT_SECRET ? env.JWT_SECRET.length : 0);
+    console.log('🔍 tRPC middleware - X-Session-Token header:', c.req.header('X-Session-Token') ? 'present' : 'missing');
+    console.log('🔍 tRPC middleware - Authorization header:', c.req.header('Authorization') ? 'present' : 'missing');
+    
     let sessionUser: any = null;
     
     if (sessionToken) {
         try {
             console.log('🔍 tRPC middleware - Attempting to verify JWT session token');
+            console.log('🔍 tRPC middleware - Token starts with:', sessionToken.substring(0, 20) + '...');
             
             // Verify the JWT token
             const isValid = await jwt.verify(sessionToken, env.JWT_SECRET);
+            console.log('🔍 tRPC middleware - JWT verification result:', isValid);
             
             if (!isValid) {
                 console.error('🔍 tRPC middleware - JWT token verification failed');
@@ -24,6 +38,7 @@ export const trpcContextMiddleware = async (c: HonoContext, next: () => Promise<
             
             // Decode the JWT payload
             const payload = jwt.decode(sessionToken);
+            console.log('🔍 tRPC middleware - JWT payload:', payload);
             console.log('🔍 tRPC middleware - JWT token verified successfully');
             
             // Create session user from JWT payload
@@ -44,6 +59,12 @@ export const trpcContextMiddleware = async (c: HonoContext, next: () => Promise<
             
         } catch (error) {
             console.error('🔍 tRPC middleware - Error verifying JWT token:', error);
+            console.error('🔍 tRPC middleware - Error details:', {
+                message: error.message,
+                stack: error.stack,
+                tokenLength: sessionToken.length,
+                hasJWTSecret: !!env.JWT_SECRET
+            });
             
             // Fallback: try to decode as base64 (for backward compatibility)
             try {

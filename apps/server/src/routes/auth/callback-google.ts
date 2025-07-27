@@ -133,7 +133,7 @@ export const googleCallbackHandler = async (c: any) => {
             picture: userData.picture,
             access_token: tokenData.access_token,
             refresh_token: tokenData.refresh_token,
-            exp: Math.floor(Date.now() / 1000) + (tokenData.expires_in), // JWT exp is in seconds
+            exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours in seconds
             iat: Math.floor(Date.now() / 1000), // issued at
         };
         
@@ -141,6 +141,7 @@ export const googleCallbackHandler = async (c: any) => {
         const sessionToken = await jwt.sign(sessionPayload, env.JWT_SECRET);
         
         console.log('Generated JWT session token successfully');
+        console.log('JWT token expiration:', new Date((sessionPayload.exp * 1000)).toISOString());
         
         // Redirect with the JWT session token
         const successUrl = `${config.app.publicUrl}/auth/callback/google?success=true&email=${encodeURIComponent(userData.email)}&name=${encodeURIComponent(userData.name)}&picture=${encodeURIComponent(userData.picture)}&session=${encodeURIComponent(sessionToken)}`;
