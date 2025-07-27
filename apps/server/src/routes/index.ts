@@ -56,7 +56,18 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
             console.log('[Route] Got agent stub, forwarding request');
             
             // Do not declare this function as async, and return the promise directly
-            return agent.fetch(c.req.raw);
+            return agent.fetch(c.req.raw).catch((error: any) => {
+                console.error('[Route] Agent fetch error:', error);
+                // Return error details in response for debugging
+                return new Response(JSON.stringify({ 
+                    error: 'Agent fetch failed', 
+                    details: error instanceof Error ? error.message : String(error),
+                    stack: error instanceof Error ? error.stack : undefined
+                }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            });
         } catch (error) {
             console.error('[Route] Error creating agent:', error);
             return new Response(JSON.stringify({ error: 'Failed to create agent', details: error instanceof Error ? error.message : String(error) }), {

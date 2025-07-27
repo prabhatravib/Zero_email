@@ -1029,7 +1029,7 @@ export class ZeroAgent extends DurableObject {
         const [client, server] = Object.values(pair);
         
         console.log('[ZeroAgent.fetch] Calling handleSession');
-        await this.handleSession(server);
+        await this.handleSession(server, request);
         
         console.log('[ZeroAgent.fetch] Returning WebSocket response');
         return new Response(null, { status: 101, webSocket: client });
@@ -1049,15 +1049,26 @@ export class ZeroAgent extends DurableObject {
     }
   }
 
-  async handleSession(server: WebSocket) {
+  async handleSession(server: WebSocket, request: Request) {
     try {
       console.log('[ZeroAgent.handleSession] Starting session setup');
       server.accept();
       console.log('[ZeroAgent.handleSession] WebSocket accepted');
       
+      // Extract query parameters from request
+      const url = new URL(request.url);
+      const pk = url.searchParams.get('_pk');
+      console.log('[ZeroAgent.handleSession] Query params:', { pk });
+      
       const connection = {
-        id: Math.random().toString(36).substring(2),
-        send: (message: string) => server.send(message),
+        id: pk || Math.random().toString(36).substring(2),
+        send: (message: string) => {
+          try {
+            server.send(message);
+          } catch (error) {
+            console.error('[ZeroAgent.handleSession] Error sending message:', error);
+          }
+        },
         state: {},
         close: () => server.close(),
       };
@@ -1065,6 +1076,19 @@ export class ZeroAgent extends DurableObject {
       
       this.parties.add(connection);
       console.log('[ZeroAgent.handleSession] Added connection to parties');
+      
+      // Send initial connection message (party protocol)
+      try {
+        const welcomeMessage = JSON.stringify({
+          type: 'connection',
+          id: connection.id,
+          name: this.name
+        });
+        console.log('[ZeroAgent.handleSession] Sending welcome message:', welcomeMessage);
+        server.send(welcomeMessage);
+      } catch (error) {
+        console.error('[ZeroAgent.handleSession] Error sending welcome message:', error);
+      }
 
       server.addEventListener('message', async (event) => {
         console.log('[ZeroAgent.handleSession] Received message:', event.data);
