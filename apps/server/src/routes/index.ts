@@ -1,10 +1,21 @@
 import type { HonoContext } from '../ctx';
 import type { Hono } from 'hono';
-import { party } from 'hono-party';
 
 export const registerRoutes = async (app: Hono<HonoContext>) => {
-    // 1️⃣ Party router must be first so /agents/* routes exist before anything else
-    app.route("/agents", party);
+    // WebSocket routes are handled by Durable Objects at /agents/*
+    app.all("/agents/*", async (c) => {
+        const env = c.env as any;
+        const url = new URL(c.req.url);
+        const pathParts = url.pathname.split('/');
+        const agentName = pathParts[pathParts.length - 1] || 'general';
+        
+        // Create or get the Durable Object
+        const id = env.ZERO_AGENT.idFromName(agentName);
+        const obj = env.ZERO_AGENT.get(id);
+        
+        // Forward the request to the Durable Object
+        return obj.fetch(c.req.raw);
+    });
     
     // Lazy load route handlers to avoid startup overhead
     const [
@@ -63,7 +74,7 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
         return c.json(debugInfo);
     });
     
-    // WebSocket routes are now handled by hono-party at /agents/*
+    // WebSocket routes are now handled by Durable Objects at /agents/*
     
     // Register auth routes
     app.route('/auth', publicRouter);
