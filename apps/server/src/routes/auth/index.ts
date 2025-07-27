@@ -1,23 +1,25 @@
 import { Hono } from 'hono';
-import { auth } from '@hono/auth';
-import Google from '@auth/core/providers/google';
+import { googleAuth } from '@hono/oauth-providers/google';
 import { googleCallbackHandler } from './callback-google.js';
 import type { HonoContext } from '../../ctx';
 
 export const registerAuthRoutes = (app: Hono<HonoContext>) => {
-  // The @hono/auth middleware handles the /auth/login/google route automatically
-  app.use('/auth/*', auth({
-    // It's important that the secret is a string of at least 32 characters.
-    secret: c => c.env.JWT_SECRET,
-    providers: [
-      Google({
-        clientId: c => c.env.GOOGLE_CLIENT_ID,
-        clientSecret: c => c.env.GOOGLE_CLIENT_SECRET,
-        scope: ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'],
-      }),
-    ],
-  }));
+  // Use the googleAuth middleware to handle the entire OAuth flow
+  app.use(
+    '/auth/google/callback',
+    googleAuth({
+      client_id: c => c.env.GOOGLE_CLIENT_ID,
+      client_secret: c => c.env.GOOGLE_CLIENT_SECRET,
+      scope: [
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/gmail.modify',
+        'https://www.googleapis.com/auth/gmail.readonly',
+      ],
+    })
+  );
 
-  // We still need our custom callback handler to manage session creation
+  // After the middleware, our custom callback handler will run.
+  // The middleware places 'token' and 'user-google' in the context.
   app.get('/auth/google/callback', googleCallbackHandler);
 }; 
