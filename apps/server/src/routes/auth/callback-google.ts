@@ -1,6 +1,6 @@
+import { type Context } from 'hono';
 import type { HonoContext } from '../../ctx';
 import jwt from '@tsndr/cloudflare-worker-jwt';
-import { getConfig } from '../../config.js';
 
 type GoogleUser = {
   id: string;
@@ -18,16 +18,17 @@ type GoogleToken = {
   expires_in: number;
 };
 
-export const googleCallbackHandler = async (c: HonoContext) => {
-  const config = getConfig(c.env as any);
-  
+export const googleCallbackHandler = async (c: Context<HonoContext>) => {
+  const env = c.env;
+  const publicUrl = env.VITE_PUBLIC_APP_URL || 'https://pitext-email.onrender.com';
+
   // Data is placed in context by the googleAuth middleware
   const googleUser = c.get('user-google') as GoogleUser;
   const token = c.get('token') as GoogleToken;
 
   if (!googleUser || !token) {
     console.error('Google auth middleware did not provide user or token.');
-    return c.redirect(`${config.app.publicUrl}/auth/google/callback?error=auth_middleware_failed`);
+    return c.redirect(`${publicUrl}/auth/google/callback?error=auth_middleware_failed`);
   }
 
   try {
@@ -46,7 +47,7 @@ export const googleCallbackHandler = async (c: HonoContext) => {
       iat: Math.floor(Date.now() / 1000),
     };
 
-    const sessionToken = await jwt.sign(sessionPayload, config.jwt.secret);
+    const sessionToken = await jwt.sign(sessionPayload, env.JWT_SECRET);
 
     // Redirect back to the frontend with the session token
     const successUrlParams = new URLSearchParams({
@@ -57,12 +58,12 @@ export const googleCallbackHandler = async (c: HonoContext) => {
       session: sessionToken,
     });
 
-    const successUrl = `${config.app.publicUrl}/auth/google/callback?${successUrlParams.toString()}`;
+    const successUrl = `${publicUrl}/auth/google/callback?${successUrlParams.toString()}`;
     
     return c.redirect(successUrl);
 
   } catch (err) {
     console.error('Failed to create session JWT in googleCallbackHandler:', err);
-    return c.redirect(`${config.app.publicUrl}/auth/google/callback?error=session_creation_failed`);
+    return c.redirect(`${publicUrl}/auth/google/callback?error=session_creation_failed`);
   }
 }; 

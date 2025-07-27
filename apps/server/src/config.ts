@@ -19,6 +19,11 @@ export const createConfig = (env: any) => ({
         ].join(' ')
     },
     
+    // JWT Configuration
+    jwt: {
+        secret: env.JWT_SECRET || 'REPLACE_WITH_YOUR_JWT_SECRET'
+    },
+    
     // Application URLs
     app: {
         publicUrl: env.VITE_PUBLIC_APP_URL || 'https://pitext-email.onrender.com'
