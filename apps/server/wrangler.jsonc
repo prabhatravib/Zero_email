@@ -8,7 +8,6 @@
     "binding": "AI",
   },
 
-
   "durable_objects": {
     "bindings": [
       {
@@ -40,6 +39,16 @@
       ]
     }
   ],
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "pitext-vectorize"
+    },
+    {
+      "binding": "VECTORIZE_MESSAGE",
+      "index_name": "pitext-message-vectorize"
+    }
+  ],
   "vars": {
     "VITE_PUBLIC_APP_URL": "https://pitext-email.onrender.com",
     "GOOGLE_REDIRECT_URI": "https://pitext-mail.prabhatravib.workers.dev/auth/callback/google",
@@ -47,6 +56,9 @@
     "BETTER_AUTH_URL": "https://pitext-mail.prabhatravib.workers.dev",
     "GOOGLE_CLIENT_ID": "363401296279-vo7al766jmct0gcat24rrn2grv2jh1p5.apps.googleusercontent.com",
     "GOOGLE_CLIENT_SECRET": "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",
-    "JWT_SECRET": "egwrgwrgndnznzgnfhnzxdgnnethzhnzhtyjtudi5e6u4u75tei6"
+    "JWT_SECRET": "egwrgwrgndnznzgnfhnzxdgnnethzhnzhtyjtudi5e6u4u75tei6",
+    "OPENAI_MODEL": "gpt-4o",
+    "OPENAI_MINI_MODEL": "gpt-4o-mini",
+    "THREAD_SYNC_LOOP": "true"
   }
 }

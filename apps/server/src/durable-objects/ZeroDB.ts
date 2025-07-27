@@ -103,4 +103,39 @@ export class ZeroDB extends DurableObject {
 
         return new Response('Not found', { status: 404 });
     }
+
+    // RPC methods for connections
+    async findManyConnections() {
+        // Get all connections for the user
+        const connections = await this.state.storage.get('connections') || [];
+        return connections;
+    }
+
+    async findUserConnection(connectionId: string) {
+        // Get a specific connection by ID
+        const connections = await this.state.storage.get('connections') || [];
+        return connections.find((c: any) => c.id === connectionId) || null;
+    }
+
+    async updateUser(userData: any) {
+        // Update user data
+        await this.state.storage.put('user', userData);
+        return { success: true };
+    }
+
+    async deleteConnection(connectionId: string) {
+        // Delete a connection
+        const connections = await this.state.storage.get('connections') || [];
+        const filteredConnections = connections.filter((c: any) => c.id !== connectionId);
+        await this.state.storage.put('connections', filteredConnections);
+        return { success: true };
+    }
+
+    async storeConnection(connection: any) {
+        // Store a new connection
+        const connections = await this.state.storage.get('connections') || [];
+        connections.push(connection);
+        await this.state.storage.put('connections', connections);
+        return { success: true };
+    }
 } 

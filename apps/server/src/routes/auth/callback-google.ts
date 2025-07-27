@@ -128,6 +128,33 @@ export const googleCallbackHandler = async (c: any) => {
         };
         console.log('User info fetched:', userData.email);
 
+        // Create connection data
+        const connectionId = `${userData.id}_${userData.email}`;
+        const connectionData = {
+            id: connectionId,
+            userId: userData.id,
+            email: userData.email,
+            name: userData.name,
+            picture: userData.picture,
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token,
+            scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify',
+            providerId: 'google' as const,
+            expiresAt: new Date(Date.now() + (tokenData.expires_in * 1000)),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        };
+
+        // Store connection data in ZeroDB Durable Object
+        try {
+            const db = (env as any).ZERO_DB.get((env as any).ZERO_DB.idFromName(userData.id));
+            await db.storeConnection(connectionData);
+            console.log('Connection data stored in ZeroDB Durable Object');
+        } catch (dbError) {
+            console.error('Failed to store connection data in Durable Object:', dbError);
+            // Continue with the flow even if storage fails
+        }
+
         // Generate a proper JWT session token
         const sessionPayload = {
             userId: userData.id,        // Use Google's unique user ID
@@ -135,6 +162,7 @@ export const googleCallbackHandler = async (c: any) => {
             name: userData.name,
             picture: userData.picture,
             verified_email: userData.verified_email,
+            connectionId: connectionId, // Add connectionId to session
             access_token: tokenData.access_token,
             refresh_token: tokenData.refresh_token,
             exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours in seconds

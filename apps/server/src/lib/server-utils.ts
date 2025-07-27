@@ -19,12 +19,15 @@ export const getConnectionFromDurableObject = async (connectionId: string) => {
   if (!userId) return null;
   
   const db = await getZeroDB(userId);
+  // Use RPC method to get connection data
   return await db.findUserConnection(connectionId);
 };
 
 export const getZeroAgent = async (connectionId: string) => {
   const stub = env.ZERO_DRIVER.get(env.ZERO_DRIVER.idFromName(connectionId));
+  // Call setMetaData via RPC to initialize the Durable Object
   const rpcTarget = await stub.setMetaData(connectionId);
+  // Call setupAuth via RPC to set up authentication
   await rpcTarget.setupAuth();
   return rpcTarget;
 };

@@ -418,11 +418,17 @@ export class ZeroDriver extends DurableObject {
           normalizedReceivedOn = new Date().toISOString();
         }
 
-        await env.THREADS_BUCKET.put(this.getThreadKey(threadId), JSON.stringify(threadData), {
-          customMetadata: {
-            threadId,
-          },
-        });
+        // Try to store thread data in R2 bucket, but don't fail if bucket is not available
+        try {
+          await env.THREADS_BUCKET.put(this.getThreadKey(threadId), JSON.stringify(threadData), {
+            customMetadata: {
+              threadId,
+            },
+          });
+        } catch (bucketError) {
+          console.log('R2 bucket not available, skipping thread storage for:', threadId);
+          // Continue without storing in R2 - the app will still work
+        }
 
         void this.sql`
           INSERT OR REPLACE INTO threads (
@@ -885,11 +891,27 @@ export class ZeroDriver extends DurableObject {
         } satisfies IGetThreadResponse;
       }
       const row = result[0] as { latest_label_ids: string };
-      const storedThread = await env.THREADS_BUCKET.get(this.getThreadKey(id));
-
-      const messages: ParsedMessage[] = storedThread
-        ? (JSON.parse(await storedThread.text()) as IGetThreadResponse).messages
-        : [];
+      
+      // Try to get stored thread from R2 bucket, fall back to Gmail API if not available
+      let messages: ParsedMessage[] = [];
+      try {
+        const storedThread = await env.THREADS_BUCKET.get(this.getThreadKey(id));
+        if (storedThread) {
+          messages = (JSON.parse(await storedThread.text()) as IGetThreadResponse).messages;
+        }
+      } catch (bucketError) {
+        console.log('R2 bucket not available, falling back to Gmail API for thread:', id);
+        // Fall back to Gmail API if R2 bucket is not available
+        if (this.driver) {
+          try {
+            const threadData = await this.getWithRetry(id);
+            messages = threadData.messages || [];
+          } catch (apiError) {
+            console.error('Failed to fetch thread from Gmail API:', apiError);
+            messages = [];
+          }
+        }
+      }
 
       const latestLabelIds = JSON.parse(row.latest_label_ids || '[]');
 
