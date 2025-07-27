@@ -30,9 +30,6 @@ export const registerGoogleAuthRoutes = (app: Hono<HonoContext>) => {
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallenge(codeVerifier);
     
-    // Store code verifier in session for later use
-    c.set('code_verifier', codeVerifier);
-    
     // Build OAuth URL with Gmail scopes
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', env.GOOGLE_CLIENT_ID);
@@ -49,6 +46,11 @@ export const registerGoogleAuthRoutes = (app: Hono<HonoContext>) => {
     authUrl.searchParams.set('prompt', 'consent');
     authUrl.searchParams.set('code_challenge', codeChallenge);
     authUrl.searchParams.set('code_challenge_method', 'S256');
+    
+    // Store code verifier in a temporary cookie for later use
+    const response = c.redirect(authUrl.toString());
+    response.headers.set('Set-Cookie', `pkce_verifier=${codeVerifier}; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=300`); // 5 minutes expiry
+    return response;
     
     return c.redirect(authUrl.toString());
   });
@@ -72,8 +74,23 @@ export const registerGoogleAuthRoutes = (app: Hono<HonoContext>) => {
         return c.redirect(`${publicUrl}/auth/google/callback?error=no_code`);
       }
       
+      // Get the code verifier from the temporary cookie
+      const pkceCookie = c.req.header('Cookie')?.match(/pkce_verifier=([^;]+)/)?.[1];
+      
+      if (!pkceCookie) {
+        console.error('No PKCE verifier found in cookie');
+        return c.redirect(`${publicUrl}/auth/google/callback?error=no_code_verifier`);
+      }
+      
+      const codeVerifier = pkceCookie;
+      
+      if (!codeVerifier) {
+        console.error('No code verifier found in session');
+        return c.redirect(`${publicUrl}/auth/google/callback?error=no_code_verifier`);
+      }
+      
       // Exchange code for tokens
-      const tokenResponse = await exchangeCodeForTokens(code, env);
+      const tokenResponse = await exchangeCodeForTokens(code, codeVerifier, env);
       
       if (!tokenResponse) {
         console.error('Failed to exchange code for tokens');
@@ -110,15 +127,20 @@ export const registerGoogleAuthRoutes = (app: Hono<HonoContext>) => {
         await storeRefreshToken(user.sub, tokenResponse.refresh_token, env);
       }
       
-      // Redirect to inbox with session cookie
+      // Redirect to inbox with session cookie and clear PKCE cookie
       const response = c.redirect(`${publicUrl}/mail/inbox`);
-      response.headers.set('Set-Cookie', `session=${sessionToken}; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=${tokenResponse.expires_in || 3600}`);
+      response.headers.set('Set-Cookie', [
+        `session=${sessionToken}; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=${tokenResponse.expires_in || 3600}`,
+        `pkce_verifier=; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=0`
+      ].join(', '));
       
       return response;
       
     } catch (error) {
       console.error('Google OAuth callback error:', error);
-      return c.redirect(`${publicUrl}/auth/google/callback?error=callback_failed`);
+      const response = c.redirect(`${publicUrl}/auth/google/callback?error=callback_failed`);
+      response.headers.set('Set-Cookie', `pkce_verifier=; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=0`);
+      return response;
     }
   });
 };
@@ -144,7 +166,7 @@ function base64URLEncode(buffer: Uint8Array): string {
     .replace(/=/g, '');
 }
 
-async function exchangeCodeForTokens(code: string, env: any): Promise<GoogleTokenResponse | null> {
+async function exchangeCodeForTokens(code: string, codeVerifier: string, env: any): Promise<GoogleTokenResponse | null> {
   const tokenUrl = 'https://oauth2.googleapis.com/token';
   const redirectUri = `${env.VITE_PUBLIC_BACKEND_URL || 'https://pitext-mail.prabhatravib.workers.dev'}/auth/google/callback`;
   
@@ -159,6 +181,7 @@ async function exchangeCodeForTokens(code: string, env: any): Promise<GoogleToke
       code,
       grant_type: 'authorization_code',
       redirect_uri: redirectUri,
+      code_verifier: codeVerifier,
     }),
   });
   
