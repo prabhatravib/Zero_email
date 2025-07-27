@@ -1054,7 +1054,7 @@ export class ZeroAgent extends DurableObject {
   async handleSession(server: WebSocket, request: Request) {
     try {
       console.log('[ZeroAgent.handleSession] Starting session setup');
-      // server.accept();  // remove this line
+      server.accept();                  // ✅ RE-ENABLE: completes the 101 upgrade
       
       // Extract query parameters from request
       const url = new URL(request.url);
