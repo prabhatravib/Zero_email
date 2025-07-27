@@ -597,9 +597,6 @@ importers:
       hono-agents:
         specifier: 0.0.83
         version: 0.0.83(agents@0.0.106(@cloudflare/workers-types@4.20250628.0)(react@19.1.0))(hono@4.8.3)
-      hono-party:
-        specifier: ^0.0.12
-        version: 0.0.12(@cloudflare/workers-types@4.20250628.0)(hono@4.8.3)(partyserver@0.0.71(@cloudflare/workers-types@4.20250628.0))
       jose:
         specifier: 6.0.11
         version: 6.0.11
@@ -5900,13 +5897,6 @@ packages:
     peerDependencies:
       agents: ^0.0.93
       hono: ^4.6.17
-
-  hono-party@0.0.12:
-    resolution: {integrity: sha512-mvjPDel2GcI93dJ6sreCn3Jx+ta3aw4JFGWwwNYwK7wYpjJG8pqiwVhEnbcneXl+TPheyq0uykQpgNVkruF1Yg==}
-    peerDependencies:
-      '@cloudflare/workers-types': ^4.20240729.0
-      hono: ^4.6.17
-      partyserver: ^0.0.71
 
   hono@4.8.3:
     resolution: {integrity: sha512-jYZ6ZtfWjzBdh8H/0CIFfCBHaFL75k+KMzaM177hrWWm2TWL39YMYaJgB74uK/niRc866NMlH9B8uCvIo284WQ==}
@@ -14407,12 +14397,6 @@ snapshots:
     dependencies:
       agents: 0.0.106(@cloudflare/workers-types@4.20250628.0)(react@19.1.0)
       hono: 4.8.3
-
-  hono-party@0.0.12(@cloudflare/workers-types@4.20250628.0)(hono@4.8.3)(partyserver@0.0.71(@cloudflare/workers-types@4.20250628.0)):
-    dependencies:
-      '@cloudflare/workers-types': 4.20250628.0
-      hono: 4.8.3
-      partyserver: 0.0.71(@cloudflare/workers-types@4.20250628.0)
 
   hono@4.8.3: {}
 
