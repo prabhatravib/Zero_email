@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-const https = require('https');
-
 const WORKER_URL = 'https://pitext-mail.prabhatravib.workers.dev';
 
 async function testSimple() {
