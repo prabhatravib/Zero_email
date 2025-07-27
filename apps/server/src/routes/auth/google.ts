@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { googleAuth } from '@hono/oauth-providers/google';
 import jwt from '@tsndr/cloudflare-worker-jwt';
+import { setCookie } from 'hono/cookie';
 import type { HonoContext } from '../../ctx';
 
 // Types for Google OAuth response
@@ -48,11 +49,13 @@ export const registerGoogleAuthRoutes = (app: Hono<HonoContext>) => {
     authUrl.searchParams.set('code_challenge_method', 'S256');
     
     // Store code verifier in a temporary cookie for later use
-    const response = c.redirect(authUrl.toString());
-    response.headers.set('Set-Cookie', `pkce_verifier=${codeVerifier}; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=300`); // 5 minutes expiry
-    return response;
-    
-    return c.redirect(authUrl.toString());
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: authUrl.toString(),
+        'Set-Cookie': `pkce_verifier=${codeVerifier}; HttpOnly; Secure; Path=/; SameSite=None; Max-Age=300`, // 5 minutes expiry
+      },
+    });
   });
 
   // Google OAuth callback endpoint
@@ -127,20 +130,27 @@ export const registerGoogleAuthRoutes = (app: Hono<HonoContext>) => {
         await storeRefreshToken(user.sub, tokenResponse.refresh_token, env);
       }
       
-      // Redirect to inbox with session cookie and clear PKCE cookie
-      const response = c.redirect(`${publicUrl}/mail/inbox`);
-      response.headers.set('Set-Cookie', [
-        `session=${sessionToken}; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=${tokenResponse.expires_in || 3600}`,
-        `pkce_verifier=; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=0`
-      ].join(', '));
-      
-      return response;
+      // **build the response manually so Set-Cookie survives the 302**
+      const setCookieHeader = `session=${sessionToken}; HttpOnly; Secure; Path=/; SameSite=None; Max-Age=${tokenResponse.expires_in || 3600}`;
+      const clearPkceHeader = `pkce_verifier=; HttpOnly; Secure; Path=/; SameSite=None; Max-Age=0`;
+
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: `${publicUrl}/mail/inbox`,
+          'Set-Cookie': [setCookieHeader, clearPkceHeader].join(', '),
+        },
+      });
       
     } catch (error) {
       console.error('Google OAuth callback error:', error);
-      const response = c.redirect(`${publicUrl}/auth/google/callback?error=callback_failed`);
-      response.headers.set('Set-Cookie', `pkce_verifier=; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=0`);
-      return response;
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: `${publicUrl}/auth/google/callback?error=callback_failed`,
+          'Set-Cookie': `pkce_verifier=; HttpOnly; Secure; Path=/; SameSite=None; Max-Age=0`,
+        },
+      });
     }
   });
 };

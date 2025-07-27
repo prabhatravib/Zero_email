@@ -567,7 +567,7 @@ const MoreAboutPerson = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showOverlay>
+      <DialogContent showOverlay aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>More about {cleanNameDisplay(person.name)}</DialogTitle>
         </DialogHeader>
@@ -640,7 +640,7 @@ const MoreAboutQuery = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showOverlay>
+      <DialogContent showOverlay aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>Search Results</DialogTitle>
         </DialogHeader>
