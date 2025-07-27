@@ -1,5 +1,5 @@
 import { streamText, tool, type DataStreamWriter, type ToolSet } from 'ai';
-import { perplexity } from '@ai-sdk/perplexity';
+import { openai } from '@ai-sdk/openai';
 
 import { getZeroAgent } from '../../lib/server-utils';
 import { Tools } from '../../types';
@@ -43,8 +43,9 @@ export class ToolOrchestrator {
         }),
         execute: async ({ query }, { toolCallId }) => {
           try {
+            // TODO: Replace with OpenAI model since perplexity was removed
             const response = streamText({
-              model: perplexity('sonar'),
+              model: openai('gpt-4o-mini'),
               messages: [
                 { role: 'system', content: 'Be precise and concise.' },
                 { role: 'system', content: 'Do not include sources in your response.' },

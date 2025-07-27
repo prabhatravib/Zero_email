@@ -4,7 +4,7 @@ import {
   type ToolExecutionOptions,
   type ToolSet,
 } from 'ai';
-import { formatDataStreamPart, type Message } from '@ai-sdk/ui-utils';
+import type { Message } from 'ai';
 import type { z } from 'zod';
 
 // Approval string to be shared across frontend and backend
@@ -94,12 +94,11 @@ export async function processToolCalls<
       }
 
       // Forward updated tool result to the client.
-      dataStream.write(
-        formatDataStreamPart('tool_result', {
-          toolCallId: toolInvocation.toolCallId,
-          result,
-        }),
-      );
+      dataStream.write({
+        type: 'tool_result',
+        toolCallId: toolInvocation.toolCallId,
+        result,
+      });
 
       // Return updated toolInvocation with the actual result.
       return {

@@ -4,7 +4,7 @@ import { writingStyleMatrix } from '../db/schema';
 
 
 import { env } from 'cloudflare:workers';
-import { google } from '@ai-sdk/google';
+import { openai } from '@ai-sdk/openai';
 import { jsonrepair } from 'jsonrepair';
 import { generateObject } from 'ai';
 import { eq } from 'drizzle-orm';
@@ -273,7 +273,7 @@ const extractStyleMatrix = async (emailBody: string) => {
   }
 
   const { object: result } = await generateObject({
-    model: google('gemini-2.0-flash'),
+    model: openai('gpt-4o-mini'),
     schema,
     temperature: 0,
     maxTokens: 600,
