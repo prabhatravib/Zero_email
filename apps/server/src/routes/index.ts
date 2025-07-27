@@ -9,14 +9,16 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
         { publicRouter },
         { debugEnvHandler },
         { healthHandler },
-        { registerTrpcRoutes }
+        { registerTrpcRoutes },
+        { authCheckHandler }
     ] = await Promise.all([
         import('./test'),
         import('./debug'),
         import('./auth'),
         import('./debug-env'),
         import('./health'),
-        import('./trpc')
+        import('./trpc'),
+        import('./auth-check')
     ]);
 
     app.get('/test', testHandler)
@@ -27,7 +29,8 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
        .get('/test-jwt', testJwtHandler)
        .get('/test-decode', testDecodeHandler)
        .get('/test-jwt-verify', testJwtVerifyHandler)
-       .get('/test-trpc-auth', testTrpcAuthHandler);
+       .get('/test-trpc-auth', testTrpcAuthHandler)
+       .get('/api/auth/check', authCheckHandler);
     
     // WebSocket route for agents
     app.get('/agents/:agentId/:channel', async (c) => {

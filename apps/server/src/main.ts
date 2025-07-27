@@ -34,7 +34,20 @@ class WorkerClass {
         if (!this.app) {
             this.app = new Hono<HonoContext>()
                 .use('*', corsMiddleware)
-                .use(contextStorageMiddleware);
+                .use(contextStorageMiddleware)
+                // Add global error handler to return JSON instead of HTML
+                .onError((err, c) => {
+                    console.error('Global error handler caught:', err);
+                    
+                    // Return JSON error response instead of HTML
+                    return c.json({
+                        error: {
+                            code: 'INTERNAL_SERVER_ERROR',
+                            message: err.message || 'Internal server error',
+                            ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+                        }
+                    }, 500);
+                });
         }
         
         // Initialize routes on first request
@@ -46,8 +59,29 @@ class WorkerClass {
     }
 
     async fetch(request: Request, env: any, ctx: any): Promise<Response> {
-        const app = await this.getApp();
-        return app.fetch(request, env, ctx);
+        try {
+            const app = await this.getApp();
+            return app.fetch(request, env, ctx);
+        } catch (error) {
+            console.error('Unhandled error in fetch:', error);
+            
+            // Return JSON error response for unhandled errors
+            return new Response(JSON.stringify({
+                error: {
+                    code: 'INTERNAL_SERVER_ERROR',
+                    message: error instanceof Error ? error.message : 'Internal server error',
+                    ...(process.env.NODE_ENV === 'development' && { stack: error instanceof Error ? error.stack : undefined })
+                }
+            }), {
+                status: 500,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Session-Token'
+                }
+            });
+        }
     }
 }
 
