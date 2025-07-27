@@ -38,10 +38,32 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
     // WebSocket route for agents
     app.get('/agents/zero-agent/:channel', (c) => {
         const { channel } = c.req.param();
+        console.log('[Route] WebSocket request for channel:', channel);
+        
         const env = c.env as any;
-        const agent = env.ZERO_AGENT.get(env.ZERO_AGENT.idFromName(channel));
-        // Do not declare this function as async, and return the promise directly
-        return agent.fetch(c.req.raw);
+        console.log('[Route] Environment bindings:', Object.keys(env));
+        
+        if (!env.ZERO_AGENT) {
+            console.error('[Route] ZERO_AGENT binding not found!');
+            return new Response('ZERO_AGENT binding not configured', { status: 500 });
+        }
+        
+        try {
+            const agentId = env.ZERO_AGENT.idFromName(channel);
+            console.log('[Route] Created agent ID:', agentId);
+            
+            const agent = env.ZERO_AGENT.get(agentId);
+            console.log('[Route] Got agent stub, forwarding request');
+            
+            // Do not declare this function as async, and return the promise directly
+            return agent.fetch(c.req.raw);
+        } catch (error) {
+            console.error('[Route] Error creating agent:', error);
+            return new Response(JSON.stringify({ error: 'Failed to create agent', details: error instanceof Error ? error.message : String(error) }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
     });
     
     // Register auth routes

@@ -1005,47 +1005,94 @@ export class ZeroAgent extends DurableObject {
   }
 
   async fetch(request: Request): Promise<Response> {
-    // Handle WebSocket upgrade requests
-    if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-      const pair = new WebSocketPair();
-      const [client, server] = Object.values(pair);
-      await this.handleSession(server);
-      return new Response(null, { status: 101, webSocket: client });
+    try {
+      console.log('[ZeroAgent.fetch] Received request:', {
+        url: request.url,
+        method: request.method,
+        headers: Object.fromEntries(request.headers.entries()),
+        upgrade: request.headers.get('Upgrade')
+      });
+      
+      // Extract channel from URL and set name
+      const url = new URL(request.url);
+      const pathParts = url.pathname.split('/');
+      const channel = pathParts[pathParts.length - 1];
+      if (channel && channel !== 'zero-agent') {
+        console.log('[ZeroAgent.fetch] Setting agent name to:', channel);
+        await this.setName(channel);
+      }
+
+      // Handle WebSocket upgrade requests
+      if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
+        console.log('[ZeroAgent.fetch] WebSocket upgrade detected, creating WebSocket pair');
+        const pair = new WebSocketPair();
+        const [client, server] = Object.values(pair);
+        
+        console.log('[ZeroAgent.fetch] Calling handleSession');
+        await this.handleSession(server);
+        
+        console.log('[ZeroAgent.fetch] Returning WebSocket response');
+        return new Response(null, { status: 101, webSocket: client });
+      }
+      
+      // Handle HTTP requests
+      console.log('[ZeroAgent.fetch] Regular HTTP request, returning JSON response');
+      return new Response(JSON.stringify({ message: 'ZeroAgent is running' }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      console.error('[ZeroAgent.fetch] Error:', error);
+      return new Response(JSON.stringify({ error: 'Internal server error', details: error.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
-    
-    // Handle HTTP requests
-    return new Response(JSON.stringify({ message: 'ZeroAgent is running' }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
   }
 
   async handleSession(server: WebSocket) {
-    server.accept();
-    const connection = {
-      id: Math.random().toString(36).substring(2),
-      send: (message: string) => server.send(message),
-      state: {},
-      close: () => server.close(),
-    };
-    this.parties.add(connection);
+    try {
+      console.log('[ZeroAgent.handleSession] Starting session setup');
+      server.accept();
+      console.log('[ZeroAgent.handleSession] WebSocket accepted');
+      
+      const connection = {
+        id: Math.random().toString(36).substring(2),
+        send: (message: string) => server.send(message),
+        state: {},
+        close: () => server.close(),
+      };
+      console.log('[ZeroAgent.handleSession] Created connection:', connection.id);
+      
+      this.parties.add(connection);
+      console.log('[ZeroAgent.handleSession] Added connection to parties');
 
-    server.addEventListener('message', async (event) => {
-      try {
-        await this.onMessage(connection, event.data as string | ArrayBuffer);
-      } catch (error) {
-        if (this.env.DEBUG === 'true') {
-          console.error('WebSocket message error', error);
+      server.addEventListener('message', async (event) => {
+        console.log('[ZeroAgent.handleSession] Received message:', event.data);
+        try {
+          await this.onMessage(connection, event.data as string | ArrayBuffer);
+        } catch (error) {
+          console.error('[ZeroAgent.handleSession] Error in onMessage:', error);
+          if (this.env.DEBUG === 'true') {
+            console.error('WebSocket message error', error);
+          }
         }
-      }
-    });
+      });
 
-    server.addEventListener('close', () => {
-      this.parties.delete(connection);
-    });
+      server.addEventListener('close', () => {
+        console.log('[ZeroAgent.handleSession] WebSocket closed');
+        this.parties.delete(connection);
+      });
 
-    server.addEventListener('error', () => {
-      this.parties.delete(connection);
-    });
+      server.addEventListener('error', (error) => {
+        console.error('[ZeroAgent.handleSession] WebSocket error:', error);
+        this.parties.delete(connection);
+      });
+      
+      console.log('[ZeroAgent.handleSession] Session setup complete');
+    } catch (error) {
+      console.error('[ZeroAgent.handleSession] Fatal error:', error);
+      throw error;
+    }
   }
 
   async registerZeroMCP() {
