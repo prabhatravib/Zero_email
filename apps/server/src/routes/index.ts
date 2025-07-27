@@ -37,8 +37,10 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
         const { agentId, channel } = c.req.param();
         const env = c.env as any;
         
-        // Forward to Durable Object
-        const agent = env.ZERO_AGENT.get(env.ZERO_AGENT.idFromName(agentId));
+        // For WebSocket connections, the agentId is 'zero-agent' and channel is the connection ID
+        // We need to create the Durable Object with the connection ID (channel)
+        const durableObjectId = agentId === 'zero-agent' ? channel : agentId;
+        const agent = env.ZERO_AGENT.get(env.ZERO_AGENT.idFromName(durableObjectId));
         
         // Return the promise directly to preserve WebSocket upgrade
         return agent.fetch(c.req.raw);

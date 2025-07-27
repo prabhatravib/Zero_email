@@ -58,16 +58,6 @@ export function NavMain({ items }: NavMainProps) {
   const [category] = useQueryState('category');
 
   const trpc = useTRPC();
-  const { data: intercomToken } = useQuery(trpc.user.getIntercomToken.queryOptions());
-
-  React.useEffect(() => {
-    if (intercomToken) {
-      Intercom({
-        app_id: 'aavenrba',
-        intercom_user_jwt: intercomToken,
-      });
-    }
-  }, [intercomToken]);
 
   const { mutateAsync: createLabel } = useMutation(trpc.labels.create.mutationOptions());
 
@@ -184,14 +174,6 @@ export function NavMain({ items }: NavMainProps) {
       <SidebarMenu>
         {isBottomNav ? (
           <>
-            <SidebarMenuButton
-              onClick={() => show()}
-              tooltip={state === 'collapsed' ? m['common.commandPalette.groups.help']() : undefined}
-              className="hover:bg-subtleWhite flex cursor-pointer items-center dark:hover:bg-[#202020]"
-            >
-              <OldPhone className="relative mr-2.5 h-2 w-2 fill-[#8F8F8F]" />
-              <p className="relative bottom-0.5 mt-0.5 truncate text-[13px]">Live Support</p>
-            </SidebarMenuButton>
             <NavItem
               key={'feedback'}
               isActive={isUrlActive('https://feedback.0.email')}
