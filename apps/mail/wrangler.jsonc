@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "zero",
   "compatibility_date": "2025-06-27",
-  "main": "app/entry.server.tsx",
+  "main": "build/server/entry.server.js",
   "observability": {
     "enabled": true,
   },
