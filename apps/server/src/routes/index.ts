@@ -87,6 +87,8 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
                     const pair = new WebSocketPair();
                     const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
 
+                    console.log('[Route] about to stub.fetch, server is', !!server);
+
                     // Forward the server side to the DO (do NOT call server.accept or await)
                     agent.fetch('https://zero-agent/session', {
                       webSocket: server,

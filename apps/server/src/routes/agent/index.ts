@@ -1140,7 +1140,7 @@ export class ZeroAgent extends DurableObject {
         }
  
         // Start long-running handler without blocking the response
-        this.state.waitUntil(this.handleSession(ws));
+        this.state.waitUntil(this.handleSession(ws, request));
  
         // Return 101 Switching Protocols with the accepted socket
         return new Response(null, { status: 101, webSocket: ws });
