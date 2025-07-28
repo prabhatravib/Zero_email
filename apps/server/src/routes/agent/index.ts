@@ -1098,7 +1098,7 @@ export class ZeroAgent extends DurableObject {
     try {
       // Confirm the socket was attached by the edge worker before doing anything else
       const ws = (request as any).webSocket as WebSocket | undefined;
-      console.log('[ZeroAgent] fetch called. hasWS =', !!ws);
+      console.log('[ZeroAgent] ENTER, hasWS =', !!ws); // quick sanity log
 
       if (!ws) {
         // Edge worker did not attach the WebSocket – bail out early
