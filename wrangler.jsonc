@@ -1,0 +1,49 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pitext-mail",
+  "compatibility_date": "2025-05-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./apps/server/src/main.ts",
+  "ai": {
+    "binding": "AI",
+  },
+  "observability": {
+    "logs": {
+      "enabled": true
+    }
+  },
+
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ZERO_AGENT",
+        "class_name": "ZeroAgent",
+      },
+      {
+        "name": "ZERO_MCP",
+        "class_name": "ZeroMCP",
+      },
+      {
+        "name": "ZERO_DB",
+        "class_name": "ZeroDB",
+      },
+      {
+        "name": "ZERO_DRIVER",
+        "class_name": "ZeroDriver",
+      },
+    ],
+  },
+
+  "vars": {
+    "VITE_PUBLIC_APP_URL": "https://pitext-email.onrender.com",
+    "GOOGLE_REDIRECT_URI": "https://pitext-mail.prabhatravib.workers.dev/auth/google/callback",
+    "VITE_PUBLIC_BACKEND_URL": "https://pitext-mail.prabhatravib.workers.dev",
+    "BETTER_AUTH_URL": "https://pitext-mail.prabhatravib.workers.dev",
+    "GOOGLE_CLIENT_ID": "363401296279-vo7al766jmct0gcat24rrn2grv2jh1p5.apps.googleusercontent.com",
+    "GOOGLE_CLIENT_SECRET": "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",
+    "JWT_SECRET": "egwrgwrgndnznzgnfhnzxdgnnethzhnzhtyjtudi5e6u4u75tei6",
+    "OPENAI_MODEL": "gpt-4o",
+    "OPENAI_MINI_MODEL": "gpt-4o-mini",
+    "THREAD_SYNC_LOOP": "true"
+  }
+} 
