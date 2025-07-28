@@ -88,20 +88,9 @@ export const trpcClient = createTRPCClient<AppRouter>({
       url: getUrl(),
       maxItems: 1,
       headers: () => {
-        // Get session token from localStorage for cross-site requests
-        const sessionToken = localStorage.getItem('gmail_session_token');
-        const headers: Record<string, string> = {};
-        
-        if (sessionToken) {
-          console.log('🔍 tRPC Client - Sending session token:', sessionToken.substring(0, 20) + '...');
-          headers['X-Session-Token'] = sessionToken;
-          // Also try Authorization header as fallback
-          headers['Authorization'] = `Bearer ${sessionToken}`;
-        } else {
-          console.log('🔍 tRPC Client - No session token found in localStorage');
-        }
-        
-        return headers;
+        // We're using cookie-based authentication, so no need for token headers
+        // The fetch function below will include credentials: 'include' automatically
+        return {};
       },
       fetch: (url, options) =>
         fetch(url, { ...options, credentials: 'include' }).then((res) => {

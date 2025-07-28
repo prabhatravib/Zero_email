@@ -59,7 +59,14 @@ export const getSession = async () => {
       return sessionData.user; // Return the user data from the response
     }
 
-    // If no valid session, return null
+    // If no valid session (401), return null silently
+    // This is expected behavior when user is not logged in
+    if (response.status === 401) {
+      return null;
+    }
+
+    // For other errors, log them
+    console.error('Session request failed with status:', response.status);
     return null;
   } catch (error) {
     console.error('Failed to get session:', error);
@@ -144,7 +151,7 @@ export const signOut = async () => {
       credentials: 'include',
     });
     
-    // Clear any local storage
+    // Clear any local storage (keeping for backward compatibility)
     localStorage.removeItem('gmail_user_data');
     localStorage.removeItem('gmail_session_token');
     
