@@ -1,13 +1,14 @@
-import { activeDriverProcedure, createRateLimiterMiddleware, router, privateProcedure } from '../trpc';
+import { activeDriverProcedure, createRateLimiterMiddleware, router } from '../trpc';
 import { getZeroAgent } from '../../lib/server-utils';
+import { Ratelimit } from '@upstash/ratelimit';
 import { z } from 'zod';
 
 export const labelsRouter = router({
-  list: privateProcedure
+  list: activeDriverProcedure
     .use(
       createRateLimiterMiddleware({
-        generatePrefix: ({ sessionUser }) => `ratelimit:get-labels-${sessionUser?.id || 'anonymous'}`,
-        limiter: { window: '1m', limit: 120 },
+        generatePrefix: ({ sessionUser }) => `ratelimit:get-labels-${sessionUser?.id}`,
+        limiter: Ratelimit.slidingWindow(120, '1m'),
       }),
     )
     .output(
@@ -26,32 +27,15 @@ export const labelsRouter = router({
       ),
     )
     .query(async ({ ctx }) => {
-      try {
-        const { sessionUser } = ctx;
-        if (!sessionUser) {
-          return [];
-        }
-
-        // Try to get active connection, but don't fail if none exists
-        try {
-          const { getActiveConnection } = await import('../../lib/server-utils');
-          const activeConnection = await getActiveConnection();
-          const agent = await getZeroAgent(activeConnection.id);
-          return await agent.getUserLabels();
-        } catch (connectionError) {
-          console.log('No active connection found, returning empty labels list');
-          return [];
-        }
-      } catch (error) {
-        console.error('Error in labels.list:', error);
-        return [];
-      }
+      const { activeConnection } = ctx;
+      const agent = await getZeroAgent(activeConnection.id);
+      return await agent.getUserLabels();
     }),
   create: activeDriverProcedure
     .use(
       createRateLimiterMiddleware({
-        generatePrefix: ({ sessionUser }) => `ratelimit:labels-post-${sessionUser?.id || 'anonymous'}`,
-        limiter: { window: '1m', limit: 60 },
+        generatePrefix: ({ sessionUser }) => `ratelimit:labels-post-${sessionUser?.id}`,
+        limiter: Ratelimit.slidingWindow(60, '1m'),
       }),
     )
     .input(
@@ -80,8 +64,8 @@ export const labelsRouter = router({
   update: activeDriverProcedure
     .use(
       createRateLimiterMiddleware({
-        generatePrefix: ({ sessionUser }) => `ratelimit:labels-patch-${sessionUser?.id || 'anonymous'}`,
-        limiter: { window: '1m', limit: 60 },
+        generatePrefix: ({ sessionUser }) => `ratelimit:labels-patch-${sessionUser?.id}`,
+        limiter: Ratelimit.slidingWindow(60, '1m'),
       }),
     )
     .input(
@@ -106,8 +90,8 @@ export const labelsRouter = router({
   delete: activeDriverProcedure
     .use(
       createRateLimiterMiddleware({
-        generatePrefix: ({ sessionUser }) => `ratelimit:labels-delete-${sessionUser?.id || 'anonymous'}`,
-        limiter: { window: '1m', limit: 60 },
+        generatePrefix: ({ sessionUser }) => `ratelimit:labels-delete-${sessionUser?.id}`,
+        limiter: Ratelimit.slidingWindow(60, '1m'),
       }),
     )
     .input(z.object({ id: z.string() }))

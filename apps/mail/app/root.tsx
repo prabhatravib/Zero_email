@@ -15,7 +15,7 @@ import { ServerProviders } from '@/providers/server-providers';
 import { ClientProviders } from '@/providers/client-providers';
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import { useEffect, type PropsWithChildren } from 'react';
-import type { AppRouter } from '@zero/server/trpc/types';
+import type { AppRouter } from '@zero/server/trpc';
 import { Button } from '@/components/ui/button';
 import { getLocale } from '@/paraglide/runtime';
 import { siteConfig } from '@/lib/site-config';
@@ -33,22 +33,12 @@ const getUrl = () => import.meta.env.VITE_PUBLIC_BACKEND_URL + '/api/trpc';
 export const getServerTrpc = (req: Request) =>
   createTRPCClient<AppRouter>({
     links: [
-          httpBatchLink({
-      maxItems: 1,
-      url: getUrl(),
-      transformer: superjson,
-      headers: () => {
-        // Get session token from request headers for server-side rendering
-        const sessionToken = req.headers.get('X-Session-Token') || req.headers.get('Authorization')?.replace('Bearer ', '');
-        const headers: Record<string, string> = {};
-        
-        if (sessionToken) {
-          headers['X-Session-Token'] = sessionToken;
-        }
-        
-        return headers;
-      },
-    }),
+      httpBatchLink({
+        maxItems: 1,
+        url: getUrl(),
+        transformer: superjson,
+        headers: req.headers,
+      }),
     ],
   });
 

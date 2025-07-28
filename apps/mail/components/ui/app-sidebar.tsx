@@ -172,6 +172,9 @@ function ComposeButton() {
   };
   return (
     <Dialog open={!!dialogOpen} onOpenChange={handleOpenChange}>
+      <DialogTitle></DialogTitle>
+      <DialogDescription></DialogDescription>
+
       <DialogTrigger asChild>
         <button className="relative mb-1.5 inline-flex h-8 w-full items-center justify-center gap-1 self-stretch overflow-hidden rounded-lg border border-gray-200 bg-[#006FFE] text-black dark:border-none dark:text-white">
           {state === 'collapsed' && !isMobile ? (
@@ -187,10 +190,7 @@ function ComposeButton() {
         </button>
       </DialogTrigger>
 
-      <DialogContent className="h-screen w-screen max-w-none border-none bg-[#FAFAFA] p-0 shadow-none dark:bg-[#141414]" aria-describedby="compose-email-description">
-        <DialogDescription id="compose-email-description" className="sr-only">
-          Compose new email dialog
-        </DialogDescription>
+      <DialogContent className="h-screen w-screen max-w-none border-none bg-[#FAFAFA] p-0 shadow-none dark:bg-[#141414]">
         <CreateEmail />
       </DialogContent>
     </Dialog>

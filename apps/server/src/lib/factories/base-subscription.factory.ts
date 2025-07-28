@@ -4,7 +4,7 @@ import { connection } from '../../db/schema';
 
 
 import { env } from 'cloudflare:workers';
-// Database disabled - using Durable Objects instead
+import { createDb } from '../../db';
 import { eq } from 'drizzle-orm';
 
 export interface SubscriptionData {
@@ -29,9 +29,10 @@ export abstract class BaseSubscriptionFactory {
 
   protected async getConnectionFromDb(connectionId: string) {
     // Revisit
-    // Database disabled - using Durable Objects instead
-          // Database disabled - using Durable Objects instead
-      throw new Error('Database disabled - using Durable Objects');
+    const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
+    const connectionData = await db.query.connection.findFirst({
+      where: eq(connection.id, connectionId),
+    });
     await conn.end();
     return connectionData;
   }

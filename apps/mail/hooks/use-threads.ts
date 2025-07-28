@@ -19,7 +19,6 @@ export const useThreads = () => {
   const isInQueue = useAtomValue(isThreadInBackgroundQueueAtom);
   const trpc = useTRPC();
   const { labels } = useSearchLabels();
-  const { data: session, isPending } = useSession();
 
   const threadsQuery = useInfiniteQuery(
     trpc.mail.listThreads.infiniteQueryOptions(
@@ -34,7 +33,6 @@ export const useThreads = () => {
         staleTime: 60 * 1000 * 1, // 1 minute
         refetchOnMount: true,
         refetchIntervalInBackground: true,
-        enabled: !isPending && !!session?.user?.id, // Only run when authenticated
       },
     ),
   );
@@ -65,7 +63,7 @@ export const useThreads = () => {
 };
 
 export const useThread = (threadId: string | null) => {
-  const { data: session, isPending } = useSession();
+  const { data: session } = useSession();
   const [_threadId] = useQueryState('threadId');
   const id = threadId ? threadId : _threadId;
   const trpc = useTRPC();
@@ -78,7 +76,7 @@ export const useThread = (threadId: string | null) => {
         id: id!,
       },
       {
-        enabled: !!id && !isPending && !!session?.user?.id,
+        enabled: !!id && !!session?.user.id,
         staleTime: 1000 * 60 * 60, // 1 minute
       },
     ),

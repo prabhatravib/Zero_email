@@ -3,11 +3,11 @@ import {
   type PersistedClient,
   type Persister,
 } from '@tanstack/react-query-persist-client';
-import { createTRPCClient, httpBatchLink, loggerLink } from '@trpc/client';
 import { QueryCache, QueryClient, hashKey } from '@tanstack/react-query';
 import { createTRPCContext } from '@trpc/tanstack-react-query';
+import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import { useMemo, type PropsWithChildren } from 'react';
-import type { AppRouter } from '@zero/server/trpc/types';
+import type { AppRouter } from '@zero/server/trpc';
 import { CACHE_BURST_KEY } from '@/lib/constants';
 import { signOut } from '@/lib/auth-client';
 import { get, set, del } from 'idb-keyval';
@@ -37,9 +37,14 @@ export const makeQueryClient = (connectionId: string | null) =>
           err.message === 'Required scopes missing' ||
           err.message.includes('Invalid connection')
         ) {
-          signOut();
-          if (window.location.href.includes('/login')) return;
-          window.location.href = '/login?error=required_scopes_missing';
+          signOut({
+            fetchOptions: {
+              onSuccess: () => {
+                if (window.location.href.includes('/login')) return;
+                window.location.href = '/login?error=required_scopes_missing';
+              },
+            },
+          });
         } else console.error(err.message || 'Something went wrong');
       },
     }),
@@ -82,16 +87,12 @@ export const { TRPCProvider, useTRPC, useTRPCClient } = createTRPCContext<AppRou
 
 export const trpcClient = createTRPCClient<AppRouter>({
   links: [
-    loggerLink({ enabled: () => true }),
+    // loggerLink({ enabled: () => true }),
     httpBatchLink({
       transformer: superjson,
       url: getUrl(),
+      methodOverride: 'POST',
       maxItems: 1,
-      headers: () => {
-        // We're using cookie-based authentication, so no need for token headers
-        // The fetch function below will include credentials: 'include' automatically
-        return {};
-      },
       fetch: (url, options) =>
         fetch(url, { ...options, credentials: 'include' }).then((res) => {
           const currentPath = new URL(window.location.href).pathname;

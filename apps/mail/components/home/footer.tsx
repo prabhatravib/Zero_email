@@ -72,12 +72,9 @@ export default function Footer() {
                 transition={{ duration: 0.5, delay: 0.4 }}
                 className="flex w-fit flex-col items-center justify-center md:pt-4"
               >
-                <Button 
-                  className="h-8 bg-white text-black"
-                  onClick={() => window.open('https://cal.com/team/0', '_blank')}
-                >
-                  Get Started
-                </Button>
+                <a href="/login">
+                  <Button className="h-8 bg-white text-black">Get Started</Button>
+                </a>
               </motion.div>
             </div>
           </div>

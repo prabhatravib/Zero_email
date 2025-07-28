@@ -38,7 +38,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import type { Sender, ParsedMessage, Attachment } from '@/types';
 import { useActiveConnection } from '@/hooks/use-connections';
 import { useAttachments } from '@/hooks/use-attachments';
-import { useBrainState } from '../../hooks/use-summary';
 import { useTRPC } from '@/providers/query-provider';
 import { useThreadLabels } from '@/hooks/use-labels';
 import { useMutation } from '@tanstack/react-query';
@@ -567,7 +566,7 @@ const MoreAboutPerson = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showOverlay aria-describedby={undefined}>
+      <DialogContent showOverlay>
         <DialogHeader>
           <DialogTitle>More about {cleanNameDisplay(person.name)}</DialogTitle>
         </DialogHeader>
@@ -640,7 +639,7 @@ const MoreAboutQuery = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showOverlay aria-describedby={undefined}>
+      <DialogContent showOverlay>
         <DialogHeader>
           <DialogTitle>Search Results</DialogTitle>
         </DialogHeader>
@@ -682,7 +681,6 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
   const { labels: threadLabels } = useThreadLabels(
     emailData.tags ? emailData.tags.map((l) => l.id) : [],
   );
-  const { data: brainState } = useBrainState();
   const { data: activeConnection } = useActiveConnection();
   const [researchSender, setResearchSender] = useState<Sender | null>(null);
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
@@ -1315,7 +1313,7 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
                     })()}
                   </div>
                 </div>
-                {brainState?.enabled && <AiSummary />}
+                <AiSummary />
                 {threadAttachments && threadAttachments.length > 0 && (
                   <ThreadAttachments attachments={threadAttachments} />
                 )}

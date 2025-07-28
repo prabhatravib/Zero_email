@@ -8,7 +8,7 @@ import { google } from '@ai-sdk/google';
 import { jsonrepair } from 'jsonrepair';
 import { generateObject } from 'ai';
 import { eq } from 'drizzle-orm';
-// Database disabled - using Durable Objects instead
+import { createDb } from '../db';
 import pRetry from 'p-retry';
 import { z } from 'zod';
 
@@ -165,13 +165,79 @@ export const getWritingStyleMatrixForConnectionId = async ({
   connectionId: string;
   backupContent?: string;
 }) => {
-  // Writing style analysis disabled - no database storage
-  return null;
+  const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
+
+  const matrix = await db.query.writingStyleMatrix.findFirst({
+    where: eq(writingStyleMatrix.connectionId, connectionId),
+  });
+
+  await conn.end();
+
+  if (!matrix && backupContent) {
+    if (!backupContent.trim()) {
+      return null;
+    }
+
+    const newMatrix = await extractStyleMatrix(backupContent);
+
+    return {
+      connectionId,
+      numMessages: 1,
+      style: initializeStyleMatrixFromEmail(newMatrix),
+    };
+  }
+
+  return matrix;
 };
 
 export const updateWritingStyleMatrix = async (connectionId: string, emailBody: string) => {
-  // Writing style analysis disabled - no database storage
-  return;
+  const emailStyleMatrix = await extractStyleMatrix(emailBody);
+
+  await pRetry(
+    async () => {
+      const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
+      await db.transaction(async (tx) => {
+        const [existingMatrix] = await tx
+          .select({
+            numMessages: writingStyleMatrix.numMessages,
+            style: writingStyleMatrix.style,
+          })
+          .from(writingStyleMatrix)
+          .where(eq(writingStyleMatrix.connectionId, connectionId));
+
+        if (existingMatrix) {
+          const newStyle = createUpdatedMatrixFromNewEmail(
+            existingMatrix.numMessages,
+            existingMatrix.style as WritingStyleMatrix,
+            emailStyleMatrix,
+          );
+
+          await tx
+            .update(writingStyleMatrix)
+            .set({
+              numMessages: existingMatrix.numMessages + 1,
+              style: newStyle,
+            })
+            .where(eq(writingStyleMatrix.connectionId, connectionId));
+        } else {
+          const newStyle = initializeStyleMatrixFromEmail(emailStyleMatrix);
+
+          await tx
+            .insert(writingStyleMatrix)
+            .values({
+              connectionId,
+              numMessages: 1,
+              style: newStyle,
+            })
+            .onConflictDoNothing();
+        }
+      });
+      await conn.end();
+    },
+    {
+      retries: 1,
+    },
+  );
 };
 
 export const createUpdatedMatrixFromNewEmail = (

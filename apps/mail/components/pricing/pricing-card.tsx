@@ -47,9 +47,16 @@ const handleGoogleSignIn = (
   callbackURL: string,
   options?: { loading?: string; success?: string },
 ) => {
-  // Use the unified Google OAuth flow
-  const backendUrl = 'https://pitext-mail.prabhatravib.workers.dev';
-  window.location.href = `${backendUrl}/auth/google/login`;
+  return toast.promise(
+    signIn.social({
+      provider: 'google',
+      callbackURL,
+    }),
+    {
+      success: options?.success || 'Redirecting to login...',
+      error: 'Login redirect failed',
+    },
+  );
 };
 
 interface FeatureItemProps {
@@ -152,8 +159,14 @@ export default function PricingCard() {
           </div>
           <button
             onClick={() => {
-              // Simple redirect to contact form
-              window.open('https://cal.com/team/0', '_blank');
+              if (session) {
+                navigate('/mail/inbox');
+              } else {
+                handleGoogleSignIn(`${window.location.origin}/mail`, {
+                  loading: undefined,
+                  success: undefined,
+                });
+              }
             }}
             className="z-30 mt-auto inline-flex h-10 items-center justify-center gap-2.5 self-stretch overflow-hidden rounded-lg bg-[#2D2D2D] p-3 shadow shadow-black/30 outline outline-1 outline-offset-[-1px] outline-[#434343]"
           >

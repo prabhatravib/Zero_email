@@ -92,7 +92,7 @@ export function LabelDialog({
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent showOverlay={true} aria-describedby={undefined}>
+      <DialogContent showOverlay={true}>
         <DialogHeader>
           <DialogTitle>
             {editingLabel ? m['common.labels.editLabel']() : m['common.mail.createNewLabel']()}

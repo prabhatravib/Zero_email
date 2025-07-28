@@ -22,7 +22,7 @@ import { FOLDERS } from '../../lib/utils';
 import { env } from 'cloudflare:workers';
 import { eq, and } from 'drizzle-orm';
 import { McpAgent } from 'agents/mcp';
-// Database disabled - using Durable Objects instead
+import { createDb } from '../../db';
 import z from 'zod';
 
 export class ZeroMCP extends McpAgent<typeof env, Record<string, unknown>, { userId: string }> {
@@ -35,9 +35,10 @@ export class ZeroMCP extends McpAgent<typeof env, Record<string, unknown>, { use
   activeConnectionId: string | undefined;
 
   async init(): Promise<void> {
-    // Database disabled - using Durable Objects instead
-          // Database disabled - using Durable Objects instead
-      throw new Error('Database disabled - using Durable Objects');
+    const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
+    const _connection = await db.query.connection.findFirst({
+      where: eq(connection.userId, this.props.userId),
+    });
     if (!_connection) {
       throw new Error('Unauthorized');
     }

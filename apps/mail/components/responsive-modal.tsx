@@ -26,13 +26,13 @@ export default function ResponsiveModal({
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
+        <VisuallyHidden.VisuallyHidden>
+          <DialogHeader>
+            <DialogTitle>Title</DialogTitle>
+            <DialogDescription>Modal content</DialogDescription>
+          </DialogHeader>
+        </VisuallyHidden.VisuallyHidden>
         <DialogContent className="w-full overflow-y-auto border-none p-0 [-ms-overflow-style:none] [scrollbar-width:none] sm:max-w-lg [&::-webkit-scrollbar]:hidden">
-          <VisuallyHidden.VisuallyHidden>
-            <DialogHeader>
-              <DialogTitle>Title</DialogTitle>
-              <DialogDescription id="responsive-modal-description">Modal content</DialogDescription>
-            </DialogHeader>
-          </VisuallyHidden.VisuallyHidden>
           {children}
         </DialogContent>
       </Dialog>

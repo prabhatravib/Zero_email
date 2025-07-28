@@ -63,7 +63,7 @@ export function HotkeyRecorder({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{m['pages.settings.shortcuts.actions.recordHotkey']()}</DialogTitle>
         </DialogHeader>

@@ -47,7 +47,6 @@ export function PricingDialog() {
       <DialogContent
         className="flex w-auto items-center justify-center rounded-2xl border-none p-1"
         showOverlay
-        aria-describedby={undefined}
       >
         <DialogTitle className="text-center text-2xl"></DialogTitle>
 

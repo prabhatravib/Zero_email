@@ -83,8 +83,8 @@ interface GitHubApiResponse {
 export function Navigation() {
   const [open, setOpen] = useState(false);
   const [stars, setStars] = useState(0); // Default fallback value
+  const { data: session } = useSession();
   const navigate = useNavigate();
-  const { session } = useSession();
 
   const { data: githubData } = useQuery({
     queryKey: ['githubStars'],
@@ -192,13 +192,19 @@ export function Navigation() {
             </a>
             <Button
               className="h-8 bg-white text-black hover:bg-white hover:text-black"
-              onClick={async () => {
+              onClick={() => {
                 if (session) {
                   navigate('/mail/inbox');
                 } else {
-                  // Use the unified Google OAuth flow
-                  const backendUrl = 'https://pitext-mail.prabhatravib.workers.dev';
-                  window.location.href = `${backendUrl}/auth/google/login`;
+                  toast.promise(
+                    signIn.social({
+                      provider: 'google',
+                      callbackURL: `${window.location.origin}/mail`,
+                    }),
+                    {
+                      error: 'Login redirect failed',
+                    },
+                  );
                 }
               }}
             >

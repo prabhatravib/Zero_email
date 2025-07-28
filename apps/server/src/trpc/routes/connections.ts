@@ -1,5 +1,6 @@
 import { createRateLimiterMiddleware, privateProcedure, publicProcedure, router } from '../trpc';
 import { getActiveConnection, getZeroDB } from '../../lib/server-utils';
+import { Ratelimit } from '@upstash/ratelimit';
 
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -8,41 +9,32 @@ export const connectionsRouter = router({
   list: privateProcedure
     .use(
       createRateLimiterMiddleware({
-        limiter: { window: '1m', limit: 120 },
-        generatePrefix: ({ sessionUser }) => `ratelimit:get-connections-${sessionUser?.id || 'anonymous'}`,
+        limiter: Ratelimit.slidingWindow(120, '1m'),
+        generatePrefix: ({ sessionUser }) => `ratelimit:get-connections-${sessionUser?.id}`,
       }),
     )
     .query(async ({ ctx }) => {
-      try {
-        const { sessionUser } = ctx;
-        if (!sessionUser) {
-          return { connections: [], disconnectedIds: [] };
-        }
+      const { sessionUser } = ctx;
+      const db = await getZeroDB(sessionUser.id);
+      const connections = await db.findManyConnections();
 
-        const db = await getZeroDB(sessionUser.id);
-        const connections = await db.findManyConnections();
+      const disconnectedIds = connections
+        .filter((c) => !c.accessToken || !c.refreshToken)
+        .map((c) => c.id);
 
-        const disconnectedIds = connections
-          .filter((c) => !c.accessToken || !c.refreshToken)
-          .map((c) => c.id);
-
-        return {
-          connections: connections.map((connection) => {
-            return {
-              id: connection.id,
-              email: connection.email,
-              name: connection.name,
-              picture: connection.picture,
-              createdAt: connection.createdAt,
-              providerId: connection.providerId,
-            };
-          }),
-          disconnectedIds,
-        };
-      } catch (error) {
-        console.error('Error in connections.list:', error);
-        return { connections: [], disconnectedIds: [] };
-      }
+      return {
+        connections: connections.map((connection) => {
+          return {
+            id: connection.id,
+            email: connection.email,
+            name: connection.name,
+            picture: connection.picture,
+            createdAt: connection.createdAt,
+            providerId: connection.providerId,
+          };
+        }),
+        disconnectedIds,
+      };
     }),
   setDefault: privateProcedure
     .input(z.object({ connectionId: z.string() }))
@@ -66,21 +58,15 @@ export const connectionsRouter = router({
       if (connectionId === activeConnection.id) await db.updateUser({ defaultConnectionId: null });
     }),
   getDefault: publicProcedure.query(async ({ ctx }) => {
-    try {
-      if (!ctx.sessionUser) return null;
-      
-      const connection = await getActiveConnection();
-      return {
-        id: connection.id,
-        email: connection.email,
-        name: connection.name,
-        picture: connection.picture,
-        createdAt: connection.createdAt,
-        providerId: connection.providerId,
-      };
-    } catch (error) {
-      console.log('No active connection found in getDefault');
-      return null;
-    }
+    if (!ctx.sessionUser) return null;
+    const connection = await getActiveConnection();
+    return {
+      id: connection.id,
+      email: connection.email,
+      name: connection.name,
+      picture: connection.picture,
+      createdAt: connection.createdAt,
+      providerId: connection.providerId,
+    };
   }),
 });

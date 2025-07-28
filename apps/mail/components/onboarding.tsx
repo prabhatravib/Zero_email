@@ -75,7 +75,6 @@ export function OnboardingDialog({
       <DialogContent
         showOverlay
         className="bg-panelLight mx-auto w-full max-w-[90%] rounded-xl border p-0 sm:max-w-[690px] dark:bg-[#111111]"
-        aria-describedby={undefined}
       >
         <div className="flex flex-col gap-4 p-4">
           {steps[currentStep] && steps[currentStep].video && (

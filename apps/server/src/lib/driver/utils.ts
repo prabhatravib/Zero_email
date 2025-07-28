@@ -10,10 +10,11 @@ export const deleteActiveConnection = async () => {
   const c = getContext<HonoContext>();
   const activeConnection = await getActiveConnection();
   if (!activeConnection) return console.log('No connection ID found');
-  const sessionUser = c.var.sessionUser;
-  if (!sessionUser) return console.log('No session found');
+  const session = await c.var.auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session) return console.log('No session found');
   try {
-    const db = await getZeroDB(sessionUser.id);
+    await c.var.auth.api.signOut({ headers: c.req.raw.headers });
+    const db = await getZeroDB(session.user.id);
     await db.deleteActiveConnection(activeConnection.id);
   } catch (error) {
     console.error('Server: Error deleting connection:', error);
@@ -23,22 +24,8 @@ export const deleteActiveConnection = async () => {
 
 export const fromBase64Url = (str: string) => str.replace(/-/g, '+').replace(/_/g, '/');
 
-export const fromBinary = (str: string) => {
-  try {
-    // Handle empty or invalid strings
-    if (!str || typeof str !== 'string') {
-      return '';
-    }
-    
-    // Clean the string and decode
-    const cleanedStr = str.replace(/-/g, '+').replace(/_/g, '/');
-    const byteArray = toByteArray(cleanedStr);
-    return new TextDecoder().decode(byteArray);
-  } catch (error) {
-    console.error('Failed to decode base64 string:', error);
-    return ''; // Return empty string on error
-  }
-};
+export const fromBinary = (str: string) =>
+  new TextDecoder().decode(toByteArray(str.replace(/-/g, '+').replace(/_/g, '/')));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const findHtmlBody = (parts: any[]): string => {

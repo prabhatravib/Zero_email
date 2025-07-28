@@ -1,13 +1,14 @@
 import { createRateLimiterMiddleware, privateProcedure, publicProcedure, router } from '../trpc';
 import { defaultUserSettings, userSettingsSchema, type UserSettings } from '../../lib/schemas';
 import { getZeroDB } from '../../lib/server-utils';
+import { Ratelimit } from '@upstash/ratelimit';
 
 export const settingsRouter = router({
   get: publicProcedure
     .use(
       createRateLimiterMiddleware({
-        limiter: { window: '1m', limit: 120 },
-        generatePrefix: ({ sessionUser }) => `ratelimit:get-settings-${sessionUser?.id || 'anonymous'}`,
+        limiter: Ratelimit.slidingWindow(120, '1m'),
+        generatePrefix: ({ sessionUser }) => `ratelimit:get-settings-${sessionUser?.id}`,
       }),
     )
     .query(async ({ ctx }) => {

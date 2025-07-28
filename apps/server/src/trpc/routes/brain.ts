@@ -14,8 +14,14 @@ const labelsSchema = z.array(labelSchema);
 
 export const brainRouter = router({
   enableBrain: activeConnectionProcedure.mutation(async ({ ctx }) => {
-    // Brain features disabled - no queue storage
-    return false;
+    const connection = ctx.activeConnection as { id: string; providerId: EProviders };
+    await setSubscribedState(connection.id, connection.providerId);
+    await env.subscribe_queue.send({
+      connectionId: connection.id,
+      providerId: connection.providerId,
+    } as ISubscribeBatch);
+    return true;
+    // return await enableBrainFunction(connection);
   }),
   disableBrain: activeConnectionProcedure.mutation(async ({ ctx }) => {
     const connection = ctx.activeConnection as { id: string; providerId: EProviders };
@@ -29,12 +35,27 @@ export const brainRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
-      // Brain features disabled - no vectorize storage
+      const { threadId } = input;
+      const response = await env.VECTORIZE.getByIds([threadId]);
+      if (response.length && response?.[0]?.metadata?.['summary']) {
+        const result = response[0].metadata as { summary: string; connection: string };
+        if (result.connection !== ctx.activeConnection.id) return null;
+        const shortResponse = await env.AI.run('@cf/facebook/bart-large-cnn', {
+          input_text: result.summary,
+        });
+        return {
+          data: {
+            short: shortResponse.summary,
+          },
+        };
+      }
       return null;
     }),
   getState: activeConnectionProcedure.query(async ({ ctx }) => {
-    // Brain features disabled - no KV storage
-    return { enabled: false };
+    const connection = ctx.activeConnection;
+    const state = await env.subscribed_accounts.get(`${connection.id}__${connection.providerId}`);
+    if (!state || state === 'pending') return { enabled: false };
+    return { enabled: true };
   }),
   getLabels: activeConnectionProcedure
     .output(
@@ -46,8 +67,14 @@ export const brainRouter = router({
       ),
     )
     .query(async ({ ctx }) => {
-      // Brain features disabled - no KV storage
-      return [];
+      const connection = ctx.activeConnection;
+      const labels = await env.connection_labels.get(connection.id);
+      try {
+        return labels ? (JSON.parse(labels) as z.infer<typeof labelsSchema>) : [];
+      } catch (error) {
+        console.error(`[GET_LABELS] Error parsing labels for ${connection.id}:`, error);
+        return [];
+      }
     }),
   getPrompts: activeConnectionProcedure.query(async ({ ctx }) => {
     const connection = ctx.activeConnection;
@@ -61,8 +88,13 @@ export const brainRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Brain features disabled - no KV storage
-      return { success: false, error: 'Brain features disabled' };
+      const connection = ctx.activeConnection;
+
+      const promptName = `${connection.id}-${input.promptType}`;
+
+      await env.prompts_storage.put(promptName, input.content);
+
+      return { success: true };
     }),
   updateLabels: activeConnectionProcedure
     .input(
@@ -71,7 +103,13 @@ export const brainRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Brain features disabled - no KV storage
-      return { success: false, error: 'Brain features disabled' };
+      const connection = ctx.activeConnection;
+      console.log(input.labels);
+
+      const labels = labelsSchema.parse(input.labels);
+      console.log(labels);
+
+      await env.connection_labels.put(connection.id, JSON.stringify(labels));
+      return { success: true };
     }),
 });

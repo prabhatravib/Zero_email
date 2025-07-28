@@ -3,14 +3,16 @@ import { useLoaderData, useNavigate } from 'react-router';
 import { MailLayout } from '@/components/mail/mail';
 import { useLabels } from '@/hooks/use-labels';
 import { authProxy } from '@/lib/auth-proxy';
-import { getSession } from '@/lib/auth-client';
 import { useEffect, useState } from 'react';
 import type { Route } from './+types/page';
 
 const ALLOWED_FOLDERS = new Set(['inbox', 'draft', 'sent', 'spam', 'bin', 'archive', 'snoozed']);
 
-export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+export async function clientLoader({ params, request }: Route.ClientLoaderArgs) {
   if (!params.folder) return Response.redirect(`${import.meta.env.VITE_PUBLIC_APP_URL}/mail/inbox`);
+
+  const session = await authProxy.api.getSession({ headers: request.headers });
+  if (!session) return Response.redirect(`${import.meta.env.VITE_PUBLIC_APP_URL}/login`);
 
   return {
     folder: params.folder,
@@ -21,32 +23,10 @@ export default function MailPage() {
   const { folder } = useLoaderData<typeof clientLoader>();
   const navigate = useNavigate();
   const [isLabelValid, setIsLabelValid] = useState<boolean | null>(true);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   const isStandardFolder = ALLOWED_FOLDERS.has(folder);
 
   const { userLabels, isLoading: isLoadingLabels } = useLabels();
-
-  // Check authentication on client side
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const session = await getSession();
-        if (!session) {
-          console.log('No valid session found, redirecting to login');
-          navigate('/login');
-          return;
-        }
-        console.log('Valid session found:', session.email);
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('Authentication check failed:', error);
-        navigate('/login');
-      }
-    };
-
-    checkAuth();
-  }, [navigate]);
 
   useEffect(() => {
     if (isStandardFolder) {
@@ -80,26 +60,6 @@ export default function MailPage() {
       setIsLabelValid(false);
     }
   }, [folder, userLabels, isLoadingLabels, isStandardFolder, navigate]);
-
-  // Show loading while checking authentication
-  if (isAuthenticated === null) {
-    return (
-      <div className="flex h-screen w-full flex-col items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-        <p className="text-gray-600">Checking authentication...</p>
-      </div>
-    );
-  }
-
-  // Show loading while checking authentication
-  if (isAuthenticated === false) {
-    return (
-      <div className="flex h-screen w-full flex-col items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-        <p className="text-gray-600">Redirecting to login...</p>
-      </div>
-    );
-  }
 
   if (!isLabelValid) {
     return (
