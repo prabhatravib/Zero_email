@@ -1,4 +1,5 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 // Custom auth client for unified Google OAuth flow
 const BACKEND_URL = import.meta.env.VITE_PUBLIC_BACKEND_URL || 'https://pitext-mail.prabhatravib.workers.dev';
@@ -68,17 +69,19 @@ export const getSession = async () => {
 
 // Simplified useSession hook
 export const useSession = () => {
-  const [session, setSession] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
+  // Leverage TanStack React Query so every component shares the same request + cache
+  const query = useQuery({
+    queryKey: ['session'],
+    queryFn: getSession,
+    // Session changes rarely within a minute; tweak as needed
+    staleTime: 1000 * 60,
+  });
 
-  React.useEffect(() => {
-    getSession().then((user) => {
-      setSession(user);
-      setLoading(false);
-    });
-  }, []);
-
-  return { data: session, isLoading: loading };
+  // Return the entire query result but keep the original API shape for backward-compatibility
+  return {
+    ...query,
+    session: query.data, // legacy alias used in a few components
+  } as typeof query & { session: Awaited<ReturnType<typeof getSession>> };
 };
 
 // Enhanced error handling for Google authentication
