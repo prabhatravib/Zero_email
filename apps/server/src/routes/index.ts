@@ -97,9 +97,7 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
                     console.log('[Route] stub id =', agentId.toString());
 
                     // Forward the server WebSocket to the Durable Object (per CF recipe)
-                    agent.fetch(targetUrl, {
-                      method: 'GET',
-                      headers: { 'Upgrade': 'websocket' },
+                    agent.fetch(c.req.raw, {
                       webSocket: server as any,
                     }).catch((err: any) => {
                       console.error('[Route] Agent fetch error:', err);
@@ -177,10 +175,8 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
         const id = c.env.ZERO_AGENT.idFromName(name);
         const doStub = c.env.ZERO_AGENT.get(id);
 
-        // Fire-and-forget – do NOT await (use plain URL string per CF recipe)
-        doStub.fetch('https://zero-agent/session', {
-            method: 'GET',
-            headers: { 'Upgrade': 'websocket' }, // explicit upgrade keeps frameworks honest
+        // Fire-and-forget – do NOT await (forward original request)
+        doStub.fetch(c.req.raw, {
             webSocket: server as any,
         }).catch(console.error);
 
