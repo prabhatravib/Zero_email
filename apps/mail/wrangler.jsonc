@@ -2,23 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "zero",
   "compatibility_date": "2025-06-27",
+  "main": "app/entry.server.tsx",
   "observability": {
     "enabled": true,
-  },
-  "build": {
-    "rules": [
-      { "type": "CommonJS", "globs": ["**/*"] },
-      { "type": "Ignore", "globs": [
-        "**/sharp/**",
-        "**/better-sqlite3/**",
-        "**/@sentry/cli/**"
-      ] }
-    ]
-  },
-  "assets": {
-    "directory": "./build/client/",
-    "not_found_handling": "single-page-application",
-    "html_handling": "force-trailing-slash",
   },
   "env": {
     "local": {
