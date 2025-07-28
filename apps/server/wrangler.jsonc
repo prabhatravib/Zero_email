@@ -28,32 +28,6 @@
       },
     ],
   },
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_sqlite_classes": ["DurableMailbox"],
-    },
-    {
-      "tag": "v2",
-      "new_sqlite_classes": ["ZeroAgent", "ZeroMCP"],
-    },
-    {
-      "tag": "v3",
-      "new_sqlite_classes": ["ZeroDB"],
-    },
-    {
-      "tag": "v4",
-      "deleted_classes": ["DurableMailbox"],
-    },
-    {
-      "tag": "v5",
-      "new_sqlite_classes": ["ZeroDriver"],
-    },
-    {
-      "tag": "v6",
-      "new_sqlite_classes": ["ThinkingMCP"],
-    },
-  ],
   "env": {
     "local": {
       "ai": {
@@ -119,33 +93,6 @@
           },
         ],
       },
-      "migrations": [
-        {
-          "tag": "v1",
-          "new_classes": ["DurableMailbox"],
-        },
-        {
-          "tag": "v2",
-          "new_sqlite_classes": ["ZeroAgent", "ZeroMCP"],
-        },
-        {
-          "tag": "v3",
-          "new_classes": ["ZeroDB"],
-        },
-        {
-          "tag": "v4",
-          "deleted_classes": ["DurableMailbox"],
-        },
-        {
-          "tag": "v5",
-          "new_sqlite_classes": ["ZeroDriver"],
-        },
-        {
-          "tag": "v6",
-          "new_sqlite_classes": ["ThinkingMCP"],
-        },
-      ],
-
       "observability": {
         "enabled": true,
       },
@@ -277,36 +224,6 @@
           },
         ],
       },
-      "migrations": [
-        {
-          "tag": "v1",
-          "new_classes": ["DurableMailbox"],
-        },
-        {
-          "tag": "v2",
-          "new_sqlite_classes": ["ZeroAgent", "ZeroMCP"],
-        },
-        {
-          "tag": "v3",
-          "new_classes": ["ZeroDB"],
-        },
-        {
-          "tag": "v4",
-          "new_sqlite_classes": ["ZeroAgent"],
-        },
-        {
-          "tag": "v5",
-          "deleted_classes": ["DurableMailbox"],
-        },
-        {
-          "tag": "v6",
-          "new_sqlite_classes": ["ZeroDriver"],
-        },
-        {
-          "tag": "v7",
-          "new_sqlite_classes": ["ThinkingMCP"],
-        },
-      ],
       "observability": {
         "enabled": true,
       },
@@ -436,36 +353,6 @@
           },
         ],
       },
-      "migrations": [
-        {
-          "tag": "v1",
-          "new_classes": ["DurableMailbox"],
-        },
-        {
-          "tag": "v2",
-          "new_sqlite_classes": ["ZeroAgent", "ZeroMCP"],
-        },
-        {
-          "tag": "v3",
-          "new_classes": ["ZeroDB"],
-        },
-        {
-          "tag": "v4",
-          "new_sqlite_classes": ["ZeroAgent"],
-        },
-        {
-          "tag": "v5",
-          "deleted_classes": ["DurableMailbox"],
-        },
-        {
-          "tag": "v6",
-          "new_sqlite_classes": ["ZeroDriver"],
-        },
-        {
-          "tag": "v7",
-          "new_sqlite_classes": ["ThinkingMCP"],
-        },
-      ],
       "vars": {
         "NODE_ENV": "production",
         "COOKIE_DOMAIN": "0.email",
