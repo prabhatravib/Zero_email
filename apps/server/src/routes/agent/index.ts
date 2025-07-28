@@ -1096,6 +1096,14 @@ export class ZeroAgent extends DurableObject {
 
   async fetch(request: Request): Promise<Response> {
     try {
+      // Confirm the socket was attached by the edge worker before doing anything else
+      const ws = (request as any).webSocket as WebSocket | undefined;
+      console.log('[ZeroAgent] got webSocket =', !!ws);
+
+      if (!ws) {
+        // Edge worker did not attach the WebSocket – bail out early
+        return new Response('no WS', { status: 400 });
+      }
       console.log('[ZeroAgent.fetch] Received request:', {
         url: request.url,
         method: request.method,
@@ -1114,17 +1122,11 @@ export class ZeroAgent extends DurableObject {
 
       // Handle WebSocket upgrade requests
       if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-        const ws = (request as any).webSocket as WebSocket | undefined;
-        console.log('[ZeroAgent] got webSocket =', !!ws); // ← log ①
-
-        if (!ws) {
-          return new Response('WebSocket not found', { status: 400 });
-        }
-
+ 
         // Accept exactly once
         ws.accept();
         console.log('[ZeroAgent] ws.accept() done'); // ← log ②
-
+ 
         // Temporary proof of life – include connectionId so the client knows which room is ready
         try {
           ws.send(
@@ -1136,10 +1138,10 @@ export class ZeroAgent extends DurableObject {
         } catch (err) {
           console.error('[ZeroAgent] Error sending session.ready', err);
         }
-
+ 
         // Start long-running handler without blocking the response
         this.state.waitUntil(this.handleSession(ws, request));
-
+ 
         // Return 101 Switching Protocols with the accepted socket
         return new Response(null, { status: 101, webSocket: ws });
       }
