@@ -1145,9 +1145,6 @@ export class ZeroAgent extends DurableObject {
     try {
       console.log('[ZeroAgent.handleSession] Starting session setup');
       
-      // Accept the WebSocket connection immediately
-      server.accept();
-      
       // Extract query parameters from request
       const url = new URL(request.url);
       const pk = url.searchParams.get('_pk');
