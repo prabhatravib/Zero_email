@@ -28,6 +28,12 @@
       },
     ],
   },
+  "migrations": [
+    {
+      "tag": "v8",
+      "new_sqlite_classes": ["ThinkingMCP"],
+    },
+  ],
   "env": {
     "local": {
       "ai": {
