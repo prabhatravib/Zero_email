@@ -1,7 +1,7 @@
 import React from 'react';
 
 // Custom auth client for unified Google OAuth flow
-const BACKEND_URL = 'https://pitext-mail.prabhatravib.workers.dev';
+const BACKEND_URL = import.meta.env.VITE_PUBLIC_BACKEND_URL || 'https://pitext-mail.prabhatravib.workers.dev';
 
 export const authClient = {
   baseURL: BACKEND_URL,

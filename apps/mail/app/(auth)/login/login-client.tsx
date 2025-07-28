@@ -34,7 +34,7 @@ function LoginClientContent({ providers, isProd }: LoginClientProps) {
       setIsLoading(true);
       
       // Use the unified Google OAuth endpoint
-      const backendUrl = 'https://pitext-mail.prabhatravib.workers.dev';
+      const backendUrl = import.meta.env.VITE_PUBLIC_BACKEND_URL || 'https://pitext-mail.prabhatravib.workers.dev';
       window.location.href = `${backendUrl}/auth/google/login`;
       
     } catch (error) {
