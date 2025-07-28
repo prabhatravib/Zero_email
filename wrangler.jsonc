@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "pitext-mail",
+  "name": "pitext-email",
   "compatibility_date": "2025-05-01",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./apps/server/src/main.ts",
@@ -33,6 +33,17 @@
       },
     ],
   },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": [
+        "ZeroAgent",
+        "ZeroMCP", 
+        "ZeroDB",
+        "ZeroDriver"
+      ]
+    }
+  ],
 
   "vars": {
     "VITE_PUBLIC_APP_URL": "https://pitext-email.onrender.com",
