@@ -62,27 +62,9 @@ export default function AuthCallback() {
         return;
       }
 
-      // If no specific parameters, try to get existing user data
-      try {
-        console.log('No callback parameters, checking existing user data');
-        
-        const userDataStr = localStorage.getItem('gmail_user_data');
-        if (userDataStr) {
-          const userData = JSON.parse(userDataStr);
-          if (userData.authenticated) {
-            toast.success('Gmail session found!');
-            console.log('Existing Gmail session found, redirecting to /mail');
-            navigate('/mail');
-            return;
-          }
-        }
-      } catch (error) {
-        console.error('Failed to get existing user data:', error);
-      }
-
-      // Fallback: redirect to login
-      console.log('No valid authentication found, redirecting to login');
-      toast.error('Gmail authentication failed. Please try again.');
+      // If no specific parameters, redirect to login
+      // Don't check localStorage - rely on server session validation
+      console.log('No OAuth callback parameters, redirecting to login');
       navigate('/login');
     };
 

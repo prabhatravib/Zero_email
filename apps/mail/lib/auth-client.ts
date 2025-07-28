@@ -151,7 +151,8 @@ export const signOut = async () => {
       credentials: 'include',
     });
     
-    // Clear any local storage (keeping for backward compatibility)
+    // Clear any local storage for backward compatibility
+    // Note: We're now using cookie-based auth, but keeping this for cleanup
     localStorage.removeItem('gmail_user_data');
     localStorage.removeItem('gmail_session_token');
     
