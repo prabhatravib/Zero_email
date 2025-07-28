@@ -31,7 +31,7 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_classes": ["DurableMailbox"],
+      "new_sqlite_classes": ["DurableMailbox"],
     },
     {
       "tag": "v2",
@@ -39,7 +39,7 @@
     },
     {
       "tag": "v3",
-      "new_classes": ["ZeroDB"],
+      "new_sqlite_classes": ["ZeroDB"],
     },
     {
       "tag": "v4",
