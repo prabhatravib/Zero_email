@@ -1314,7 +1314,7 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
       }),
     ).pipe(Effect.catchAll(() => Effect.succeed([])));
 
-    const genQueryEffect = Effect.tryPromise(() =>
+    const genQueryEffect = Effect.tryPromise(async () =>
       generateText({
         model: (await getOpenAI())(env.OPENAI_MODEL || 'gpt-4o'),
         system: GmailSearchAssistantSystemPrompt(),
