@@ -73,45 +73,80 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
                 return new Response('ZERO_AGENT binding not configured', { status: 500 });
             }
             
-            try {
-                console.log('[Route] About to call idFromName with channel:', channel);
-                const agentId = env.ZERO_AGENT.idFromName(channel);
-                console.log('[Route] Created agent ID:', agentId.toString());
-                
-                console.log('[Route] About to get agent stub');
-                const agent = env.ZERO_AGENT.get(agentId);
-                console.log('[Route] Got agent stub, forwarding request');
-                
-                // Add logging before fetch
-                console.log('[Route] About to call agent.fetch with request:', {
-                    url: c.req.raw.url,
-                    headers: Object.fromEntries(c.req.raw.headers.entries())
-                });
-                
-                // Do not declare this function as async, and return the promise directly
-                return agent.fetch(c.req.raw).catch((error: any) => {
-                    console.error('[Route] Agent fetch error:', error);
-                    console.error('[Route] Error stack:', error.stack);
-                    // Return error details in response for debugging
+            // Check if this is a WebSocket upgrade request
+            if (c.req.header('Upgrade')?.toLowerCase() === 'websocket') {
+                try {
+                    console.log('[Route] WebSocket upgrade request detected');
+                    const agentId = env.ZERO_AGENT.idFromName(channel);
+                    console.log('[Route] Created agent ID:', agentId.toString());
+                    
+                    const agent = env.ZERO_AGENT.get(agentId);
+                    console.log('[Route] Got agent stub');
+                    
+                    // Create WebSocket pair in the edge route
+                    const pair = new WebSocketPair();
+                    const [client, server] = pair;
+                    
+                    // Accept the server side in the edge route (this is the ONLY accept() call)
+                    server.accept();
+                    
+                    console.log('[Route] WebSocket pair created and server accepted');
+                    
+                    // Forward the request to the DO with the server WebSocket
+                    agent.fetch(c.req.raw, {
+                        headers: { Upgrade: 'websocket' },
+                        webSocket: server
+                    }).catch((error: any) => {
+                        console.error('[Route] Agent fetch error:', error);
+                        console.error('[Route] Error stack:', error.stack);
+                    });
+                    
+                    // Return the client side to the browser
+                    return new Response(null, { status: 101, webSocket: client });
+                } catch (error) {
+                    console.error('[Route] Error in WebSocket handling:', error);
                     return new Response(JSON.stringify({ 
-                        error: 'Agent fetch failed', 
+                        error: 'WebSocket handling failed', 
                         details: error instanceof Error ? error.message : String(error),
                         stack: error instanceof Error ? error.stack : undefined
                     }), {
                         status: 500,
                         headers: { 'Content-Type': 'application/json' }
                     });
-                });
-            } catch (error) {
-                console.error('[Route] Error creating agent:', error);
-                return new Response(JSON.stringify({ 
-                    error: 'Failed to create agent', 
-                    details: error instanceof Error ? error.message : String(error),
-                    stack: error instanceof Error ? error.stack : undefined
-                }), {
-                    status: 500,
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                }
+            } else {
+                // Handle regular HTTP requests
+                try {
+                    console.log('[Route] Regular HTTP request');
+                    const agentId = env.ZERO_AGENT.idFromName(channel);
+                    console.log('[Route] Created agent ID:', agentId.toString());
+                    
+                    const agent = env.ZERO_AGENT.get(agentId);
+                    console.log('[Route] Got agent stub, forwarding request');
+                    
+                    return agent.fetch(c.req.raw).catch((error: any) => {
+                        console.error('[Route] Agent fetch error:', error);
+                        console.error('[Route] Error stack:', error.stack);
+                        return new Response(JSON.stringify({ 
+                            error: 'Agent fetch failed', 
+                            details: error instanceof Error ? error.message : String(error),
+                            stack: error instanceof Error ? error.stack : undefined
+                        }), {
+                            status: 500,
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                    });
+                } catch (error) {
+                    console.error('[Route] Error creating agent:', error);
+                    return new Response(JSON.stringify({ 
+                        error: 'Failed to create agent', 
+                        details: error instanceof Error ? error.message : String(error),
+                        stack: error instanceof Error ? error.stack : undefined
+                    }), {
+                        status: 500,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
             }
         } catch (outerError) {
             console.error('[Route] Outer error in WebSocket route:', outerError);

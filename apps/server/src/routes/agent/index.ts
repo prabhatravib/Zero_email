@@ -1114,17 +1114,20 @@ export class ZeroAgent extends DurableObject {
 
       // Handle WebSocket upgrade requests
       if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-        // Create WebSocket pair
-        const [client, server] = new WebSocketPair();
+        // The edge route has already created the WebSocket pair and called accept()
+        // We need to extract the server WebSocket from the request
+        const server = (request as any).webSocket;
         
-        // Accept the server side immediately
-        server.accept();
+        if (!server) {
+          console.error('[ZeroAgent.fetch] No WebSocket found in request');
+          return new Response('WebSocket not found', { status: 400 });
+        }
         
         // Handle the session asynchronously
         this.handleSession(server, request);
 
-        // Return the client side to the browser
-        return new Response(null, { status: 101, webSocket: client });
+        // The edge route handles the 101 response, so we just return success
+        return new Response('WebSocket session established', { status: 200 });
       }
       
       // Handle HTTP requests
