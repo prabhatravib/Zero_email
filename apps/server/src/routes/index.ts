@@ -173,10 +173,17 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
 
         // 2. Forward the server half to the Durable Object using plain string URL
         const id = c.env.ZERO_AGENT.idFromName(name);
-        c.env.ZERO_AGENT.get(id).fetch('https://zero-agent/session', {
-            webSocket: server,
+        const doStub = c.env.ZERO_AGENT.get(id);
+
+        // Build a fresh Request that already carries the server-side socket
+        const reqToDO = new Request('https://zero-agent/session', {
             method: 'GET',
-        } as any).catch(console.error);
+            headers: { 'Upgrade': 'websocket' }, // explicit upgrade keeps frameworks honest
+            webSocket: server as any,
+        });
+
+        // Fire-and-forget – do NOT await
+        doStub.fetch(reqToDO).catch(console.error);
 
         // 3. Return the client half to the browser
         return new Response(null, { status: 101, webSocket: client });
