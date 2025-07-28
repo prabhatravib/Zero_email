@@ -97,9 +97,15 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
                     console.log('[Route] stub id =', agentId.toString());
 
                     // Forward the server side to the DO (do NOT call server.accept or await)
-                    agent.fetch(targetUrl, {
-                      webSocket: server,
-                    }).catch((err: any) => {
+
+                    // Build a fresh Request that already carries the server WebSocket
+                    const reqToDO = new Request(targetUrl, {
+                      method: 'GET',
+                      headers: { 'Upgrade': 'websocket' },
+                      webSocket: server as any,
+                    });
+
+                    agent.fetch(reqToDO).catch((err: any) => {
                       console.error('[Route] Agent fetch error:', err);
                     });
 
