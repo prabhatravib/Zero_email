@@ -44,18 +44,30 @@ import { getPrompt } from '../../pipelines.effect';
 import { AIChatAgent } from 'agents/ai-chat-agent';
 import { ToolOrchestrator } from './orchestrator';
 import { getPromptName } from '../../pipelines';
-import { anthropic } from '@ai-sdk/anthropic';
 import { connection } from '../../db/schema';
 import type { WSMessage } from 'partyserver';
 import { tools as authTools } from './tools';
 import { processToolCalls } from './utils';
 import { env } from 'cloudflare:workers';
 import type { Connection } from 'agents';
-import { openai } from '@ai-sdk/openai';
 import { createDb } from '../../db';
 import { DriverRpcDO } from './rpc';
 import { eq } from 'drizzle-orm';
 import { Effect } from 'effect';
+
+// Lazy load heavy imports
+let openaiApi: typeof import('@ai-sdk/openai') | undefined;
+let anthropicApi: typeof import('@ai-sdk/anthropic') | undefined;
+
+async function getOpenAI() {
+  if (!openaiApi) openaiApi = await import('@ai-sdk/openai');
+  return openaiApi.openai;
+}
+
+async function getAnthropic() {
+  if (!anthropicApi) anthropicApi = await import('@ai-sdk/anthropic');
+  return anthropicApi.anthropic;
+}
 
 const decoder = new TextDecoder();
 
@@ -1304,7 +1316,7 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
 
     const genQueryEffect = Effect.tryPromise(() =>
       generateText({
-        model: openai(env.OPENAI_MODEL || 'gpt-4o'),
+        model: (await getOpenAI())(env.OPENAI_MODEL || 'gpt-4o'),
         system: GmailSearchAssistantSystemPrompt(),
         prompt: params.query,
       }).then((response) => response.text),
@@ -1802,8 +1814,8 @@ export class ZeroAgent extends AIChatAgent<typeof env> {
 
         const model =
           env.USE_OPENAI === 'true'
-            ? openai(env.OPENAI_MODEL || 'gpt-4o')
-            : anthropic(env.OPENAI_MODEL || 'claude-3-7-sonnet-20250219');
+            ? (await getOpenAI())(env.OPENAI_MODEL || 'gpt-4o')
+            : (await getAnthropic())(env.OPENAI_MODEL || 'claude-3-7-sonnet-20250219');
 
         const result = streamText({
           model,

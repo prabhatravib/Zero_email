@@ -10,9 +10,16 @@ import { getPrompt } from '../../../lib/brain';
 import { stripHtml } from 'string-strip-html';
 import { EPrompts } from '../../../types';
 import { env } from 'cloudflare:workers';
-import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
 import { z } from 'zod';
+
+// Lazy load heavy imports
+let openaiApi: typeof import('@ai-sdk/openai') | undefined;
+
+async function getOpenAI() {
+  if (!openaiApi) openaiApi = await import('@ai-sdk/openai');
+  return openaiApi.openai;
+}
 
 type ComposeEmailInput = {
   prompt: string;
@@ -86,7 +93,7 @@ export async function composeEmail(input: ComposeEmailInput) {
         ];
 
   const { text } = await generateText({
-    model: openai(env.OPENAI_MINI_MODEL || 'gpt-4o-mini'),
+    model: (await getOpenAI())(env.OPENAI_MINI_MODEL || 'gpt-4o-mini'),
     messages: [
       {
         role: 'system',
@@ -98,15 +105,7 @@ export async function composeEmail(input: ComposeEmailInput) {
         content: userPrompt,
       },
     ],
-    maxSteps: 10,
-    maxTokens: 2_000,
-    temperature: 0.35,
-    frequencyPenalty: 0.2,
-    presencePenalty: 0.1,
-    maxRetries: 1,
-    tools: {
-      webSearch: webSearch(),
-    },
+    maxTokens: 4000,
   });
 
   return text;
@@ -249,41 +248,19 @@ const EmailAssistantPrompt = ({
 };
 
 const generateSubject = async (message: string, styleProfile?: WritingStyleMatrix | null) => {
-  const parts: string[] = [];
-
-  parts.push('# Email Subject Generation Task');
-  if (styleProfile) {
-    parts.push('## Style Profile');
-    parts.push(`\`\`\`json
-  ${JSON.stringify(styleProfile, null, 2)}
-  \`\`\``);
-  }
-
-  parts.push('## Email Content');
-  parts.push(escapeXml(message));
-  parts.push('');
-  parts.push(
-    'Generate a concise, clear subject line that summarizes the main point of the email. The subject should be professional and under 100 characters.',
-  );
-
   const { text } = await generateText({
-    model: openai(env.OPENAI_MODEL || 'gpt-4o'),
+    model: (await getOpenAI())(env.OPENAI_MODEL || 'gpt-4o'),
     messages: [
       {
         role: 'system',
-        content:
-          'You are an email subject line generator. Generate a concise, clear subject line that summarizes the main point of the email. The subject should be professional and under 100 characters.',
+        content: StyledEmailAssistantSystemPrompt(),
       },
       {
         role: 'user',
-        content: parts.join('\n\n'),
+        content: `Generate a subject line for this email: ${message}`,
       },
     ],
-    maxTokens: 50,
-    temperature: 0.3,
-    frequencyPenalty: 0.1,
-    presencePenalty: 0.1,
-    maxRetries: 1,
+    maxTokens: 100,
   });
 
   return text.trim();

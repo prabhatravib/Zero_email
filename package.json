@@ -5,7 +5,7 @@
   "packageManager": "pnpm@10.12.1",
   "scripts": {
     "dev:worker": "wrangler dev --local",
-    "build:web":  "pnpm -F @zero/email-web build",
+    "build:web":  "pnpm -F @zero/mail build",
     "deploy:worker": "wrangler deploy -e production",
     "deploy:web":    "pnpm run build:web && render deploy --branch main"
   },

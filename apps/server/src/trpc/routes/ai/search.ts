@@ -4,9 +4,16 @@ import {
 } from '../../../lib/prompts';
 import { activeDriverProcedure } from '../../trpc';
 import { env } from 'cloudflare:workers';
-import { openai } from '@ai-sdk/openai';
 import { generateObject } from 'ai';
 import { z } from 'zod';
+
+// Lazy load heavy imports
+let openaiApi: typeof import('@ai-sdk/openai') | undefined;
+
+async function getOpenAI() {
+  if (!openaiApi) openaiApi = await import('@ai-sdk/openai');
+  return openaiApi.openai;
+}
 
 export const generateSearchQuery = activeDriverProcedure
   .input(z.object({ query: z.string() }))
@@ -22,7 +29,7 @@ export const generateSearchQuery = activeDriverProcedure
           : '';
 
     const result = await generateObject({
-      model: openai(env.OPENAI_MODEL || 'gpt-4o'),
+      model: (await getOpenAI())(env.OPENAI_MODEL || 'gpt-4o'),
       system: systemPrompt,
       prompt: input.query,
       schema: z.object({

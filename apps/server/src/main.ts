@@ -16,7 +16,6 @@ import {
 } from './db/schema';
 import { env, WorkerEntrypoint, DurableObject, RpcTarget } from 'cloudflare:workers';
 import { EProviders, type ISubscribeBatch, type IThreadBatch } from './types';
-import { oAuthDiscoveryMetadata } from 'better-auth/plugins';
 import { getZeroDB, verifyToken } from './lib/server-utils';
 import { eq, and, desc, asc, inArray } from 'drizzle-orm';
 import { EWorkflowType, runWorkflow } from './pipelines';
@@ -42,6 +41,14 @@ import { cors } from 'hono/cors';
 import { Effect } from 'effect';
 
 import { Hono } from 'hono';
+
+// Lazy load heavy imports
+let betterAuthPlugins: typeof import('better-auth/plugins') | undefined;
+
+async function getBetterAuthPlugins() {
+  if (!betterAuthPlugins) betterAuthPlugins = await import('better-auth/plugins');
+  return betterAuthPlugins;
+}
 
 const SENTRY_HOST = 'o4509328786915328.ingest.us.sentry.io';
 const SENTRY_PROJECT_IDS = new Set(['4509328795303936']);
@@ -591,7 +598,7 @@ export default class extends WorkerEntrypoint<typeof env> {
     )
     .get('.well-known/oauth-authorization-server', async (c) => {
       const auth = createAuth();
-      return oAuthDiscoveryMetadata(auth)(c.req.raw);
+      return (await getBetterAuthPlugins()).oAuthDiscoveryMetadata(auth)(c.req.raw);
     })
     .mount(
       '/sse',
@@ -635,6 +642,11 @@ export default class extends WorkerEntrypoint<typeof env> {
     .get('/agents/:agentId/:namespace', async (c) => {
       const agentId = c.req.param('agentId');
       const namespace = c.req.param('namespace');
+      
+      // Early return for non-WebSocket GETs to prevent heavy initialization
+      if (c.req.method === 'GET' && c.req.header('Upgrade') !== 'websocket') {
+        return new Response('Upgrade Required', { status: 426 });
+      }
       
       // Create a WebSocketPair
       const pair = new WebSocketPair();

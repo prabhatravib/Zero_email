@@ -15,9 +15,16 @@
  */
 
 import { generateObject } from 'ai';
-import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { env } from 'cloudflare:workers';
+
+// Lazy load heavy imports
+let openaiApi: typeof import('@ai-sdk/openai') | undefined;
+
+async function getOpenAI() {
+  if (!openaiApi) openaiApi = await import('@ai-sdk/openai');
+  return openaiApi.openai;
+}
 
 export interface GenerateTopicsOptions {
   sampleSize?: number;
@@ -91,7 +98,7 @@ ${sample.join('\n')}`;
 
   try {
     const { object } = await generateObject({
-      model: openai(env.OPENAI_MODEL || 'gpt-4o-mini'),
+      model: (await getOpenAI())(env.OPENAI_MODEL || 'gpt-4o-mini'),
       schema,
       system: systemPrompt,
       prompt: userPrompt,

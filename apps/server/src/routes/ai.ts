@@ -3,13 +3,20 @@ import { systemPrompt } from '../services/call-service/system-prompt';
 import { composeEmail } from '../trpc/routes/ai/compose';
 import { getZeroAgent } from '../lib/server-utils';
 import { env } from 'cloudflare:workers';
-import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
 import { Tools } from '../types';
 import { createDb } from '../db';
 import { Hono } from 'hono';
 import { tool } from 'ai';
 import { z } from 'zod';
+
+// Lazy load heavy imports
+let openaiApi: typeof import('@ai-sdk/openai') | undefined;
+
+async function getOpenAI() {
+  if (!openaiApi) openaiApi = await import('@ai-sdk/openai');
+  return openaiApi.openai;
+}
 
 export const aiRouter = new Hono();
 
@@ -129,7 +136,7 @@ aiRouter.post('/call', async (c) => {
   const agent = await getZeroAgent(connection.id);
 
   const { text } = await generateText({
-    model: openai(env.OPENAI_MODEL || 'gpt-4o'),
+    model: (await getOpenAI())(env.OPENAI_MODEL || 'gpt-4o'),
     system: systemPrompt,
     prompt: data.query,
     tools: {
@@ -142,7 +149,7 @@ aiRouter.post('/call', async (c) => {
           console.log('[DEBUG] buildGmailSearchQuery', params);
 
           const result = await generateText({
-            model: openai(env.OPENAI_MODEL || 'gpt-4o'),
+            model: (await getOpenAI())(env.OPENAI_MODEL || 'gpt-4o'),
             system: GmailSearchAssistantSystemPrompt(),
             prompt: params.query,
           });
