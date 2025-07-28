@@ -87,10 +87,9 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
                     const pair = new WebSocketPair();
                     const [client, server] = pair;
                     
-                    // Accept the server side in the edge route (this is the ONLY accept() call)
-                    server.accept();
+                    // Forward the raw, *unaccepted* server side to the DO
                     
-                    console.log('[Route] WebSocket pair created and server accepted');
+                    console.log('[Route] WebSocket pair created');
                     
                     // Forward the request to the DO with the server WebSocket
                     ctx.waitUntil(
