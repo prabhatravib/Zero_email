@@ -163,6 +163,29 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
         }
     });
     
+    // New simplified WebSocket hand-off route (see Cloudflare recipe)
+    app.get('/agents/:name', (c) => {
+        const { name } = c.req.param();
+
+        // 1. Create the socket pair
+        const pair = new WebSocketPair();
+        const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
+
+        // 2. Build a *new* Request carrying the server-side socket
+        const id = c.env.ZERO_AGENT.idFromName(name);
+        const reqToDO = new Request('https://zero-agent/session', {
+            method: 'GET',
+            // Cast is fine – Workers adds the correct header
+            webSocket: server as any,
+        });
+
+        // 3. Fire-and-forget – never await and never call server.accept() here
+        c.env.ZERO_AGENT.get(id).fetch(reqToDO).catch(console.error);
+
+        // 4. Return the client half to the browser
+        return new Response(null, { status: 101, webSocket: client });
+    });
+    
     // Register auth routes
     app.route('/auth', publicRouter);
     

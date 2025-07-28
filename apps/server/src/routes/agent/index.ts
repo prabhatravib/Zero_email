@@ -1115,7 +1115,7 @@ export class ZeroAgent extends DurableObject {
       const url = new URL(request.url);
       const pathParts = url.pathname.split('/');
       const channel = pathParts[pathParts.length - 1];
-      if (channel && channel !== 'zero-agent') {
+      if (channel && channel !== 'zero-agent' && channel !== 'session') {
         console.log('[ZeroAgent.fetch] Setting agent name to:', channel);
         await this.setName(channel);
       }
