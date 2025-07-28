@@ -1114,20 +1114,24 @@ export class ZeroAgent extends DurableObject {
 
       // Handle WebSocket upgrade requests
       if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-        // The edge route has already created the WebSocket pair and called accept()
-        // We need to extract the server WebSocket from the request
-        const server = (request as any).webSocket;
-        
-        if (!server) {
+        // Check for WebSocket upgrade
+        if (request.headers.get('Upgrade') !== 'websocket') {
+          return new Response('Expected websocket', { status: 400 });
+        }
+
+        const ws = request.webSocket;  // Cloudflare passes it here
+        if (!ws) {
           console.error('[ZeroAgent.fetch] No WebSocket found in request');
           return new Response('WebSocket not found', { status: 400 });
         }
         
-        // Handle the session asynchronously
-        this.handleSession(server, request);
-
-        // The edge route handles the 101 response, so we just return success
-        return new Response('WebSocket session established', { status: 200 });
+        ws.accept();  // Accept exactly once
+        
+        // Start long-running handler without blocking the response
+        this.state.waitUntil(this.handleSession(ws, request));
+        
+        // Return 101 to the edge-worker
+        return new Response(null, { status: 101, webSocket: ws });
       }
       
       // Handle HTTP requests
@@ -1146,9 +1150,6 @@ export class ZeroAgent extends DurableObject {
 
   async handleSession(server: WebSocket, request: Request) {
     try {
-      // Accept the WebSocket exactly once, inside the DO
-      server.accept();
-      
       console.log('[ZeroAgent.handleSession] Starting session setup');
       
       // Extract query parameters from request
@@ -1361,10 +1362,12 @@ export class ZeroAgent extends DurableObject {
           return this.tryCatchChat(async () => {
             const response = await this.onChatMessage(
               async ({ response }) => {
-                const finalMessages = appendResponseMessages({
-                  messages,
-                  responseMessages: response.messages,
-                });
+                          // Dynamic import to avoid startup overhead
+          const { appendResponseMessages } = await import('ai');
+          const finalMessages = appendResponseMessages({
+            messages,
+            responseMessages: response.messages,
+          });
 
                 await this.persistMessages(finalMessages, [connection.id]);
                 this.removeAbortController(chatMessageId);

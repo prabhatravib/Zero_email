@@ -92,15 +92,14 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
                     console.log('[Route] WebSocket pair created');
                     
                     // Forward the request to the DO with the server WebSocket
-                    ctx.waitUntil(
-                        agent.fetch(c.req.raw, {
-                            headers: { Upgrade: 'websocket' },
-                            webSocket: server
-                        }).catch((error: any) => {
-                            console.error('[Route] Agent fetch error:', error);
-                            console.error('[Route] Error stack:', error.stack);
-                        })
-                    );
+                    // Do NOT await this - it would block the 101 response
+                    agent.fetch(c.req.raw, {
+                        headers: { Upgrade: 'websocket' },
+                        webSocket: server
+                    }).catch((error: any) => {
+                        console.error('[Route] Agent fetch error:', error);
+                        console.error('[Route] Error stack:', error.stack);
+                    });
                     
                     // Return the client side to the browser
                     return new Response(null, { status: 101, webSocket: client });
