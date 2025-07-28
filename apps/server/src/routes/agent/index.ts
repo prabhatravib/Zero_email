@@ -33,7 +33,7 @@ import type { WSMessage } from 'partyserver';
 import type { Connection } from 'agents';
 import { DurableObject } from "cloudflare:workers";
 import { env } from 'cloudflare:workers';
-import { WebSocketPair } from 'cloudflare:workers';
+// WebSocketPair is global - no need to import it
 
 // Heavy imports will be dynamically imported when needed
 
