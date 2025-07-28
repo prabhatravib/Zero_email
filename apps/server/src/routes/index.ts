@@ -173,9 +173,10 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
 
         // 2. Build a *new* Request carrying the server-side socket
         const id = c.env.ZERO_AGENT.idFromName(name);
-        const reqToDO = new Request('https://zero-agent/session', {
-            method: 'GET',
-            // Cast is fine – Workers adds the correct header
+        const reqToDO = new Request('https://zero-agent/ws', {
+             method: 'GET',
+             headers: { 'Upgrade': 'websocket' },
+            // Cast is fine – Workers adds the correct WebSocket header
             webSocket: server as any,
         });
 
