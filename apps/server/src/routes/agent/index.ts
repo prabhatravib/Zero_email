@@ -1114,25 +1114,19 @@ export class ZeroAgent extends DurableObject {
 
       // Handle WebSocket upgrade requests
       if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-        // Check for WebSocket upgrade
-        if (request.headers.get('Upgrade') !== 'websocket') {
-          return new Response('Expected websocket', { status: 400 });
-        }
+        // Create a new WebSocketPair – Cloudflare will complete the handshake
+        const pair = new WebSocketPair();
+        const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
 
-        const ws = request.webSocket;  // Cloudflare passes it here
-        if (!ws) {
-          console.error('[ZeroAgent.fetch] No WebSocket found in request');
-          return new Response('WebSocket not found', { status: 400 });
-        }
-        
-        ws.accept();  // Accept exactly once
-        
+        // Accept the server side exactly once
+        server.accept();
+
         // Start long-running handler without blocking the response
-        this.state.waitUntil(this.handleSession(ws, request));
-        
-        // Return 101 to the edge-worker
-        return new Response(null, { status: 101, webSocket: ws });
-      }
+        this.state.waitUntil(this.handleSession(server, request));
+
+        // Return the client side to the edge-worker
+        return new Response(null, { status: 101, webSocket: client });
+        }
       
       // Handle HTTP requests
       console.log('[ZeroAgent.fetch] Regular HTTP request, returning JSON response');

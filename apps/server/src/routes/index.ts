@@ -83,26 +83,11 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
                     const agent = env.ZERO_AGENT.get(agentId);
                     console.log('[Route] Got agent stub');
                     
-                    // Create WebSocket pair in the edge route
-                    const pair = new WebSocketPair();
-                    const [client, server] = pair;
-                    
-                    // Forward the raw, *unaccepted* server side to the DO
-                    
-                    console.log('[Route] WebSocket pair created');
-                    
-                    // Forward the request to the DO with the server WebSocket
-                    // Do NOT await this - it would block the 101 response
-                    agent.fetch(c.req.raw, {
-                        headers: { Upgrade: 'websocket' },
-                        webSocket: server
-                    }).catch((error: any) => {
-                        console.error('[Route] Agent fetch error:', error);
-                        console.error('[Route] Error stack:', error.stack);
+                    // Forward the original request and its WebSocket to the Durable Object.
+                    // Cloudflare will complete the hand-off, so no need to create a new WebSocketPair.
+                    return agent.fetch(c.req.raw, {
+                        webSocket: (c.req.raw as any).webSocket
                     });
-                    
-                    // Return the client side to the browser
-                    return new Response(null, { status: 101, webSocket: client });
                 } catch (error) {
                     console.error('[Route] Error in WebSocket handling:', error);
                     return new Response(JSON.stringify({ 
