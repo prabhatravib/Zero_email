@@ -373,14 +373,22 @@ export class ZeroDriver extends DurableObject {
   }
 
   async dropTables() {
-    // Database operations disabled - using direct Gmail API
-    console.log('Database operations disabled - using direct Gmail API');
+    if (this.db) {
+      await this.sql`DROP TABLE IF EXISTS threads`;
+      console.log('Database tables dropped');
+    } else {
+      console.log('Database operations disabled - using direct Gmail API');
+    }
     return;
   }
 
   async deleteThread(id: string) {
-    // Database operations disabled - using direct Gmail API
-    console.log('Database operations disabled - using direct Gmail API');
+    if (this.db) {
+      await this.sql`DELETE FROM threads WHERE thread_id = ${id}`;
+      console.log('Thread deleted from database:', id);
+    } else {
+      console.log('Database operations disabled - using direct Gmail API');
+    }
     this.agent?.broadcastChatMessage({
       type: OutgoingMessageType.Mail_List,
       folder: 'bin',
@@ -431,8 +439,30 @@ export class ZeroDriver extends DurableObject {
           // Continue without storing in R2 - the app will still work
         }
 
-        // Database operations disabled - using direct Gmail API
-        console.log('Database operations disabled - using direct Gmail API');
+        if (this.db) {
+          await this.sql`INSERT OR REPLACE INTO threads (
+            id,
+            thread_id,
+            provider_id,
+            latest_sender,
+            latest_received_on,
+            latest_subject,
+            latest_label_ids,
+            updated_at
+          ) VALUES (
+            ${threadId},
+            ${threadId},
+            'google',
+            ${JSON.stringify(latest.sender)},
+            ${normalizedReceivedOn},
+            ${latest.subject},
+            ${JSON.stringify(latest.tags.map((tag) => tag.id))},
+            CURRENT_TIMESTAMP
+          )`;
+          console.log('Thread stored in database:', threadId);
+        } else {
+          console.log('Database operations disabled - using direct Gmail API');
+        }
         if (this.agent)
           this.agent.broadcastChatMessage({
             type: OutgoingMessageType.Mail_Get,
@@ -457,15 +487,25 @@ export class ZeroDriver extends DurableObject {
   }
 
   async getThreadCount() {
-    // Database operations disabled - using direct Gmail API
-    console.log('Database operations disabled - using direct Gmail API');
-    return 0;
+    if (this.db) {
+      const result = await this.sql`SELECT COUNT(*) as count FROM threads`;
+      return result.first?.count || 0;
+    } else {
+      console.log('Database operations disabled - using direct Gmail API');
+      return 0;
+    }
   }
 
   async getFolderThreadCount(folder: string) {
-    // Database operations disabled - using direct Gmail API
-    console.log('Database operations disabled - using direct Gmail API');
-    return 0;
+    if (this.db) {
+      const result = await this.sql`SELECT COUNT(*) as count FROM threads WHERE EXISTS (
+        SELECT 1 FROM json_each(latest_label_ids) WHERE value = ${folder.toUpperCase()}
+      )`;
+      return result.first?.count || 0;
+    } else {
+      console.log('Database operations disabled - using direct Gmail API');
+      return 0;
+    }
   }
 
   async syncThreads(folder: string) {
@@ -741,90 +781,99 @@ export class ZeroDriver extends DurableObject {
       }
 
       // Execute query based on conditions
-      let result;
+      let result: any[] = [];
 
-      if (whereConditions.length === 0) {
-        // No conditions
-        result = this.sql`
-            SELECT id, latest_received_on
-            FROM threads
-            ORDER BY latest_received_on DESC
-            LIMIT ${maxResults}
-          `;
-      } else if (whereConditions.length === 1) {
-        // Single condition
-        const condition = whereConditions[0];
-        if (condition.includes('latest_received_on <')) {
-          const cursorValue = pageToken!;
-          result = this.sql`
-              SELECT id, latest_received_on
-              FROM threads
-              WHERE latest_received_on < ${cursorValue}
-              ORDER BY latest_received_on DESC
-              LIMIT ${maxResults}
-            `;
-        } else if (folder) {
-          // Folder condition
-          const folderLabel = folder.toUpperCase();
-          result = this.sql`
-              SELECT id, latest_received_on
-              FROM threads
-              WHERE EXISTS (
-                SELECT 1 FROM json_each(latest_label_ids) WHERE value = ${folderLabel}
-              )
-              ORDER BY latest_received_on DESC
-              LIMIT ${maxResults}
-            `;
-        } else {
-          // Single label condition
-          const labelId = labelIds[0];
-          result = this.sql`
-              SELECT id, latest_received_on
-              FROM threads
-              WHERE EXISTS (
-                SELECT 1 FROM json_each(latest_label_ids) WHERE value = ${labelId}
-              )
-              ORDER BY latest_received_on DESC
-              LIMIT ${maxResults}
-            `;
+      if (this.db) {
+        try {
+          if (whereConditions.length === 0) {
+            // No conditions
+            result = await this.sql`
+                SELECT id, latest_received_on
+                FROM threads
+                ORDER BY latest_received_on DESC
+                LIMIT ${maxResults}
+              `;
+          } else if (whereConditions.length === 1) {
+            // Single condition
+            const condition = whereConditions[0];
+            if (condition.includes('latest_received_on <')) {
+              const cursorValue = pageToken!;
+              result = await this.sql`
+                  SELECT id, latest_received_on
+                  FROM threads
+                  WHERE latest_received_on < ${cursorValue}
+                  ORDER BY latest_received_on DESC
+                  LIMIT ${maxResults}
+                `;
+            } else if (folder) {
+              // Folder condition
+              const folderLabel = folder.toUpperCase();
+              result = await this.sql`
+                  SELECT id, latest_received_on
+                  FROM threads
+                  WHERE EXISTS (
+                    SELECT 1 FROM json_each(latest_label_ids) WHERE value = ${folderLabel}
+                  )
+                  ORDER BY latest_received_on DESC
+                  LIMIT ${maxResults}
+                `;
+            } else {
+              // Single label condition
+              const labelId = labelIds[0];
+              result = await this.sql`
+                  SELECT id, latest_received_on
+                  FROM threads
+                  WHERE EXISTS (
+                    SELECT 1 FROM json_each(latest_label_ids) WHERE value = ${labelId}
+                  )
+                  ORDER BY latest_received_on DESC
+                  LIMIT ${maxResults}
+                `;
+            }
+          } else {
+            // Multiple conditions - handle combinations
+            if (folder && labelIds.length === 0 && pageToken) {
+              // Folder + cursor
+              const folderLabel = folder.toUpperCase();
+              result = await this.sql`
+                  SELECT id, latest_received_on
+                  FROM threads
+                  WHERE EXISTS (
+                    SELECT 1 FROM json_each(latest_label_ids) WHERE value = ${folderLabel}
+                  ) AND latest_received_on < ${pageToken}
+                  ORDER BY latest_received_on DESC
+                  LIMIT ${maxResults}
+                `;
+            } else if (labelIds.length === 1 && pageToken && !folder) {
+              // Single label + cursor
+              const labelId = labelIds[0];
+              result = await this.sql`
+                  SELECT id, latest_received_on
+                  FROM threads
+                  WHERE EXISTS (
+                    SELECT 1 FROM json_each(latest_label_ids) WHERE value = ${labelId}
+                  ) AND latest_received_on < ${pageToken}
+                  ORDER BY latest_received_on DESC
+                  LIMIT ${maxResults}
+                `;
+            } else {
+              // For now, fallback to just cursor if complex combinations
+              const cursorValue = pageToken || '';
+              result = await this.sql`
+                  SELECT id, latest_received_on
+                  FROM threads
+                  WHERE latest_received_on < ${cursorValue}
+                  ORDER BY latest_received_on DESC
+                  LIMIT ${maxResults}
+                `;
+            }
+          }
+        } catch (error) {
+          console.error('Database query error:', error);
+          result = [];
         }
       } else {
-        // Multiple conditions - handle combinations
-        if (folder && labelIds.length === 0 && pageToken) {
-          // Folder + cursor
-          const folderLabel = folder.toUpperCase();
-          result = this.sql`
-              SELECT id, latest_received_on
-              FROM threads
-              WHERE EXISTS (
-                SELECT 1 FROM json_each(latest_label_ids) WHERE value = ${folderLabel}
-              ) AND latest_received_on < ${pageToken}
-              ORDER BY latest_received_on DESC
-              LIMIT ${maxResults}
-            `;
-        } else if (labelIds.length === 1 && pageToken && !folder) {
-          // Single label + cursor
-          const labelId = labelIds[0];
-          result = this.sql`
-              SELECT id, latest_received_on
-              FROM threads
-              WHERE EXISTS (
-                SELECT 1 FROM json_each(latest_label_ids) WHERE value = ${labelId}
-              ) AND latest_received_on < ${pageToken}
-              ORDER BY latest_received_on DESC
-              LIMIT ${maxResults}
-            `;
-        } else {
-          // For now, fallback to just cursor if complex combinations
-          const cursorValue = pageToken || '';
-          result = this.sql`
-              SELECT id, latest_received_on
-              FROM threads
-              WHERE latest_received_on < ${cursorValue}
-              ORDER BY latest_received_on DESC
-              LIMIT ${maxResults}
-            `;
-        }
+        console.log('Database operations disabled - using direct Gmail API');
       }
 
       if (result?.length) {
@@ -856,24 +905,31 @@ export class ZeroDriver extends DurableObject {
 
   async getThreadFromDB(id: string): Promise<IGetThreadResponse> {
     try {
-      const result = this.sql`
-          SELECT
-            id,
-            thread_id,
-            provider_id,
-            latest_sender,
-            latest_received_on,
-            latest_subject,
-            latest_label_ids,
-            created_at,
-            updated_at
-          FROM threads
-          WHERE id = ${id}
-          LIMIT 1
-        `;
+      let result: any = null;
+      
+      if (this.db) {
+        result = await this.sql`
+            SELECT
+              id,
+              thread_id,
+              provider_id,
+              latest_sender,
+              latest_received_on,
+              latest_subject,
+              latest_label_ids,
+              created_at,
+              updated_at
+            FROM threads
+            WHERE id = ${id}
+            LIMIT 1
+          `;
+      }
 
-      if (!result || result.length === 0) {
-        await this.queue('syncThread', { threadId: id });
+      if (!result || !result.first) {
+        // Queue sync if thread not found
+        if (this.agent) {
+          this.agent.syncThread({ threadId: id });
+        }
         return {
           messages: [],
           latest: undefined,
@@ -882,7 +938,8 @@ export class ZeroDriver extends DurableObject {
           labels: [],
         } satisfies IGetThreadResponse;
       }
-      const row = result[0] as { latest_label_ids: string };
+      
+      const row = result.first as { latest_label_ids: string };
       
       // Try to get stored thread from R2 bucket, fall back to Gmail API if not available
       let messages: ParsedMessage[] = [];
@@ -981,11 +1038,41 @@ export class ZeroAgent extends DurableObject {
   private name: string = 'general';
   private messages: any[] = [];
   private parties: Set<Connection> = new Set();
+  private db: D1Database | null = null;
 
   constructor(state: DurableObjectState, env: any) {
     super(state, env);
     this.state = state;
     this.env = env;
+    this.initializeDatabase();
+  }
+
+  private async initializeDatabase() {
+    try {
+      // Initialize SQLite database if available
+      if (this.env.DB) {
+        this.db = this.env.DB;
+        console.log('Database initialized for ZeroAgent');
+      } else {
+        console.log('No D1 database binding found for ZeroAgent');
+      }
+    } catch (error) {
+      console.error('Failed to initialize database for ZeroAgent:', error);
+    }
+  }
+
+  // SQLite query helper
+  private async sql(strings: TemplateStringsArray, ...values: any[]) {
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
+    const query = strings.reduce((result, str, i) => {
+      return result + str + (values[i] !== undefined ? '?' : '');
+    }, '');
+
+    const stmt = this.db.prepare(query);
+    return stmt.bind(...values);
   }
 
   async setName(name: string) {
@@ -1305,7 +1392,13 @@ export class ZeroAgent extends DurableObject {
         }
         case IncomingMessageType.ChatClear: {
           this.destroyAbortControllers();
-          void this.sql`delete from cf_ai_chat_agent_messages`;
+          if (this.db) {
+            try {
+              await this.sql`DELETE FROM sessions WHERE id LIKE 'chat_%'`;
+            } catch (error) {
+              console.error('Failed to clear chat messages from database:', error);
+            }
+          }
           this.messages = [];
           this.broadcastChatMessage(
             {
