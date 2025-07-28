@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "zero-frontend-build-only",
+  "compatibility_date": "2025-06-17",
+  "vars": {
+    "VITE_PUBLIC_BACKEND_URL": "https://pitext-mail.prabhatravib.workers.dev",
+    "VITE_PUBLIC_APP_URL": "https://pitext-email.onrender.com"
+  }
+} 

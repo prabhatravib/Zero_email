@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => {
       oxlintPlugin(),
       reactRouter(),
       cloudflare({
-        // Configure the environment for Cloudflare
+        configPath: '../../wrangler.jsonc',
         env: wranglerEnv,
       }),
       babel({
