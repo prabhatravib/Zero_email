@@ -33,6 +33,7 @@ import type { WSMessage } from 'partyserver';
 import type { Connection } from 'agents';
 import { DurableObject } from "cloudflare:workers";
 import { env } from 'cloudflare:workers';
+import { WebSocketPair } from 'cloudflare:workers';
 
 // Heavy imports will be dynamically imported when needed
 
@@ -372,14 +373,14 @@ export class ZeroDriver extends DurableObject {
   }
 
   async dropTables() {
-    return this.sql`
-        DROP TABLE IF EXISTS threads;`;
+    // Database operations disabled - using direct Gmail API
+    console.log('Database operations disabled - using direct Gmail API');
+    return;
   }
 
   async deleteThread(id: string) {
-    void this.sql`
-      DELETE FROM threads WHERE thread_id = ${id};
-    `;
+    // Database operations disabled - using direct Gmail API
+    console.log('Database operations disabled - using direct Gmail API');
     this.agent?.broadcastChatMessage({
       type: OutgoingMessageType.Mail_List,
       folder: 'bin',
@@ -430,27 +431,8 @@ export class ZeroDriver extends DurableObject {
           // Continue without storing in R2 - the app will still work
         }
 
-        void this.sql`
-          INSERT OR REPLACE INTO threads (
-            id,
-            thread_id,
-            provider_id,
-            latest_sender,
-            latest_received_on,
-            latest_subject,
-            latest_label_ids,
-            updated_at
-          ) VALUES (
-            ${threadId},
-            ${threadId},
-            'google',
-            ${JSON.stringify(latest.sender)},
-            ${normalizedReceivedOn},
-            ${latest.subject},
-            ${JSON.stringify(latest.tags.map((tag) => tag.id))},
-            CURRENT_TIMESTAMP
-          )
-        `;
+        // Database operations disabled - using direct Gmail API
+        console.log('Database operations disabled - using direct Gmail API');
         if (this.agent)
           this.agent.broadcastChatMessage({
             type: OutgoingMessageType.Mail_Get,
@@ -475,15 +457,15 @@ export class ZeroDriver extends DurableObject {
   }
 
   async getThreadCount() {
-    const count = this.sql`SELECT COUNT(*) FROM threads`;
-    return count[0]['COUNT(*)'] as number;
+    // Database operations disabled - using direct Gmail API
+    console.log('Database operations disabled - using direct Gmail API');
+    return 0;
   }
 
   async getFolderThreadCount(folder: string) {
-    const count = this.sql`SELECT COUNT(*) FROM threads WHERE EXISTS (
-      SELECT 1 FROM json_each(latest_label_ids) WHERE value = ${folder}
-    )`;
-    return count[0]['COUNT(*)'] as number;
+    // Database operations disabled - using direct Gmail API
+    console.log('Database operations disabled - using direct Gmail API');
+    return 0;
   }
 
   async syncThreads(folder: string) {
@@ -507,8 +489,10 @@ export class ZeroDriver extends DurableObject {
 
     const self = this;
 
-    const syncSingleThread = (threadId: string) =>
-      Effect.gen(function* () {
+    const syncSingleThread = (threadId: string) => {
+      // Dynamic import to avoid startup overhead
+      const { Effect } = require('effect');
+      return Effect.gen(function* () {
         yield* Effect.sleep(500); // Rate limiting delay
         return yield* withRetry(Effect.tryPromise(() => self.syncThread({ threadId })));
       }).pipe(
@@ -517,44 +501,51 @@ export class ZeroDriver extends DurableObject {
           return Effect.succeed(null);
         }),
       );
+    };
 
-    const syncProgram = Effect.gen(
-      function* () {
-        let totalSynced = 0;
-        let pageToken: string | null = null;
-        let hasMore = true;
-        // let _pageCount = 0;
+    const syncProgram = (() => {
+      // Dynamic import to avoid startup overhead
+      const { Effect } = require('effect');
+      return Effect.gen(
+        function* () {
+          let totalSynced = 0;
+          let pageToken: string | null = null;
+          let hasMore = true;
+          // let _pageCount = 0;
 
-        while (hasMore) {
-          // _pageCount++;
+          while (hasMore) {
+            // _pageCount++;
 
-          // Rate limiting delay between pages
-          yield* Effect.sleep(2000);
+            // Rate limiting delay between pages
+            yield* Effect.sleep(2000);
 
-          const result: IGetThreadsResponse = yield* Effect.tryPromise(() =>
-            self.listWithRetry({
-              folder,
-              maxResults: maxCount,
-              pageToken: pageToken || undefined,
-            }),
-          );
+            const result: IGetThreadsResponse = yield* Effect.tryPromise(() =>
+              self.listWithRetry({
+                folder,
+                maxResults: maxCount,
+                pageToken: pageToken || undefined,
+              }),
+            );
 
-          // Process threads with controlled concurrency to avoid rate limits
-          const threadIds = result.threads.map((thread) => thread.id);
-          const syncEffects = threadIds.map(syncSingleThread);
+            // Process threads with controlled concurrency to avoid rate limits
+            const threadIds = result.threads.map((thread) => thread.id);
+            const syncEffects = threadIds.map(syncSingleThread);
 
-          yield* Effect.all(syncEffects, { concurrency: 1, discard: true });
+            yield* Effect.all(syncEffects, { concurrency: 1, discard: true });
 
-          totalSynced += result.threads.length;
-          pageToken = result.nextPageToken;
-          hasMore = pageToken !== null && getShouldLoop();
-        }
+            totalSynced += result.threads.length;
+            pageToken = result.nextPageToken;
+            hasMore = pageToken !== null && getShouldLoop();
+          }
 
-        return { synced: totalSynced };
-      }.bind(this),
-    );
+          return { synced: totalSynced };
+        }.bind(this),
+      );
+    })();
 
     try {
+      // Dynamic import to avoid startup overhead
+      const { Effect } = require('effect');
       const result = await Effect.runPromise(
         syncProgram.pipe(
           Effect.ensuring(
@@ -626,6 +617,12 @@ export class ZeroDriver extends DurableObject {
       throw new Error('No driver available');
     }
 
+    // Dynamic import to avoid startup overhead
+    const { Effect } = require('effect');
+    const { generateText } = require('ai');
+    const { openai } = require('@ai-sdk/openai');
+    const { GmailSearchAssistantSystemPrompt } = require('../../lib/prompts');
+    
     // Create parallel Effect operations
     const ragEffect = Effect.tryPromise(() =>
       this.inboxRag(query).then((rag) => {
@@ -1030,17 +1027,17 @@ export class ZeroAgent extends DurableObject {
 
       // Handle WebSocket upgrade requests
       if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-        // ✅ Use the socket the Worker passed in
-        const ws = request.webSocket as WebSocket;
-        ws.accept();                       // completes the handshake
+        // Create WebSocket pair
+        const [client, server] = new WebSocketPair();
+        
+        // Accept the server side immediately
+        server.accept();
+        
+        // Handle the session asynchronously
+        this.handleSession(server, request);
 
-        this.handleSession(ws, request);   // no await needed – run async
-
-        // Debug: check WebSocket state before returning
-        if (!ws.accepted) console.log('WS state before return:', ws.readyState);  // 0=open, 3=closed
-
-        // Return the SAME socket so the edge Worker can pipe it to the browser
-        return new Response(null, { status: 101, webSocket: ws });
+        // Return the client side to the browser
+        return new Response(null, { status: 101, webSocket: client });
       }
       
       // Handle HTTP requests
@@ -1061,8 +1058,8 @@ export class ZeroAgent extends DurableObject {
     try {
       console.log('[ZeroAgent.handleSession] Starting session setup');
       
-      // Accept immediately or CF will close the connection
-      await this.state.acceptWebSocket(server);
+      // Accept the WebSocket connection immediately
+      server.accept();
       
       // Extract query parameters from request
       const url = new URL(request.url);
@@ -1150,44 +1147,55 @@ export class ZeroAgent extends DurableObject {
       abortSignal: AbortSignal | undefined;
     },
   ) {
-    const dataStreamResponse = createDataStreamResponse({
-      execute: async (dataStream) => {
-        if (this.name === 'general') return;
-        const connectionId = this.name;
-        const orchestrator = new ToolOrchestrator(dataStream, connectionId);
-        // const mcpTools = await this.mcp.unstable_getAITools();
+    const dataStreamResponse = (async () => {
+      // Dynamic imports to avoid startup overhead
+      const { createDataStreamResponse, streamText } = await import('ai');
+      const { anthropic } = await import('@ai-sdk/anthropic');
+      const { authTools } = await import('./tools');
+      const { processToolCalls } = await import('./utils');
+      const { ToolOrchestrator } = await import('./orchestrator');
+      const { getPrompt, getPromptName } = await import('../../lib/brain');
+      const { AiChatPrompt } = await import('../../lib/prompts');
+      
+      return createDataStreamResponse({
+        execute: async (dataStream) => {
+          if (this.name === 'general') return;
+          const connectionId = this.name;
+          const orchestrator = new ToolOrchestrator(dataStream, connectionId);
+          // const mcpTools = await this.mcp.unstable_getAITools();
 
-        const rawTools = {
-          ...(await authTools(connectionId)),
-        };
-        const tools = orchestrator.processTools(rawTools);
-        const processedMessages = await processToolCalls(
-          {
-            messages: this.messages,
-            dataStream,
+          const rawTools = {
+            ...(await authTools(connectionId)),
+          };
+          const tools = orchestrator.processTools(rawTools);
+          const processedMessages = await processToolCalls(
+            {
+              messages: this.messages,
+              dataStream,
+              tools,
+            },
+            {},
+          );
+
+          const result = streamText({
+            model: anthropic(env.OPENAI_MODEL || 'claude-3-5-haiku-latest'),
+            maxSteps: 10,
+            messages: processedMessages,
             tools,
-          },
-          {},
-        );
+            onFinish,
+            onError: (error) => {
+              // Only log in debug mode to avoid startup overhead
+              if (env.DEBUG === 'true') {
+                console.error('Error in streamText', error);
+              }
+            },
+            system: await getPrompt(getPromptName(connectionId, EPrompts.Chat), AiChatPrompt('')),
+          });
 
-        const result = streamText({
-          model: anthropic(env.OPENAI_MODEL || 'claude-3-5-haiku-latest'),
-          maxSteps: 10,
-          messages: processedMessages,
-          tools,
-          onFinish,
-          onError: (error) => {
-            // Only log in debug mode to avoid startup overhead
-            if (env.DEBUG === 'true') {
-              console.error('Error in streamText', error);
-            }
-          },
-          system: await getPrompt(getPromptName(connectionId, EPrompts.Chat), AiChatPrompt('')),
-        });
-
-        result.mergeIntoDataStream(dataStream);
-      },
-    });
+          result.mergeIntoDataStream(dataStream);
+        },
+      });
+    })();
 
     return dataStreamResponse;
   }
