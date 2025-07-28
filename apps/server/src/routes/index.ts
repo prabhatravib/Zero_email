@@ -83,11 +83,19 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
                     const agent = env.ZERO_AGENT.get(agentId);
                     console.log('[Route] Got agent stub');
                     
-                    // Forward the original request and its WebSocket to the Durable Object.
-                    // Cloudflare will complete the hand-off, so no need to create a new WebSocketPair.
-                    return agent.fetch(c.req.raw, {
-                        webSocket: (c.req.raw as any).webSocket
+                    // Create a WebSocket pair and pass the *server* half to the Durable Object.
+                    const pair = new WebSocketPair();
+                    const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
+
+                    // Forward the server side to the DO (do NOT call server.accept or await)
+                    agent.fetch(c.req.raw, {
+                      webSocket: server,
+                    }).catch((err: any) => {
+                      console.error('[Route] Agent fetch error:', err);
                     });
+
+                    // Return the client side to the browser
+                    return new Response(null, { status: 101, webSocket: client });
                 } catch (error) {
                     console.error('[Route] Error in WebSocket handling:', error);
                     return new Response(JSON.stringify({ 
