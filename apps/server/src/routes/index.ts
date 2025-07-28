@@ -88,7 +88,7 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
                     const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
 
                     // Forward the server side to the DO (do NOT call server.accept or await)
-                    agent.fetch(c.req.raw, {
+                    agent.fetch('https://zero-agent/session', {
                       webSocket: server,
                     }).catch((err: any) => {
                       console.error('[Route] Agent fetch error:', err);
