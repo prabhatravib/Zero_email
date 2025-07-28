@@ -7,13 +7,6 @@
   "ai": {
     "binding": "AI",
   },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "pitext-mail-db",
-      "database_id": "4193e7df-f5e1-48f1-b71d-cd9f960f4325"
-    }
-  ],
   "observability": {
     "logs": {
       "enabled": true

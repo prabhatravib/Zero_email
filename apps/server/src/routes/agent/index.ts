@@ -1130,8 +1130,8 @@ export class ZeroAgent extends DurableObject {
         // Start long-running handler without blocking the response
         this.state.waitUntil(this.handleSession(ws, request));
         
-        // Return 101 to the edge-worker (DO should NOT include the socket again)
-        return new Response(null, { status: 101 });
+        // Return 101 to the edge-worker
+        return new Response(null, { status: 101, webSocket: ws });
       }
       
       // Handle HTTP requests
@@ -1183,16 +1183,6 @@ export class ZeroAgent extends DurableObject {
         });
         console.log('[ZeroAgent.handleSession] Sending welcome message:', welcomeMessage);
         server.send(welcomeMessage);
-
-        // Send a diagnostic ping after 1 second to verify client connectivity
-        setTimeout(() => {
-          try {
-            server.send(JSON.stringify({ type: 'ping' }));
-            console.log('[ZeroAgent.handleSession] Ping sent');
-          } catch (err) {
-            console.error('[ZeroAgent.handleSession] Error sending ping:', err);
-          }
-        }, 1000);
       } catch (error) {
         console.error('[ZeroAgent.handleSession] Error sending welcome message:', error);
       }
