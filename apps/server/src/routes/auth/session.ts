@@ -6,9 +6,18 @@ export const sessionHandler = async (c: any) => {
   const env = c.env as any;
   
   try {
-    // Get session cookie using Hono's getCookie helper
-    const token = getCookie(c, 'zero_session');
-    
+    // Try to read JWT from Authorization header (e.g., "Bearer <token>")
+    const authHeader = c.req.header('Authorization');
+    const headerToken = authHeader && authHeader.startsWith('Bearer ')
+      ? authHeader.slice(7)
+      : undefined;
+
+    // Fallback to the traditional cookie if no bearer token provided
+    const cookieToken = getCookie(c, 'zero_session');
+
+    // Prefer bearer token, otherwise use cookie
+    const token = headerToken ?? cookieToken;
+
     if (!token) {
       return c.json({ error: 'No session found' }, 401);
     }

@@ -44,12 +44,15 @@ export const signIn = {
 // Session management using cookies
 export const getSession = async () => {
   try {
-    // Check if we have a session cookie by making a request to the backend
+    // Retrieve the JWT that was stored in localStorage during the OAuth callback
+    const sessionToken = localStorage.getItem('gmail_session_token');
+
     const response = await fetch(`${BACKEND_URL}/auth/session`, {
       method: 'GET',
-      credentials: 'include', // This will include the session cookie
+      credentials: 'include', // Keep cookies for backwards-compatibility
       headers: {
         'Content-Type': 'application/json',
+        ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
       },
     });
 
