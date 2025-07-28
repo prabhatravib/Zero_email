@@ -96,16 +96,12 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
                     console.log('[Route] server exists? ', !!server);
                     console.log('[Route] stub id =', agentId.toString());
 
-                    // Forward the server side to the DO (do NOT call server.accept or await)
-
-                    // Build a fresh Request that already carries the server WebSocket
-                    const reqToDO = new Request(targetUrl, {
+                    // Forward the server WebSocket to the Durable Object (per CF recipe)
+                    agent.fetch(targetUrl, {
                       method: 'GET',
                       headers: { 'Upgrade': 'websocket' },
                       webSocket: server as any,
-                    });
-
-                    agent.fetch(reqToDO).catch((err: any) => {
+                    }).catch((err: any) => {
                       console.error('[Route] Agent fetch error:', err);
                     });
 
@@ -181,15 +177,12 @@ export const registerRoutes = async (app: Hono<HonoContext>) => {
         const id = c.env.ZERO_AGENT.idFromName(name);
         const doStub = c.env.ZERO_AGENT.get(id);
 
-        // Build a fresh Request that already carries the server-side socket
-        const reqToDO = new Request('https://zero-agent/session', {
+        // Fire-and-forget – do NOT await (use plain URL string per CF recipe)
+        doStub.fetch('https://zero-agent/session', {
             method: 'GET',
             headers: { 'Upgrade': 'websocket' }, // explicit upgrade keeps frameworks honest
             webSocket: server as any,
-        });
-
-        // Fire-and-forget – do NOT await
-        doStub.fetch(reqToDO).catch(console.error);
+        }).catch(console.error);
 
         // 3. Return the client half to the browser
         return new Response(null, { status: 101, webSocket: client });
