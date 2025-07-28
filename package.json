@@ -6,7 +6,7 @@
   "scripts": {
     "dev:worker": "wrangler dev --local",
     "build:web":  "pnpm -F @zero/mail build",
-    "deploy:worker": "wrangler deploy -e production",
+    "deploy:worker": "cd apps/server && wrangler deploy -e production",
     "deploy:web":    "pnpm run build:web && render deploy --branch main"
   },
   "devDependencies": {

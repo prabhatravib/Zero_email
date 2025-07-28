@@ -4,6 +4,56 @@
   "compatibility_date": "2025-05-01",
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/main.ts",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ZERO_AGENT",
+        "class_name": "ZeroAgent",
+      },
+      {
+        "name": "ZERO_MCP",
+        "class_name": "ZeroMCP",
+      },
+      {
+        "name": "ZERO_DB",
+        "class_name": "ZeroDB",
+      },
+      {
+        "name": "ZERO_DRIVER",
+        "class_name": "ZeroDriver",
+      },
+      {
+        "name": "THINKING_MCP",
+        "class_name": "ThinkingMCP",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["DurableMailbox"],
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["ZeroAgent", "ZeroMCP"],
+    },
+    {
+      "tag": "v3",
+      "new_classes": ["ZeroDB"],
+    },
+    {
+      "tag": "v4",
+      "deleted_classes": ["DurableMailbox"],
+    },
+    {
+      "tag": "v5",
+      "new_sqlite_classes": ["ZeroDriver"],
+    },
+    {
+      "tag": "v6",
+      "new_sqlite_classes": ["ThinkingMCP"],
+    },
+  ],
   "env": {
     "local": {
       "ai": {

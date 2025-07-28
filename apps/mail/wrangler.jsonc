@@ -6,29 +6,15 @@
     "enabled": true,
   },
   "build": {
-    "upload": {
-      "rules": [
-        { "type": "CommonJS", "globs": ["**/*"] },
-        { "type": "Ignore", "globs": [
-          "**/sharp/**",
-          "**/better-sqlite3/**",
-          "**/@sentry/cli/**"
-        ] }
-      ]
-    }
-  },
-  "durable_objects": {
-    "bindings": [
-      { "name": "ZERO_AGENT", "class_name": "ZeroAgent" },
-      { "name": "ZERO_MCP", "class_name": "ZeroMCP" },
-      { "name": "ZERO_DB", "class_name": "ZeroDB" },
-      { "name": "ZERO_DRIVER", "class_name": "ZeroDriver" },
-      { "name": "THINKING_MCP", "class_name": "ThinkingMCP" }
+    "rules": [
+      { "type": "CommonJS", "globs": ["**/*"] },
+      { "type": "Ignore", "globs": [
+        "**/sharp/**",
+        "**/better-sqlite3/**",
+        "**/@sentry/cli/**"
+      ] }
     ]
   },
-  "kv_namespaces": [
-    { "binding": "DB", "id": "<KV-ID-WILL-PASTE>" }
-  ],
   "assets": {
     "directory": "./build/client/",
     "not_found_handling": "single-page-application",
