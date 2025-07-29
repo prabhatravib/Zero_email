@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "react-router dev",
     "build": "vite build",
-    "start": "vite preview --port $PORT",
+    "start": "vite preview --host 0.0.0.0 --port $PORT",
     "lint": "eslint .",
     "machine-translate": "inlang machine translate --project project.inlang"
   },
