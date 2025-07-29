@@ -50,6 +50,11 @@ export default defineConfig({
       clientFiles: ['./app/**/*', './components/**/*'],
     },
   },
+  preview: {
+    host: '0.0.0.0',
+    allowedHosts: ['pitext-email.onrender.com', '.onrender.com'],
+    port: 10000,
+  },
   css: {
     postcss: {
       plugins: [tailwindcss()],
