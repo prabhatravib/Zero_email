@@ -23,6 +23,7 @@ import { signOut } from '@/lib/auth-client';
 import { AlertCircle } from 'lucide-react';
 import { m } from '@/paraglide/messages';
 import { ArrowLeft } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import superjson from 'superjson';
 import './globals.css';
 
@@ -95,13 +96,13 @@ export function Layout({ children }: PropsWithChildren) {
   );
 }
 
-// export function HydrateFallback() {
-//   return (
-//     <div className="flex h-screen w-full items-center justify-center">
-//       <Loader2 className="h-10 w-10 animate-spin" />
-//     </div>
-//   );
-// }
+export function HydrateFallback() {
+  return (
+    <div className="flex h-screen w-full items-center justify-center">
+      <Loader2 className="h-10 w-10 animate-spin" />
+    </div>
+  );
+}
 
 export default function App() {
   return <Outlet />;

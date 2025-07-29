@@ -4,13 +4,22 @@ import { useLoaderData } from 'react-router';
 export async function clientLoader() {
   const isProd = !import.meta.env.DEV;
 
-  const response = await fetch(import.meta.env.VITE_PUBLIC_BACKEND_URL + '/api/public/providers');
-  const data = (await response.json()) as { allProviders: any[] };
+  try {
+    const response = await fetch(import.meta.env.VITE_PUBLIC_BACKEND_URL + '/api/public/providers');
+    const data = (await response.json()) as { allProviders: any[] };
 
-  return {
-    allProviders: data.allProviders,
-    isProd,
-  };
+    return {
+      allProviders: data.allProviders,
+      isProd,
+    };
+  } catch (error) {
+    console.error('Error fetching providers:', error);
+    // Return empty providers array to prevent app from breaking
+    return {
+      allProviders: [],
+      isProd,
+    };
+  }
 }
 
 export default function LoginPage() {

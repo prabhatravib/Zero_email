@@ -1,13 +1,23 @@
 services:
   - type: web
     name: pitext-email-frontend
-    env: static
+    env: node
     buildCommand: cd apps/mail && pnpm install && pnpm run build
-    staticPublishPath: apps/mail/build/client
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    startCommand: cd apps/mail && pnpm start
     envVars:
       - key: NODE_ENV
         value: production
+      - key: VITE_PUBLIC_BACKEND_URL
+        value: https://pitext-mail.prabhatravib.workers.dev
+      - key: VITE_PUBLIC_APP_URL
+        value: https://pitext-email.onrender.com
+      - key: VITE_PUBLIC_POSTHOG_KEY
+        value: ""  # Add your PostHog key if you have one
+      - key: VITE_PUBLIC_POSTHOG_HOST
+        value: https://app.posthog.com
+      - key: VITE_PUBLIC_IMAGE_API_URL
+        value: ""
+      - key: VITE_PUBLIC_IMAGE_PROXY
+        value: ""
+      - key: VITE_PUBLIC_PHONE_NUMBER
+        value: ""

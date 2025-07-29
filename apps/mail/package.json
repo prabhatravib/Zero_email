@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "react-router dev",
     "build": "react-router build",
-    "start": "npx serve build/client -p $PORT",
+    "start": "react-router serve",
     "lint": "eslint .",
     "machine-translate": "inlang machine translate --project project.inlang"
   },

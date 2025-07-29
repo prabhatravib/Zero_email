@@ -1,23 +1,16 @@
-// Placeholder for removed better-auth functionality
-const createAuthClient = () => ({
-  // Placeholder implementation
-});
-
-import type { Auth } from '@zero/server/auth';
-
-const authClient = createAuthClient();
-
+// Simple auth proxy that doesn't break the app
 export const authProxy = {
   api: {
     getSession: async ({ headers }: { headers: Headers }) => {
-      const session = await authClient.getSession({
-        fetchOptions: { headers, credentials: 'include' },
-      });
-      if (session.error) {
-        console.error(`Failed to get session: ${session.error}`, session);
+      try {
+        // For now, return null to prevent app from breaking
+        // This will be replaced with actual auth implementation later
+        console.log('Auth proxy called - returning null for now');
+        return null;
+      } catch (error) {
+        console.error('Auth proxy error:', error);
         return null;
       }
-      return session.data;
     },
   },
 };
