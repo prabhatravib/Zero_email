@@ -195,7 +195,7 @@ export const runZeroWorkflow = (
       historyProcessingKey,
     );
 
-    const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
+    const { db, conn } = createDb(env.DB);
 
     const foundConnection = yield* Effect.tryPromise({
       try: async () => {
@@ -511,7 +511,7 @@ export const runThreadWorkflow = (
 
     if (providerId === EProviders.google) {
       yield* Console.log('[THREAD_WORKFLOW] Processing Google provider workflow');
-      const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
+      const { db, conn } = createDb(env.DB);
 
       const foundConnection = yield* Effect.tryPromise({
         try: async () => {

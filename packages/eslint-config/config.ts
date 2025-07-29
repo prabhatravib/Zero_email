@@ -17,4 +17,11 @@ export default defineConfig([
   reactPlugin.configs.flat.recommended,
   reactPlugin.configs.flat['jsx-runtime'],
   reactHooksPlugin.configs['recommended-latest'],
+  {
+    settings: {
+      react: {
+        version: 'detect',
+      },
+    },
+  },
 ]);

@@ -55,6 +55,13 @@
           "bucket_name": "threads-staging",
         },
       ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "zero-local",
+          "database_id": "local"
+        }
+      ],
       "durable_objects": {
         "bindings": [
           {
@@ -105,13 +112,6 @@
       "triggers": {
         "crons": ["*/1 * * * *"],
       },
-      "hyperdrive": [
-        {
-          "binding": "HYPERDRIVE",
-          "id": "57834ddb6716440496c8836f6d99bc9a",
-          "localConnectionString": "postgresql://postgres:postgres@localhost:5432/zerodotemail",
-        },
-      ],
       "vars": {
         "NODE_ENV": "development",
         "COOKIE_DOMAIN": "localhost",
@@ -128,6 +128,7 @@
         "DISABLE_WORKFLOWS": "false",
         "AUTORAG_ID": "",
         "USE_OPENAI": "true",
+        "DATABASE_URL": "file:./local.db"
       },
       "kv_namespaces": [
         {

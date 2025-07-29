@@ -43,7 +43,6 @@
     "jose": "6.0.11",
     "jsonrepair": "^3.12.0",
     "p-retry": "6.2.1",
-    "postgres": "3.4.5",
     "react": "catalog:",
     "remeda": "2.21.3",
     "superjson": "catalog:",
@@ -53,6 +52,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241218.0",
     "@effect/language-service": "0.31.1",
     "@types/he": "1.2.3",
     "@types/node": "^22.9.0",

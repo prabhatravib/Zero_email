@@ -189,7 +189,7 @@ class ZeroDB extends DurableObject<Env> {
 
   get db(): DB {
     if (!this._db) {
-      this._db = createDb(env.HYPERDRIVE.connectionString).db;
+      this._db = createDb(env.DB).db;
     }
     return this._db;
   }
@@ -769,7 +769,7 @@ export default class extends WorkerEntrypoint<typeof env> {
 
   async scheduled() {
     console.log('[SCHEDULED] Checking for expired subscriptions...');
-    const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
+    const { db, conn } = createDb(env.DB);
     const allAccounts = await db.query.connection.findMany({
       where: (fields, { isNotNull, and }) =>
         and(isNotNull(fields.accessToken), isNotNull(fields.refreshToken)),

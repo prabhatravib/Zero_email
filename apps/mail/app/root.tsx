@@ -54,7 +54,7 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export async function loader(_: LoaderFunctionArgs) {
+export async function loader() {
   //   const trpc = getServerTrpc(request);
   //   const defaultConnection = await trpc.connections.getDefault
   //     .query()

@@ -202,7 +202,7 @@ export const createAuth = () => {
 
 const createAuthConfig = () => {
   const cache = redis();
-  const { db } = createDb(env.HYPERDRIVE.connectionString);
+  const { db } = createDb(env.DB);
   return {
     database: drizzleAdapter(db, { provider: 'pg' }),
     secondaryStorage: {

@@ -3,7 +3,6 @@ import { Github, Mail, ArrowLeft } from 'lucide-react';
 import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import Footer from '@/components/home/footer';
-import React from 'react';
 
 export default function AboutPage() {
   return (
@@ -59,7 +58,7 @@ const sections = [
     title: 'Our Mission',
     content: (
       <p>
-        Zero is an AI-powered email client that manages your inbox, so you don't have to. We help
+        Zero is an AI-powered email client that manages your inbox, so you don&apos;t have to. We help
         busy professionals unclutter their inboxes, prioritize important messages, summarize
         conversations, complete tasks, and even chat with their inbox — letting them spend less time
         managing email and more time getting things done.
@@ -71,9 +70,9 @@ const sections = [
     content: (
       <p>
         We started Zero because we were frustrated that email — the most-used communication tool in
-        the world — hasn't meaningfully evolved in decades. Despite countless new apps, none
+        the world — hasn&apos;t meaningfully evolved in decades. Despite countless new apps, none
         actually solve the real problem: helping you finish what you intend to do. We realized the
-        real solution isn't just a new interface — it's AI acting like a true assistant inside your
+        real solution isn&apos;t just a new interface — it&apos;s AI acting like a true assistant inside your
         inbox.
       </p>
     ),
@@ -127,7 +126,7 @@ const sections = [
           in email firsthand while trying to build and grow companies.
         </p>
         <p>
-          We're driven by a shared belief that email should help you move faster, not slow you down.
+          We&apos;re driven by a shared belief that email should help you move faster, not slow you down.
         </p>
       </div>
     ),

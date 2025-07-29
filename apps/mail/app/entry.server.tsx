@@ -7,7 +7,6 @@ export default async function handleRequest(
   responseStatusCode: number,
   responseHeaders: Headers,
   routerContext: EntryContext,
-  _loadContext: AppLoadContext,
 ) {
   // For SPA mode, we render a minimal version that doesn't use client-side hooks
   const body = renderToString(

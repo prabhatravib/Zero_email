@@ -410,7 +410,7 @@ export default function OpenPage() {
                 size="sm"
                 className="gap-2 border-neutral-200 bg-white/50 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:border-neutral-700 dark:bg-neutral-900/50 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:hover:text-white"
               >
-                <a href={`https://github.com/${REPOSITORY}`} target="_blank">
+                <a href={`https://github.com/${REPOSITORY}`} target="_blank" rel="noreferrer">
                   <Github className="h-4 w-4" />
                   View on GitHub
                 </a>
