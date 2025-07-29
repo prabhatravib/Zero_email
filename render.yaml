@@ -1,9 +1,13 @@
 services:
   - type: web
     name: pitext-email-frontend
-    env: node
+    env: static
     buildCommand: cd apps/mail && pnpm install && pnpm run build
-    startCommand: cd apps/mail && pnpm start
+    staticPublishPath: apps/mail/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: NODE_ENV
         value: production

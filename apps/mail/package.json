@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "react-router dev",
-    "build": "react-router build",
-    "start": "react-router serve",
+    "build": "vite build",
+    "start": "vite preview --port $PORT",
     "lint": "eslint .",
     "machine-translate": "inlang machine translate --project project.inlang"
   },
