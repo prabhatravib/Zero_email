@@ -2,10 +2,5 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "zero-mail",
   "compatibility_date": "2025-06-27",
-  "main": "app/entry.server.tsx",
-  "env": {
-    "local": { "name": "zero-local" },
-    "staging": { "name": "zero-staging" },
-    "production": { "name": "zero-production" }
-  }
+  "main": "app/entry.server.tsx"
 }
