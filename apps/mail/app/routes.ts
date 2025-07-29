@@ -6,6 +6,9 @@ export default [
 
   route('/api/mailto-handler', 'mailto-handler.ts'),
 
+  // Add manifest.webmanifest route
+  route('/manifest.webmanifest', 'manifest.webmanifest.ts'),
+
   layout('(full-width)/layout.tsx', [
     route('/about', '(full-width)/about.tsx'),
     route('/terms', '(full-width)/terms.tsx'),
