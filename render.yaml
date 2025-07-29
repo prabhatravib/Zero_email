@@ -3,7 +3,7 @@ services:
     name: pitext-email-frontend
     env: node
     buildCommand: cd apps/mail && pnpm install && pnpm run build
-    startCommand: cd apps/mail && pnpm run start
+    startCommand: cd apps/mail && vite preview --outDir build --host 0.0.0.0 --port $PORT
     envVars:
       - key: NODE_ENV
         value: production
