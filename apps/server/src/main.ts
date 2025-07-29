@@ -34,20 +34,43 @@ import { autumnApi } from './routes/autumn';
 import type { HonoContext } from './ctx';
 import { createDb, type DB } from './db';
 import { createAuth } from './lib/auth';
-import { aiRouter } from './routes/ai';
-import { Autumn } from 'autumn-js';
 import { appRouter } from './trpc';
 import { cors } from 'hono/cors';
-import { Effect } from 'effect';
-
 import { Hono } from 'hono';
 
 // Lazy load heavy imports
 let betterAuthPlugins: typeof import('better-auth/plugins') | undefined;
+let Effect: typeof import('effect').Effect | undefined;
+let Autumn: typeof import('autumn-js').Autumn | undefined;
+let aiRouter: typeof import('./routes/ai').aiRouter | undefined;
 
 async function getBetterAuthPlugins() {
   if (!betterAuthPlugins) betterAuthPlugins = await import('better-auth/plugins');
   return betterAuthPlugins;
+}
+
+async function getEffect() {
+  if (!Effect) {
+    const effectModule = await import('effect');
+    Effect = effectModule.Effect;
+  }
+  return Effect;
+}
+
+async function getAutumn() {
+  if (!Autumn) {
+    const autumnModule = await import('autumn-js');
+    Autumn = autumnModule.Autumn;
+  }
+  return Autumn;
+}
+
+async function getAiRouter() {
+  if (!aiRouter) {
+    const aiModule = await import('./routes/ai');
+    aiRouter = aiModule.aiRouter;
+  }
+  return aiRouter;
 }
 
 const SENTRY_HOST = 'o4509328786915328.ingest.us.sentry.io';
@@ -541,7 +564,10 @@ export default class extends WorkerEntrypoint<typeof env> {
       c.set('autumn', undefined as any);
       c.set('auth', undefined as any);
     })
-    .route('/ai', aiRouter)
+    .route('/ai', async (c) => {
+      const router = await getAiRouter();
+      return router.fetch(c.req.raw);
+    })
     .route('/autumn', autumnApi)
     .route('/public', publicRouter)
     .on(['GET', 'POST', 'OPTIONS'], '/auth/*', (c) => {
@@ -775,6 +801,7 @@ export default class extends WorkerEntrypoint<typeof env> {
             });
 
             try {
+              const Effect = await getEffect();
               const result = await Effect.runPromise(workflow);
               console.log('[THREAD_QUEUE] result', result);
             } catch (error) {
