@@ -1,5 +1,7 @@
-import { QueryProvider } from './query-provider';
-import { AutumnProvider } from 'autumn-js/react';
+// Placeholder for removed autumn-js dependency
+const AutumnProvider = ({ children }: { children: React.ReactNode }) => children;
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { PropsWithChildren } from 'react';
 
 export function ServerProviders({

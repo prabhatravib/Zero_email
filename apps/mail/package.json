@@ -46,6 +46,7 @@
     "@tiptap/starter-kit": "2.23.0",
     "@trpc/client": "catalog:",
     "@trpc/tanstack-react-query": "catalog:",
+    "@zero/server": "workspace:*",
     "accept-language-parser": "^1.5.0",
     "babel-plugin-react-compiler": "19.1.0-rc.2",
     "canvas-confetti": "1.9.3",

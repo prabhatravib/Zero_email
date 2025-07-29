@@ -1,4 +1,17 @@
-import { useAutumn, useCustomer } from 'autumn-js/react';
+// Placeholder for removed autumn-js dependency
+const useAutumn = () => ({
+  attach: () => {},
+  track: () => {},
+  openBillingPortal: () => {},
+});
+
+const useCustomer = () => ({
+  customer: null,
+  refetch: () => {},
+  isLoading: false,
+  error: null,
+});
+
 import { signOut } from '@/lib/auth-client';
 import { useEffect, useMemo } from 'react';
 

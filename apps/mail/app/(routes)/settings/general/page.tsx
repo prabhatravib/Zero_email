@@ -22,7 +22,6 @@ import { useEmailAliases } from '@/hooks/use-email-aliases';
 import { Globe, Clock, Mail, InfoIcon } from 'lucide-react';
 import { getLocale, setLocale } from '@/paraglide/runtime';
 import { useState, useEffect, useMemo, memo } from 'react';
-import { userSettingsSchema } from '@zero/server/schemas';
 import { locales } from '@/project.inlang/settings.json';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -38,6 +37,15 @@ import { m } from '@/paraglide/messages';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import * as z from 'zod';
+
+// Placeholder for removed @zero/server/schemas dependency
+const userSettingsSchema = z.object({
+  externalImages: z.boolean(),
+  trustedSenders: z.array(z.string()),
+  timezone: z.string(),
+  displayName: z.string().optional(),
+  signature: z.string().optional(),
+});
 
 const TimezoneSelect = memo(
   ({ field }: { field: ControllerRenderProps<z.infer<typeof userSettingsSchema>, 'timezone'> }) => {

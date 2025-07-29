@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { defaultUserSettings } from '@zero/server/schemas';
+// Placeholder for removed @zero/server/schemas dependency
+const defaultUserSettings = {
+  externalImages: false,
+  trustedSenders: [],
+  timezone: 'UTC',
+};
 import { fixNonReadableColors } from '@/lib/email-utils';
 import { useTRPC } from '@/providers/query-provider';
 import { getBrowserTimezone } from '@/lib/timezones';

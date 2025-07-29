@@ -8,7 +8,12 @@ import {
 } from '@/components/ui/form';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { SettingsCard } from '@/components/settings/settings-card';
-import { userSettingsSchema } from '@zero/server/schemas';
+// Placeholder for removed @zero/server/schemas dependency
+const userSettingsSchema = z.object({
+  externalImages: z.boolean(),
+  trustedSenders: z.array(z.string()),
+  timezone: z.string(),
+});
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTRPC } from '@/providers/query-provider';
