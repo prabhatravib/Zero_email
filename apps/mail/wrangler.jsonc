@@ -2,5 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "zero-mail",
   "compatibility_date": "2025-06-27",
-  "main": "app/entry.server.tsx"
+  "main": "app/entry.server.tsx",
+  "observability": {
+    "enabled": true,
+  }
 }

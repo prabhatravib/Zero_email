@@ -28,6 +28,15 @@ import { createDb, type DB } from './db';
 import { cors } from 'hono/cors';
 import { Hono } from 'hono';
 
+// Hard-coded allow-list removes any env-var dependency.
+// Keep this list short: localhost for dev, Render for SPA,
+// Workers.dev itself for tests / preview.
+const ALLOW_ORIGINS = [
+  'http://localhost:3000',
+  'https://pitext-email.onrender.com',
+  'https://pitext-mail.prabhatravib.workers.dev',
+] as const;
+
 // Lazy load heavy imports
 let betterAuthPlugins: typeof import('better-auth/plugins') | undefined;
 let Effect: typeof import('effect').Effect | undefined;
@@ -681,19 +690,8 @@ export default class extends WorkerEntrypoint<typeof env> {
         '*',
         cors({
           origin: (origin) => {
-            if (!origin) return null;
-            let hostname: string;
-            try {
-              hostname = new URL(origin).hostname;
-            } catch {
-              return null;
-            }
-            const cookieDomain = env.COOKIE_DOMAIN;
-            if (!cookieDomain) return null;
-            if (hostname === cookieDomain || hostname.endsWith('.' + cookieDomain)) {
-              return origin;
-            }
-            return null;
+            if (!origin) return null; // forbid opaque origins
+            return ALLOW_ORIGINS.includes(origin) ? origin : null;
           },
           credentials: true,
           allowHeaders: ['Content-Type', 'Authorization'],
