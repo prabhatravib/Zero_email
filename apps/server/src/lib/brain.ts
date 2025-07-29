@@ -1,6 +1,6 @@
 import { ReSummarizeThread, SummarizeMessage, SummarizeThread } from './brain.fallback.prompts';
 import { getSubscriptionFactory } from './factories/subscription-factory.registry';
-import { AiChatPrompt, StyledEmailAssistantSystemPrompt } from './prompts';
+import { StyledEmailAssistantSystemPrompt } from './prompts';
 import { resetConnection } from './server-utils';
 import { EPrompts, EProviders } from '../types';
 import { getPromptName } from '../pipelines';
@@ -49,7 +49,7 @@ export const getPrompts = async ({ connectionId }: { connectionId: string }) => 
     [EPrompts.SummarizeMessage]: SummarizeMessage,
     [EPrompts.ReSummarizeThread]: ReSummarizeThread,
     [EPrompts.SummarizeThread]: SummarizeThread,
-    [EPrompts.Chat]: AiChatPrompt(''),
+    [EPrompts.Chat]: '',
     [EPrompts.Compose]: StyledEmailAssistantSystemPrompt(),
     // [EPrompts.ThreadLabels]: '',
   };

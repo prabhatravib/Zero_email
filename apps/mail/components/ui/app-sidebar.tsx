@@ -16,7 +16,6 @@ import { PencilCompose, X } from '../icons/icons';
 import { useBilling } from '@/hooks/use-billing';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
-import { useAIFullScreen } from './ai-sidebar';
 import { useStats } from '@/hooks/use-stats';
 import { useLocation } from 'react-router';
 
@@ -35,8 +34,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return true;
   });
   const [, setPricingDialog] = useQueryState('pricingDialog');
-
-  const { isFullScreen } = useAIFullScreen();
 
   const { data: stats } = useStats();
 
@@ -77,74 +74,72 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <div>
-      {!isFullScreen && (
-        <Sidebar
-          collapsible="icon"
-          {...props}
-          className={`bg-sidebar dark:bg-sidebar flex h-screen select-none flex-col items-center ${state === 'collapsed' ? '' : ''} pb-2`}
+      <Sidebar
+        collapsible="icon"
+        {...props}
+        className={`bg-sidebar dark:bg-sidebar flex h-screen select-none flex-col items-center ${state === 'collapsed' ? '' : ''} pb-2`}
+      >
+        <SidebarHeader
+          className={`relative top-2.5 flex flex-col gap-2 ${state === 'collapsed' ? 'px-2' : 'md:px-4'}`}
         >
-          <SidebarHeader
-            className={`relative top-2.5 flex flex-col gap-2 ${state === 'collapsed' ? 'px-2' : 'md:px-4'}`}
-          >
-            {session && <NavUser />}
+          {session && <NavUser />}
 
-            {showComposeButton && (
-              <div>
-                <ComposeButton />
-              </div>
-            )}
-          </SidebarHeader>
-          <SidebarContent
-            className={`scrollbar scrollbar-w-1 scrollbar-thumb-accent/40 scrollbar-track-transparent hover:scrollbar-thumb-accent scrollbar-thumb-rounded-full overflow-x-hidden py-0 pt-0 ${state !== 'collapsed' ? 'mt-5 md:px-4' : 'px-2'}`}
-          >
-            <div className="flex-1 py-0">
-              <NavMain items={navItems} />
-            </div>
-          </SidebarContent>
-
-          {!isLoading && !isPro && showUpgrade && state !== 'collapsed' && (
-            <div className="relative top-3 mx-3 mb-4 rounded-lg border bg-white px-4 py-4 backdrop-blur-sm dark:bg-[#1C1C1C]">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-2 h-6 w-6 rounded-full hover:bg-white/10 [&>svg]:h-2.5 [&>svg]:w-2.5"
-                onClick={() => {
-                  setShowUpgrade(false);
-                  localStorage.setItem('hideUpgradeCard', 'true');
-                }}
-              >
-                <X className="h-2.5 w-2.5 fill-black dark:fill-white/50" />
-              </Button>
-              <div className="flex items-start gap-2">
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-black dark:text-white/90">
-                      Get Zero Pro
-                    </h3>
-                  </div>
-                  <p className="text-[13px] leading-snug text-black dark:text-white/50">
-                    Get unlimited AI chats, auto-labeling, writing assistant, and more.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setPricingDialog('true')}
-                className="mt-3 inline-flex h-7 w-full items-center justify-center gap-0.5 overflow-hidden rounded-lg bg-[#8B5CF6] px-2"
-              >
-                <div className="flex items-center justify-center gap-2.5 px-0.5">
-                  <div className="justify-start whitespace-nowrap text-xs leading-none text-white md:text-sm">
-                    Start 7 day free trial
-                  </div>
-                </div>
-              </button>
+          {showComposeButton && (
+            <div>
+              <ComposeButton />
             </div>
           )}
+        </SidebarHeader>
+        <SidebarContent
+          className={`scrollbar scrollbar-w-1 scrollbar-thumb-accent/40 scrollbar-track-transparent hover:scrollbar-thumb-accent scrollbar-thumb-rounded-full overflow-x-hidden py-0 pt-0 ${state !== 'collapsed' ? 'mt-5 md:px-4' : 'px-2'}`}
+        >
+          <div className="flex-1 py-0">
+            <NavMain items={navItems} />
+          </div>
+        </SidebarContent>
 
-          <SidebarFooter className={`px-0 pb-0 ${state === 'collapsed' ? 'md:px-2' : 'md:px-4'}`}>
-            <NavMain items={bottomNavItems} />
-          </SidebarFooter>
-        </Sidebar>
-      )}
+        {!isLoading && !isPro && showUpgrade && state !== 'collapsed' && (
+          <div className="relative top-3 mx-3 mb-4 rounded-lg border bg-white px-4 py-4 backdrop-blur-sm dark:bg-[#1C1C1C]">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2 h-6 w-6 rounded-full hover:bg-white/10 [&>svg]:h-2.5 [&>svg]:w-2.5"
+              onClick={() => {
+                setShowUpgrade(false);
+                localStorage.setItem('hideUpgradeCard', 'true');
+              }}
+            >
+              <X className="h-2.5 w-2.5 fill-black dark:fill-white/50" />
+            </Button>
+            <div className="flex items-start gap-2">
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-black dark:text-white/90">
+                    Get Zero Pro
+                  </h3>
+                </div>
+                <p className="text-[13px] leading-snug text-black dark:text-white/50">
+                  Get unlimited AI chats, auto-labeling, writing assistant, and more.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setPricingDialog('true')}
+              className="mt-3 inline-flex h-7 w-full items-center justify-center gap-0.5 overflow-hidden rounded-lg bg-[#8B5CF6] px-2"
+            >
+              <div className="flex items-center justify-center gap-2.5 px-0.5">
+                <div className="justify-start whitespace-nowrap text-xs leading-none text-white md:text-sm">
+                  Start 7 day free trial
+                </div>
+              </div>
+            </button>
+          </div>
+        )}
+
+        <SidebarFooter className={`px-0 pb-0 ${state === 'collapsed' ? 'md:px-2' : 'md:px-4'}`}>
+          <NavMain items={bottomNavItems} />
+        </SidebarFooter>
+      </Sidebar>
     </div>
   );
 }

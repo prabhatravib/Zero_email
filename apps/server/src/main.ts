@@ -19,16 +19,11 @@ import { EProviders, type ISubscribeBatch, type IThreadBatch } from './types';
 import { getZeroDB, verifyToken } from './lib/server-utils';
 import { eq, and, desc, asc, inArray } from 'drizzle-orm';
 import { EWorkflowType, runWorkflow } from './pipelines';
-import { ThinkingMCP } from './lib/sequential-thinking';
-import { ZeroAgent, ZeroDriver } from './routes/agent';
 import { contextStorage } from 'hono/context-storage';
 import { defaultUserSettings } from './lib/schemas';
 import { createLocalJWKSet, jwtVerify } from 'jose';
-import { getZeroAgent } from './lib/server-utils';
 import { enableBrainFunction } from './lib/brain';
 import { trpcServer } from '@hono/trpc-server';
-import { agentsMiddleware } from 'hono-agents';
-import { ZeroMCP } from './routes/agent/mcp';
 import { publicRouter } from './routes/auth';
 import { autumnApi } from './routes/autumn';
 import type { HonoContext } from './ctx';
@@ -41,8 +36,6 @@ import { Hono } from 'hono';
 // Lazy load heavy imports
 let betterAuthPlugins: typeof import('better-auth/plugins') | undefined;
 let Effect: typeof import('effect').Effect | undefined;
-let Autumn: typeof import('autumn-js').Autumn | undefined;
-let aiRouter: typeof import('./routes/ai').aiRouter | undefined;
 
 async function getBetterAuthPlugins() {
   if (!betterAuthPlugins) betterAuthPlugins = await import('better-auth/plugins');
@@ -55,22 +48,6 @@ async function getEffect() {
     Effect = effectModule.Effect;
   }
   return Effect;
-}
-
-async function getAutumn() {
-  if (!Autumn) {
-    const autumnModule = await import('autumn-js');
-    Autumn = autumnModule.Autumn;
-  }
-  return Autumn;
-}
-
-async function getAiRouter() {
-  if (!aiRouter) {
-    const aiModule = await import('./routes/ai');
-    aiRouter = aiModule.aiRouter;
-  }
-  return aiRouter;
 }
 
 const SENTRY_HOST = 'o4509328786915328.ingest.us.sentry.io';
@@ -579,10 +556,6 @@ export default class extends WorkerEntrypoint<typeof env> {
       c.set('autumn', undefined as any);
       c.set('auth', undefined as any);
     })
-    .route('/ai', async (c) => {
-      const router = await getAiRouter();
-      return router.fetch(c.req.raw);
-    })
     .route('/autumn', autumnApi)
     .route('/public', publicRouter)
     .on(['GET', 'POST', 'OPTIONS'], '/auth/*', (c) => {
@@ -679,40 +652,6 @@ export default class extends WorkerEntrypoint<typeof env> {
       { replaceRequest: false },
     )
     .route('/api', this.api)
-    .get('/agents/:agentId/:namespace', async (c) => {
-      const agentId = c.req.param('agentId');
-      const namespace = c.req.param('namespace');
-      
-      // Early return for non-WebSocket GETs to prevent heavy initialization
-      if (c.req.method === 'GET' && c.req.header('Upgrade') !== 'websocket') {
-        return new Response('Upgrade Required', { status: 426 });
-      }
-      
-      // Create a WebSocketPair
-      const pair = new WebSocketPair();
-      const [client, server] = Object.values(pair);
-      
-      // Get the Durable Object stub
-      const stub = env.ZERO_AGENT.get(env.ZERO_AGENT.idFromName(agentId));
-      
-      // Fire-and-forget ONE call that forwards the ORIGINAL request + socket
-      stub.fetch(c.req.raw, { webSocket: server }).catch(console.error);
-      
-      // Immediately return 101 with the client socket
-      return new Response(null, { status: 101, webSocket: client });
-    })
-    .use(
-      '*',
-      agentsMiddleware({
-        options: {
-          onBeforeConnect: (c) => {
-            if (!c.headers.get('Cookie')) {
-              return new Response('Unauthorized', { status: 401 });
-            }
-          },
-        },
-      }),
-    )
     .get('/health', (c) => c.json({ message: 'Zero Server is Up!' }))
     .get('/', (c) => c.redirect(`${env.VITE_PUBLIC_APP_URL}`))
     .post('/monitoring/sentry', async (c) => {
