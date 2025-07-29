@@ -4,7 +4,7 @@
   "envMode": "loose",
   "tasks": {
     "build": {
-      "dependsOn": ["^build", "sentry:sourcemaps"],
+      "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["build/**", "!.react-router/**", "dist/**"]
     },
@@ -17,9 +17,6 @@
     },
     "lint": {
       "outputs": []
-    },
-    "sentry:sourcemaps": {
-      "cache": false
     }
   }
 }

@@ -81,9 +81,6 @@ async function getAutumnApi() {
   return autumnApi;
 }
 
-const SENTRY_HOST = 'o4509328786915328.ingest.us.sentry.io';
-const SENTRY_PROJECT_IDS = new Set(['4509328795303936']);
-
 // Stub implementations for missing Durable Object classes
 export class ZeroAgent extends DurableObject<Env> {
   async fetch(request: Request): Promise<Response> {
@@ -616,7 +613,6 @@ export default class extends WorkerEntrypoint<typeof env> {
     const auth = await this.getAuth();
     const appRouter = await getAppRouter();
     const publicRouter = await getPublicRouter();
-    const autumnApi = await getAutumnApi();
 
     return new Hono<HonoContext>()
       .use(contextStorage())
@@ -647,7 +643,6 @@ export default class extends WorkerEntrypoint<typeof env> {
         c.set('sessionUser', undefined);
         c.set('auth', undefined as any);
       })
-      .route('/autumn', autumnApi)
       .route('/public', publicRouter)
       .on(['GET', 'POST', 'OPTIONS'], '/auth/*', (c) => {
         return c.var.auth.handler(c.req.raw);
@@ -751,35 +746,27 @@ export default class extends WorkerEntrypoint<typeof env> {
       )
       .route('/api', api)
       .get('/health', (c) => c.json({ message: 'Zero Server is Up!' }))
-      .get('/', (c) => c.redirect(`${env.VITE_PUBLIC_APP_URL}`))
-      .post('/monitoring/sentry', async (c) => {
-        try {
-          const envelopeBytes = await c.req.arrayBuffer();
-          const envelope = new TextDecoder().decode(envelopeBytes);
-          const piece = envelope.split('\n')[0];
-          const header = JSON.parse(piece);
-          const dsn = new URL(header['dsn']);
-          const project_id = dsn.pathname?.replace('/', '');
-
-          if (dsn.hostname !== SENTRY_HOST) {
-            throw new Error(`Invalid sentry hostname: ${dsn.hostname}`);
-          }
-
-          if (!project_id || !SENTRY_PROJECT_IDS.has(project_id)) {
-            throw new Error(`Invalid sentry project id: ${project_id}`);
-          }
-
-          const upstream_sentry_url = `https://${SENTRY_HOST}/api/${project_id}/envelope/`;
-          await fetch(upstream_sentry_url, {
-            method: 'POST',
-            body: envelopeBytes,
-          });
-
-          return c.json({}, { status: 200 });
-        } catch (e) {
-          console.error('error tunneling to sentry', e);
-          return c.json({ error: 'error tunneling to sentry' }, { status: 500 });
+      .get('/info', (c) => c.json({ 
+        message: 'Zero Server Info',
+        timestamp: new Date().toISOString(),
+        environment: {
+          nodeEnv: env.NODE_ENV,
+          cookieDomain: env.COOKIE_DOMAIN,
+          hasAppUrl: !!env.VITE_PUBLIC_APP_URL,
+          hasBackendUrl: !!env.VITE_PUBLIC_BACKEND_URL,
         }
+      }))
+      .get('/', (c) => {
+        const appUrl = env.VITE_PUBLIC_APP_URL;
+        if (!appUrl) {
+          console.error('VITE_PUBLIC_APP_URL environment variable is not set');
+          return c.json({ 
+            error: 'Server configuration error', 
+            message: 'VITE_PUBLIC_APP_URL environment variable is not set',
+            timestamp: new Date().toISOString()
+          }, 500);
+        }
+        return c.redirect(appUrl);
       })
       .post('/a8n/notify/:providerId', async (c) => {
         if (!c.req.header('Authorization')) return c.json({ error: 'Unauthorized' }, { status: 401 });
