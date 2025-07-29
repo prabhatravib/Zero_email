@@ -2,7 +2,7 @@
 
 ## Capabilties
 
-Zero MCP provides the following capabilities:
+Zero MCP provides the following capabilities:ebebeb
 
 ### Email Management
 
