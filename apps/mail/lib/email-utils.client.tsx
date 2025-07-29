@@ -1,4 +1,3 @@
-import { Html, Head, Body, Container, Section, Column, Row } from '@react-email/components';
 import { getListUnsubscribeAction } from '@/lib/email-utils';
 import { trpcClient } from '@/providers/query-provider';
 import { renderToString } from 'react-dom/server';
@@ -159,8 +158,8 @@ const proxyImageUrls = (html: string): string => {
 
 const EmailTemplate = ({ content, imagesEnabled, nonce }: EmailTemplateProps) => {
   return (
-    <Html>
-      <Head>
+    <html>
+      <head>
         <meta
           httpEquiv="Content-Security-Policy"
           content={
@@ -179,9 +178,9 @@ const EmailTemplate = ({ content, imagesEnabled, nonce }: EmailTemplateProps) =>
             });
           `}
         </script>
-      </Head>
-      <Body style={{ margin: 0, padding: 0, background: 'transparent' }}>
-        <Container
+      </head>
+      <body style={{ margin: 0, padding: 0, background: 'transparent' }}>
+        <div
           style={{
             width: '100%',
             maxWidth: '100%',
@@ -190,16 +189,16 @@ const EmailTemplate = ({ content, imagesEnabled, nonce }: EmailTemplateProps) =>
             margin: 0,
           }}
         >
-          <Section style={{ width: '100%', background: 'transparent' }}>
-            <Row style={{ background: 'transparent' }}>
-              <Column style={{ background: 'transparent' }}>
+          <div style={{ width: '100%', background: 'transparent' }}>
+            <div style={{ background: 'transparent' }}>
+              <div style={{ background: 'transparent' }}>
                 <div dangerouslySetInnerHTML={{ __html: content }} />
-              </Column>
-            </Row>
-          </Section>
-        </Container>
-      </Body>
-    </Html>
+              </div>
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>
   );
 };
 

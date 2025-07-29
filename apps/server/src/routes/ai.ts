@@ -20,7 +20,7 @@ async function getOpenAI() {
 
 export const aiRouter = new Hono();
 
-aiRouter.get('/', (c) => c.text('Twilio + ElevenLabs + AI Phone System Ready'));
+aiRouter.get('/', (c) => c.text('AI Email System Ready'));
 
 aiRouter.post('/do/:action', async (c) => {
   if (env.DISABLE_CALLS) return c.json({ success: false, error: 'Not implemented' }, 400);

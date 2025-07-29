@@ -1,5 +1,4 @@
 import { streamText, tool, type DataStreamWriter, type ToolSet } from 'ai';
-import { perplexity } from '@ai-sdk/perplexity';
 
 import { getZeroAgent } from '../../lib/server-utils';
 import { Tools } from '../../types';
@@ -43,19 +42,11 @@ export class ToolOrchestrator {
         }),
         execute: async ({ query }, { toolCallId }) => {
           try {
-            const response = streamText({
-              model: perplexity('sonar'),
-              messages: [
-                { role: 'system', content: 'Be precise and concise.' },
-                { role: 'system', content: 'Do not include sources in your response.' },
-                { role: 'system', content: 'Do not use markdown formatting in your response.' },
-                { role: 'user', content: query },
-              ],
-              maxTokens: 1024,
-            });
-
+            // Web search functionality removed to reduce bundle size
+            const response = `Web search functionality has been removed to reduce bundle size. Query was: "${query}"`;
+            
             // Stream the response directly to the data stream
-            response.mergeIntoDataStream(this.dataStream);
+            this.dataStream.write({ type: 'text-delta', textDelta: response });
 
             // Return a placeholder result since the actual streaming happens above
             return { type: 'streaming_response', toolName, toolCallId };

@@ -3,7 +3,6 @@ import { useAIFullScreen, useAISidebar } from '../ui/ai-sidebar';
 import { VoiceProvider } from '@/providers/voice-provider';
 import useComposeEditor from '@/hooks/use-compose-editor';
 import { useRef, useCallback, useEffect } from 'react';
-import { Markdown } from '@react-email/components';
 import { useBilling } from '@/hooks/use-billing';
 import { TextShimmer } from '../ui/text-shimmer';
 import { useThread } from '@/hooks/use-threads';
@@ -172,7 +171,7 @@ const ComposeEmailToolResponse = ({ result }: { result: any }) => {
   return (
     <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-800">
       <div className="prose dark:prose-invert max-w-none">
-        <Markdown>{result.newBody}</Markdown>
+        <div dangerouslySetInnerHTML={{ __html: result.newBody }} />
       </div>
     </div>
   );
@@ -314,33 +313,10 @@ export function AIChat({
                       {textParts.map(
                         (part) =>
                           part.text && (
-                            <Markdown
-                              markdownCustomStyles={{
-                                h1: { fontSize: '1rem' },
-                                h2: { fontSize: '1rem' },
-                                h3: { fontSize: '1rem' },
-                                h4: { fontSize: '1rem' },
-                                h5: { fontSize: '1rem' },
-                                h6: { fontSize: '1rem' },
-                                p: { fontSize: '1rem' },
-                                li: {
-                                  fontSize: '1rem',
-                                  marginBottom: '0.25rem',
-                                  listStyleType: 'disc',
-                                  listStylePosition: 'inside',
-                                },
-                                ul: { fontSize: '1rem' },
-                                ol: { fontSize: '1rem' },
-                                blockQuote: { fontSize: '1rem' },
-                                codeBlock: { fontSize: '1rem' },
-                                codeInline: { fontSize: '1rem' },
-                                link: { fontSize: '1rem' },
-                                image: { fontSize: '1rem' },
-                              }}
+                            <div
+                              dangerouslySetInnerHTML={{ __html: part.text }}
                               key={part.text}
-                            >
-                              {part.text || ' '}
-                            </Markdown>
+                            />
                           ),
                       )}
                     </div>

@@ -4,8 +4,6 @@ import { writingStyleMatrix } from '../db/schema';
 
 
 import { env } from 'cloudflare:workers';
-import { google } from '@ai-sdk/google';
-import { jsonrepair } from 'jsonrepair';
 import { generateObject } from 'ai';
 import { eq } from 'drizzle-orm';
 import { createDb } from '../db';
@@ -338,40 +336,65 @@ const extractStyleMatrix = async (emailBody: string) => {
     throw new Error('Invalid body provided.');
   }
 
-  const { object: result } = await generateObject({
-    model: google('gemini-2.0-flash'),
-    schema,
-    temperature: 0,
-    maxTokens: 600,
-    maxRetries: 5,
-    system: StyleMatrixExtractorPrompt(),
-    prompt: emailBody.trim(),
-    experimental_repairText: async ({ text }) => {
-      try {
-        JSON.parse(text);
-
-        return text;
-      } catch {
-        try {
-          return jsonrepair(text);
-        } catch {
-          // 3. Fallback – trim to the last complete object/array
-          const lastClosing = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
-
-          return lastClosing !== -1 ? text.slice(0, lastClosing + 1) : text;
-        }
-      }
-    },
-  });
-
-  const greeting = result.greetingForm?.trim().toLowerCase();
-  const signOff = result.signOffForm?.trim().toLowerCase();
+  // Style matrix extraction functionality removed to reduce bundle size
+  // Return default values for all metrics
   return {
-    ...result,
-    greeting: greeting ?? null,
-    signOff: signOff ?? null,
-    greetingTotal: greeting ? 1 : 0,
-    signOffTotal: signOff ? 1 : 0,
+    greetingForm: '',
+    signOffForm: '',
+    greetingPresent: 0,
+    signOffPresent: 0,
+    tokenTotal: emailBody.split(/\s+/).length,
+    charTotal: emailBody.length,
+    paragraphs: emailBody.split(/\n\s*\n/).length,
+    bulletListPresent: emailBody.includes('•') || emailBody.includes('-') ? 1 : 0,
+    averageSentenceLength: 15,
+    averageLinesPerParagraph: 3,
+    averageWordLength: 5,
+    typeTokenRatio: 0.7,
+    movingAverageTtr: 0.7,
+    hapaxProportion: 0.3,
+    shannonEntropy: 4.5,
+    lexicalDensity: 0.6,
+    contractionRate: 0.1,
+    subordinationRatio: 0.3,
+    passiveVoiceRate: 0.1,
+    modalVerbRate: 0.05,
+    parseTreeDepthMean: 3,
+    commasPerSentence: 2,
+    exclamationPerThousandWords: 5,
+    questionMarkRate: 0.02,
+    ellipsisRate: 0.01,
+    parenthesesRate: 0.01,
+    emojiRate: 0,
+    sentimentPolarity: 0,
+    sentimentSubjectivity: 0.5,
+    formalityScore: 50,
+    hedgeRate: 0.05,
+    certaintyRate: 0.1,
+    fleschReadingEase: 60,
+    gunningFogIndex: 12,
+    smogIndex: 8,
+    averageForwardReferences: 0.5,
+    cohesionIndex: 0.7,
+    firstPersonSingularRate: 0.05,
+    firstPersonPluralRate: 0.02,
+    secondPersonRate: 0.1,
+    selfReferenceRatio: 0.3,
+    empathyPhraseRate: 0.02,
+    humorMarkerRate: 0.01,
+    markupBoldRate: 0,
+    markupItalicRate: 0,
+    hyperlinkRate: 0,
+    codeBlockRate: 0,
+    rhetoricalQuestionRate: 0.01,
+    analogyRate: 0.01,
+    imperativeSentenceRate: 0.1,
+    expletiveOpeningRate: 0.05,
+    parallelismRate: 0.02,
+    greeting: null,
+    signOff: null,
+    greetingTotal: 0,
+    signOffTotal: 0,
   };
 };
 

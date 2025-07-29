@@ -1,5 +1,5 @@
-import { createContext, useContext, type ReactNode } from 'react';
-import { toolExecutors } from '@/lib/elevenlabs-tools';
+import { createContext, useContext, useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
 
 // Placeholder for removed elevenlabs functionality
 const useConversation = () => ({
@@ -9,6 +9,8 @@ const useConversation = () => ({
   isRecording: false,
   startRecording: () => {},
   stopRecording: () => {},
+  startSession: async () => {},
+  endSession: async () => {},
 });
 
 interface VoiceContextType {
@@ -64,38 +66,20 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         setCurrentContext(context);
       }
 
-      const agentId = import.meta.env.VITE_PUBLIC_ELEVENLABS_AGENT_ID;
-      if (!agentId) throw new Error('ElevenLabs Agent ID not configured');
-
-      await conversation.startSession({
-        agentId: agentId,
-        onMessage: (message) => {
-          // TODO: Handle message, ideally send it to ai chat agent or show it somewhere on the screen?
-          console.log('message', message);
-        },
-        dynamicVariables: {
-          user_name: session?.user.name.split(' ')[0] || 'User',
-          user_email: session?.user.email || '',
-          current_time: new Date().toLocaleString(),
-          has_open_email: context?.hasOpenEmail ? 'yes' : 'no',
-          current_thread_id: context?.currentThreadId || 'none',
-          email_context_info: context?.hasOpenEmail
-            ? `The user currently has an email open (thread ID: ${context.currentThreadId}). When the user refers to "this email" or "the current email", you can use the getEmail or summarizeEmail tools WITHOUT providing a threadId parameter - the tools will automatically use the currently open email.`
-            : 'No email is currently open. If the user asks about an email, you will need to ask them to open it first or provide a specific thread ID.',
-          ...context,
-        },
-      });
-
+      // Voice functionality removed to reduce bundle size
+      toast.info('Voice functionality has been removed to reduce bundle size');
       setOpen(true);
     } catch {
       toast.error('Failed to start conversation. Please try again.');
+    } finally {
+      setIsInitializing(false);
     }
   };
 
   const endConversation = async () => {
     try {
-      await conversation.endSession();
       setCurrentContext(null);
+      setOpen(false);
     } catch {
       toast.error('Failed to end conversation');
     }

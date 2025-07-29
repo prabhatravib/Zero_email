@@ -15,11 +15,85 @@ import { sanitizeTipTapHtml } from '../sanitize-tip-tap-html';
 import type { MailManager, ManagerConfig } from './types';
 import { OAuth2Client } from 'google-auth-library';
 import type { CreateDraftData } from '../schemas';
-import { createMimeMessage } from 'mimetext';
 import { cleanSearchValue } from '../utils';
 import { env } from 'cloudflare:workers';
 import { Effect } from 'effect';
 import * as he from 'he';
+
+// Simple MIME message builder
+class SimpleMimeMessage {
+  private headers: Map<string, string> = new Map();
+  private body: string = '';
+  private boundary: string;
+
+  constructor() {
+    this.boundary = `boundary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  setSender(sender: string) {
+    this.headers.set('From', sender);
+  }
+
+  setRecipients(recipients: Array<{ name: string; addr: string }>) {
+    const to = recipients.map(r => r.name ? `${r.name} <${r.addr}>` : r.addr).join(', ');
+    this.headers.set('To', to);
+  }
+
+  setCc(recipients: Array<{ name: string; addr: string }>) {
+    const cc = recipients.map(r => r.name ? `${r.name} <${r.addr}>` : r.addr).join(', ');
+    this.headers.set('Cc', cc);
+  }
+
+  setBcc(recipients: Array<{ name: string; addr: string }>) {
+    const bcc = recipients.map(r => r.name ? `${r.name} <${r.addr}>` : r.addr).join(', ');
+    this.headers.set('Bcc', bcc);
+  }
+
+  setSubject(subject: string) {
+    this.headers.set('Subject', subject);
+  }
+
+  setBody(body: string) {
+    this.body = body;
+  }
+
+  setReplyTo(replyTo: string) {
+    this.headers.set('In-Reply-To', replyTo);
+    this.headers.set('References', replyTo);
+  }
+
+  addAttachment(filename: string, contentType: string, data: string) {
+    // For now, we'll just append attachments to the body
+    // This is a simplified version
+    this.body += `\n\n--${this.boundary}\n`;
+    this.body += `Content-Type: ${contentType}; name="${filename}"\n`;
+    this.body += `Content-Disposition: attachment; filename="${filename}"\n`;
+    this.body += `Content-Transfer-Encoding: base64\n\n`;
+    this.body += data;
+  }
+
+  build(): string {
+    let message = '';
+    
+    // Add headers
+    for (const [key, value] of this.headers) {
+      message += `${key}: ${value}\n`;
+    }
+    
+    // Add content type header
+    message += `Content-Type: text/html; charset=UTF-8\n`;
+    message += `MIME-Version: 1.0\n\n`;
+    
+    // Add body
+    message += this.body;
+    
+    return message;
+  }
+}
+
+function createMimeMessage(): SimpleMimeMessage {
+  return new SimpleMimeMessage();
+}
 
 // Lazy load heavy imports
 let gmailApi: typeof import('@googleapis/gmail') | undefined;
@@ -1027,29 +1101,14 @@ export class GoogleMailManager implements MailManager {
     const { html: processedMessage, inlineImages } = await sanitizeTipTapHtml(message.trim());
 
     if (originalMessage) {
-      msg.addMessage({
-        contentType: 'text/html',
-        data: `${processedMessage}${originalMessage}`,
-      });
+      msg.setBody(`${processedMessage}${originalMessage}`);
     } else {
-      msg.addMessage({
-        contentType: 'text/html',
-        data: processedMessage,
-      });
+      msg.setBody(processedMessage);
     }
 
     if (inlineImages.length > 0) {
       for (const image of inlineImages) {
-        msg.addAttachment({
-          inline: true,
-          filename: `${image.cid}`,
-          contentType: image.mimeType,
-          data: image.data,
-          headers: {
-            'Content-ID': `<${image.cid}>`,
-            'Content-Disposition': 'inline',
-          },
-        });
+        msg.addAttachment(image.cid, image.mimeType, image.data);
       }
     }
 
@@ -1065,7 +1124,7 @@ export class GoogleMailManager implements MailManager {
                 if (!ref.endsWith('>')) ref = `${ref}>`;
                 return ref;
               });
-            msg.setHeader(key, refs.join(' '));
+            msg.setReplyTo(refs.join(' '));
           } else {
             msg.setHeader(key, value);
           }
@@ -1077,15 +1136,11 @@ export class GoogleMailManager implements MailManager {
       for (const file of attachments) {
         const base64Content = file.base64;
 
-        msg.addAttachment({
-          filename: file.name,
-          contentType: file.type || 'application/octet-stream',
-          data: base64Content,
-        });
+        msg.addAttachment(file.name, file.type || 'application/octet-stream', base64Content);
       }
     }
 
-    const emailContent = msg.asRaw();
+    const emailContent = msg.build();
     const encodedMessage = Buffer.from(emailContent).toString('base64');
 
     return {

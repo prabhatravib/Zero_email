@@ -1,12 +1,11 @@
-import { composeEmail } from '../../trpc/routes/ai/compose';
-import { perplexity } from '@ai-sdk/perplexity';
-import { generateText, tool } from 'ai';
+import { tool } from 'ai';
+import { generateText } from 'ai';
+import { z } from 'zod';
 
 import { getZeroAgent } from '../../lib/server-utils';
 import { colors } from '../../lib/prompts';
 import { env } from 'cloudflare:workers';
 import { Tools } from '../../types';
-import { z } from 'zod';
 
 type ModelTypes = 'summarize' | 'general' | 'chat' | 'vectorize';
 
@@ -145,12 +144,13 @@ const composeEmailTool = (connectionId: string) =>
         .describe('Previous messages in the thread for context'),
     }),
     execute: async (data) => {
-      const newBody = await composeEmail({
-        ...data,
-        username: 'AI Assistant',
-        connectionId,
-      });
-      return { newBody };
+      // const newBody = await composeEmail({
+      //   ...data,
+      //   username: 'AI Assistant',
+      //   connectionId,
+      // });
+      // return { newBody };
+      return { newBody: 'Compose email functionality is currently unavailable.' };
     },
   });
 
@@ -358,18 +358,8 @@ export const webSearch = () =>
     }),
     execute: async ({ query }) => {
       try {
-        const response = await generateText({
-          model: perplexity('sonar'),
-          messages: [
-            { role: 'system', content: 'Be precise and concise.' },
-            { role: 'system', content: 'Do not include sources in your response.' },
-            { role: 'system', content: 'Do not use markdown formatting in your response.' },
-            { role: 'user', content: query },
-          ],
-          maxTokens: 1024,
-        });
-
-        return response.text;
+        // Web search functionality removed to reduce bundle size
+        return `Web search functionality has been removed to reduce bundle size. Query was: "${query}"`;
       } catch (error) {
         console.error('Error searching the web:', error);
         throw new Error('Failed to search the web');
@@ -395,6 +385,10 @@ export const tools = async (connectionId: string) => {
       parameters: z.object({
         query: z.string().describe('The query to search the web for'),
       }),
+      execute: async ({ query }) => {
+        // Web search functionality removed to reduce bundle size
+        return `Web search functionality has been removed to reduce bundle size. Query was: "${query}"`;
+      },
     }),
     [Tools.InboxRag]: tool({
       description:

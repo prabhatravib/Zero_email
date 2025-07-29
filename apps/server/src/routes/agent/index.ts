@@ -45,7 +45,6 @@ import { AIChatAgent } from 'agents/ai-chat-agent';
 import { ToolOrchestrator } from './orchestrator';
 import { getPromptName } from '../../pipelines';
 import { connection } from '../../db/schema';
-import type { WSMessage } from 'partyserver';
 import { tools as authTools } from './tools';
 import { processToolCalls } from './utils';
 import { env } from 'cloudflare:workers';
@@ -55,18 +54,18 @@ import { DriverRpcDO } from './rpc';
 import { eq } from 'drizzle-orm';
 import { Effect } from 'effect';
 
+// Simple interface to replace partyserver WSMessage
+interface WSMessage {
+  type: string;
+  [key: string]: any;
+}
+
 // Lazy load heavy imports
 let openaiApi: typeof import('@ai-sdk/openai') | undefined;
-let anthropicApi: typeof import('@ai-sdk/anthropic') | undefined;
 
 async function getOpenAI() {
   if (!openaiApi) openaiApi = await import('@ai-sdk/openai');
   return openaiApi.openai;
-}
-
-async function getAnthropic() {
-  if (!anthropicApi) anthropicApi = await import('@ai-sdk/anthropic');
-  return anthropicApi.anthropic;
 }
 
 const decoder = new TextDecoder();
@@ -1812,10 +1811,7 @@ export class ZeroAgent extends AIChatAgent<typeof env> {
           {},
         );
 
-        const model =
-          env.USE_OPENAI === 'true'
-            ? (await getOpenAI())(env.OPENAI_MODEL || 'gpt-4o')
-            : (await getAnthropic())(env.OPENAI_MODEL || 'claude-3-7-sonnet-20250219');
+        const model = (await getOpenAI())(env.OPENAI_MODEL || 'gpt-4o');
 
         const result = streamText({
           model,

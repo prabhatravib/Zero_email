@@ -1,19 +1,27 @@
 import type { ParsedMessage } from '../types';
-import * as cheerio from 'cheerio';
 
 export async function htmlToText(decodedBody: string): Promise<string> {
   try {
     if (!decodedBody || typeof decodedBody !== 'string') {
       return '';
     }
-    const $ = cheerio.load(decodedBody);
-    $('script').remove();
-    $('style').remove();
-    return $('body')
-      .text()
-      .replace(/\r?\n|\r/g, ' ')
-      .replace(/\s+/g, ' ')
+    
+    // Simple HTML to text conversion without cheerio
+    let text = decodedBody
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove scripts
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '') // Remove styles
+      .replace(/<[^>]*>/g, ' ') // Remove all HTML tags
+      .replace(/&nbsp;/g, ' ') // Replace non-breaking spaces
+      .replace(/&amp;/g, '&') // Replace HTML entities
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\r?\n|\r/g, ' ') // Replace newlines with spaces
+      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
       .trim();
+    
+    return text;
   } catch (error) {
     console.error('Error extracting text from HTML:', error);
     return '';

@@ -1,8 +1,4 @@
-import { Html } from '@react-email/components';
-import { render } from '@react-email/render';
-import sanitizeHtml from 'sanitize-html';
 import { v4 as uuidv4 } from 'uuid';
-import React from 'react';
 
 interface InlineImage {
   cid: string;
@@ -29,22 +25,23 @@ export const sanitizeTipTapHtml = async (
     },
   );
 
-  const clean = sanitizeHtml(processedHtml, {
-    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
-    allowedAttributes: {
-      ...sanitizeHtml.defaults.allowedAttributes,
-      img: ['src', 'alt', 'width', 'height', 'style'],
-    },
-    allowedSchemes: ['http', 'https', 'cid', 'data'],
-  });
+  // Simple HTML sanitization without external dependencies
+  const clean = processedHtml
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+\s*=/gi, '');
 
-  const renderedHtml = await render(
-    React.createElement(
-      Html,
-      {},
-      React.createElement('div', { dangerouslySetInnerHTML: { __html: clean } }),
-    ) as any,
-  );
+  const renderedHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <div>${clean}</div>
+</body>
+</html>`;
 
   return {
     html: renderedHtml,

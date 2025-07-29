@@ -208,7 +208,14 @@ export class DbRpcDO extends RpcTarget {
 }
 
 class ZeroDB extends DurableObject<Env> {
-  db: DB = createDb(env.HYPERDRIVE.connectionString).db;
+  private _db: DB | undefined;
+
+  get db(): DB {
+    if (!this._db) {
+      this._db = createDb(env.HYPERDRIVE.connectionString).db;
+    }
+    return this._db;
+  }
 
   async setMetaData(userId: string) {
     return new DbRpcDO(this, userId);
@@ -530,19 +537,27 @@ class ZeroDB extends DurableObject<Env> {
 
 export default class extends WorkerEntrypoint<typeof env> {
   db: DB | undefined;
+  private _auth: ReturnType<typeof createAuth> | undefined;
+
+  get auth() {
+    if (!this._auth) {
+      this._auth = createAuth();
+    }
+    return this._auth;
+  }
+
   private api = new Hono<HonoContext>()
     .use(contextStorage())
     .use('*', async (c, next) => {
-      const auth = createAuth();
-      c.set('auth', auth);
-      const session = await auth.api.getSession({ headers: c.req.raw.headers });
+      c.set('auth', this.auth);
+      const session = await this.auth.api.getSession({ headers: c.req.raw.headers });
       c.set('sessionUser', session?.user);
 
       if (c.req.header('Authorization') && !session?.user) {
         const token = c.req.header('Authorization')?.split(' ')[1];
 
         if (token) {
-          const localJwks = await auth.api.getJwks();
+          const localJwks = await this.auth.api.getJwks();
           const jwks = createLocalJWKSet(localJwks);
 
           const { payload } = await jwtVerify(token, jwks);
@@ -623,8 +638,7 @@ export default class extends WorkerEntrypoint<typeof env> {
       }),
     )
     .get('.well-known/oauth-authorization-server', async (c) => {
-      const auth = createAuth();
-      return (await getBetterAuthPlugins()).oAuthDiscoveryMetadata(auth)(c.req.raw);
+      return (await getBetterAuthPlugins()).oAuthDiscoveryMetadata(this.auth)(c.req.raw);
     })
     .mount(
       '/sse',

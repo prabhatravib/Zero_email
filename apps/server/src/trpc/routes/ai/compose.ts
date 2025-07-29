@@ -7,11 +7,27 @@ import { StyledEmailAssistantSystemPrompt } from '../../../lib/prompts';
 import { webSearch } from '../../../routes/agent/tools';
 import { activeConnectionProcedure } from '../../trpc';
 import { getPrompt } from '../../../lib/brain';
-import { stripHtml } from 'string-strip-html';
 import { EPrompts } from '../../../types';
 import { env } from 'cloudflare:workers';
 import { generateText } from 'ai';
 import { z } from 'zod';
+
+// Simple HTML stripping function
+function stripHtml(html: string): { result: string } {
+  const result = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+  return { result };
+}
 
 // Lazy load heavy imports
 let openaiApi: typeof import('@ai-sdk/openai') | undefined;

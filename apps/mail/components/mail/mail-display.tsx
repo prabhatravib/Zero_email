@@ -41,7 +41,6 @@ import { useAttachments } from '@/hooks/use-attachments';
 import { useTRPC } from '@/providers/query-provider';
 import { useThreadLabels } from '@/hooks/use-labels';
 import { useMutation } from '@tanstack/react-query';
-import { Markdown } from '@react-email/components';
 import { useSummary } from '@/hooks/use-summary';
 import { TextShimmer } from '../ui/text-shimmer';
 import { useThread } from '@/hooks/use-threads';
@@ -341,7 +340,7 @@ const AiSummary = () => {
         )}
       </div>
       {showSummary && (
-        <Markdown markdownContainerStyles={{ fontSize: 15 }}>{summary?.data.short || ''}</Markdown>
+        <div className="text-sm leading-relaxed">{summary?.data.short || ''}</div>
       )}
     </div>
   );
