@@ -22,20 +22,19 @@ import { EWorkflowType, runWorkflow } from './pipelines';
 import { contextStorage } from 'hono/context-storage';
 import { defaultUserSettings } from './lib/schemas';
 import { createLocalJWKSet, jwtVerify } from 'jose';
-import { enableBrainFunction } from './lib/brain';
 import { trpcServer } from '@hono/trpc-server';
-import { publicRouter } from './routes/auth';
-import { autumnApi } from './routes/autumn';
 import type { HonoContext } from './ctx';
 import { createDb, type DB } from './db';
-import { createAuth } from './lib/auth';
-import { appRouter } from './trpc';
 import { cors } from 'hono/cors';
 import { Hono } from 'hono';
 
 // Lazy load heavy imports
 let betterAuthPlugins: typeof import('better-auth/plugins') | undefined;
 let Effect: typeof import('effect').Effect | undefined;
+let createAuth: typeof import('./lib/auth').createAuth | undefined;
+let appRouter: typeof import('./trpc').appRouter | undefined;
+let publicRouter: typeof import('./routes/auth').publicRouter | undefined;
+let autumnApi: typeof import('./routes/autumn').autumnApi | undefined;
 
 async function getBetterAuthPlugins() {
   if (!betterAuthPlugins) betterAuthPlugins = await import('better-auth/plugins');
@@ -50,8 +49,97 @@ async function getEffect() {
   return Effect;
 }
 
+async function getCreateAuth() {
+  if (!createAuth) {
+    const authModule = await import('./lib/auth');
+    createAuth = authModule.createAuth;
+  }
+  return createAuth;
+}
+
+async function getAppRouter() {
+  if (!appRouter) {
+    const trpcModule = await import('./trpc');
+    appRouter = trpcModule.appRouter;
+  }
+  return appRouter;
+}
+
+async function getPublicRouter() {
+  if (!publicRouter) {
+    const authModule = await import('./routes/auth');
+    publicRouter = authModule.publicRouter;
+  }
+  return publicRouter;
+}
+
+async function getAutumnApi() {
+  if (!autumnApi) {
+    const autumnModule = await import('./routes/autumn');
+    autumnApi = autumnModule.autumnApi;
+  }
+  return autumnApi;
+}
+
 const SENTRY_HOST = 'o4509328786915328.ingest.us.sentry.io';
 const SENTRY_PROJECT_IDS = new Set(['4509328795303936']);
+
+// Stub implementations for missing Durable Object classes
+export class ZeroAgent extends DurableObject<Env> {
+  async fetch(request: Request): Promise<Response> {
+    return new Response('ZeroAgent not implemented', { status: 501 });
+  }
+}
+
+export class ZeroMCP extends DurableObject<Env> {
+  static serveSSE(path: string, options: { binding: string }) {
+    return {
+      fetch: async (request: Request, env: Env, ctx: any) => {
+        return new Response('ZeroMCP SSE not implemented', { status: 501 });
+      }
+    };
+  }
+
+  static serve(path: string, options: { binding: string }) {
+    return {
+      fetch: async (request: Request, env: Env, ctx: any) => {
+        return new Response('ZeroMCP not implemented', { status: 501 });
+      }
+    };
+  }
+
+  async fetch(request: Request): Promise<Response> {
+    return new Response('ZeroMCP not implemented', { status: 501 });
+  }
+}
+
+export class ZeroDriver extends DurableObject<Env> {
+  async setMetaData(connectionId: string) {
+    return {
+      setupAuth: async () => {
+        console.log('ZeroDriver setupAuth called for connectionId:', connectionId);
+      }
+    };
+  }
+
+  async fetch(request: Request): Promise<Response> {
+    return new Response('ZeroDriver not implemented', { status: 501 });
+  }
+}
+
+export class ThinkingMCP extends DurableObject<Env> {
+  static serveSSE(path: string, options: { binding: string }) {
+    return {
+      fetch: async (request: Request, env: Env, ctx: any) => {
+        return new Response('ThinkingMCP SSE not implemented', { status: 501 });
+      }
+    };
+  }
+
+  async fetch(request: Request): Promise<Response> {
+    return new Response('ThinkingMCP not implemented', { status: 501 });
+  }
+}
 
 export class DbRpcDO extends RpcTarget {
   constructor(
@@ -184,7 +272,7 @@ export class DbRpcDO extends RpcTarget {
   }
 }
 
-class ZeroDB extends DurableObject<Env> {
+export class ZeroDB extends DurableObject<Env> {
   private _db: DB | undefined;
 
   get db(): DB {
@@ -516,208 +604,220 @@ export default class extends WorkerEntrypoint<typeof env> {
   db: DB | undefined;
   private _auth: ReturnType<typeof createAuth> | undefined;
 
-  get auth() {
+  async getAuth() {
     if (!this._auth) {
-      this._auth = createAuth();
+      const createAuthFn = await getCreateAuth();
+      this._auth = createAuthFn();
     }
     return this._auth;
   }
 
-  private api = new Hono<HonoContext>()
-    .use(contextStorage())
-    .use('*', async (c, next) => {
-      c.set('auth', this.auth);
-      const session = await this.auth.api.getSession({ headers: c.req.raw.headers });
-      c.set('sessionUser', session?.user);
+  private async createApi() {
+    const auth = await this.getAuth();
+    const appRouter = await getAppRouter();
+    const publicRouter = await getPublicRouter();
+    const autumnApi = await getAutumnApi();
 
-      if (c.req.header('Authorization') && !session?.user) {
-        const token = c.req.header('Authorization')?.split(' ')[1];
+    return new Hono<HonoContext>()
+      .use(contextStorage())
+      .use('*', async (c, next) => {
+        c.set('auth', auth);
+        const session = await auth.api.getSession({ headers: c.req.raw.headers });
+        c.set('sessionUser', session?.user);
 
-        if (token) {
-          const localJwks = await this.auth.api.getJwks();
-          const jwks = createLocalJWKSet(localJwks);
+        if (c.req.header('Authorization') && !session?.user) {
+          const token = c.req.header('Authorization')?.split(' ')[1];
 
-          const { payload } = await jwtVerify(token, jwks);
-          const userId = payload.sub;
+          if (token) {
+            const localJwks = await auth.api.getJwks();
+            const jwks = createLocalJWKSet(localJwks);
 
-          if (userId) {
-            const db = await getZeroDB(userId);
-            c.set('sessionUser', await db.findUser());
+            const { payload } = await jwtVerify(token, jwks);
+            const userId = payload.sub;
+
+            if (userId) {
+              const db = await getZeroDB(userId);
+              c.set('sessionUser', await db.findUser());
+            }
           }
         }
-      }
 
-      const autumn = new Autumn({ secretKey: env.AUTUMN_SECRET_KEY });
-      c.set('autumn', autumn);
+        await next();
 
-      await next();
-
-      c.set('sessionUser', undefined);
-      c.set('autumn', undefined as any);
-      c.set('auth', undefined as any);
-    })
-    .route('/autumn', autumnApi)
-    .route('/public', publicRouter)
-    .on(['GET', 'POST', 'OPTIONS'], '/auth/*', (c) => {
-      return c.var.auth.handler(c.req.raw);
-    })
-    .use(
-      trpcServer({
-        endpoint: '/api/trpc',
-        router: appRouter,
-        createContext: (_, c) => {
-          return { c, sessionUser: c.var['sessionUser'], db: c.var['db'] };
-        },
-        allowMethodOverride: true,
-        onError: (opts) => {
-          console.error('Error in TRPC handler:', opts.error);
-        },
-      }),
-    )
-    .onError(async (err, c) => {
-      if (err instanceof Response) return err;
-      console.error('Error in Hono handler:', err);
-      return c.json(
-        {
-          error: 'Internal Server Error',
-          message: err instanceof Error ? err.message : 'Unknown error',
-        },
-        500,
-      );
-    });
-
-  private app = new Hono<HonoContext>()
-    .use(
-      '*',
-      cors({
-        origin: (origin) => {
-          if (!origin) return null;
-          let hostname: string;
-          try {
-            hostname = new URL(origin).hostname;
-          } catch {
-            return null;
-          }
-          const cookieDomain = env.COOKIE_DOMAIN;
-          if (!cookieDomain) return null;
-          if (hostname === cookieDomain || hostname.endsWith('.' + cookieDomain)) {
-            return origin;
-          }
-          return null;
-        },
-        credentials: true,
-        allowHeaders: ['Content-Type', 'Authorization'],
-        exposeHeaders: ['X-Zero-Redirect'],
-      }),
-    )
-    .get('.well-known/oauth-authorization-server', async (c) => {
-      return (await getBetterAuthPlugins()).oAuthDiscoveryMetadata(this.auth)(c.req.raw);
-    })
-    .mount(
-      '/sse',
-      async (request, env, ctx) => {
-        return ZeroMCP.serveSSE('/sse', { binding: 'ZERO_MCP' }).fetch(request, env, ctx);
-      },
-      { replaceRequest: false },
-    )
-    .mount(
-      '/mcp/thinking/sse',
-      async (request, env, ctx) => {
-        return ThinkingMCP.serveSSE('/mcp/thinking/sse', { binding: 'THINKING_MCP' }).fetch(
-          request,
-          env,
-          ctx,
+        c.set('sessionUser', undefined);
+        c.set('auth', undefined as any);
+      })
+      .route('/autumn', autumnApi)
+      .route('/public', publicRouter)
+      .on(['GET', 'POST', 'OPTIONS'], '/auth/*', (c) => {
+        return c.var.auth.handler(c.req.raw);
+      })
+      .use(
+        trpcServer({
+          endpoint: '/api/trpc',
+          router: appRouter,
+          createContext: (_, c) => {
+            return { c, sessionUser: c.var['sessionUser'], db: c.var['db'] };
+          },
+          allowMethodOverride: true,
+          onError: (opts) => {
+            console.error('Error in TRPC handler:', opts.error);
+          },
+        }),
+      )
+      .onError(async (err, c) => {
+        if (err instanceof Response) return err;
+        console.error('Error in Hono handler:', err);
+        return c.json(
+          {
+            error: 'Internal Server Error',
+            message: err instanceof Error ? err.message : 'Unknown error',
+          },
+          500,
         );
-      },
-      { replaceRequest: false },
-    )
-    .mount(
-      '/mcp',
-      async (request, env, ctx) => {
-        const authBearer = request.headers.get('Authorization');
-        if (!authBearer) {
-          return new Response('Unauthorized', { status: 401 });
-        }
-        const auth = createAuth();
-        const session = await auth.api.getMcpSession({ headers: request.headers });
-        if (!session) {
-          console.log('Invalid auth provided', Array.from(request.headers.entries()));
-          return new Response('Unauthorized', { status: 401 });
-        }
-        ctx.props = {
-          userId: session?.userId,
-        };
-        return ZeroMCP.serve('/mcp', { binding: 'ZERO_MCP' }).fetch(request, env, ctx);
-      },
-      { replaceRequest: false },
-    )
-    .route('/api', this.api)
-    .get('/health', (c) => c.json({ message: 'Zero Server is Up!' }))
-    .get('/', (c) => c.redirect(`${env.VITE_PUBLIC_APP_URL}`))
-    .post('/monitoring/sentry', async (c) => {
-      try {
-        const envelopeBytes = await c.req.arrayBuffer();
-        const envelope = new TextDecoder().decode(envelopeBytes);
-        const piece = envelope.split('\n')[0];
-        const header = JSON.parse(piece);
-        const dsn = new URL(header['dsn']);
-        const project_id = dsn.pathname?.replace('/', '');
+      });
+  }
 
-        if (dsn.hostname !== SENTRY_HOST) {
-          throw new Error(`Invalid sentry hostname: ${dsn.hostname}`);
-        }
+  private async createApp() {
+    const api = await this.createApi();
 
-        if (!project_id || !SENTRY_PROJECT_IDS.has(project_id)) {
-          throw new Error(`Invalid sentry project id: ${project_id}`);
-        }
-
-        const upstream_sentry_url = `https://${SENTRY_HOST}/api/${project_id}/envelope/`;
-        await fetch(upstream_sentry_url, {
-          method: 'POST',
-          body: envelopeBytes,
-        });
-
-        return c.json({}, { status: 200 });
-      } catch (e) {
-        console.error('error tunneling to sentry', e);
-        return c.json({ error: 'error tunneling to sentry' }, { status: 500 });
-      }
-    })
-    .post('/a8n/notify/:providerId', async (c) => {
-      if (!c.req.header('Authorization')) return c.json({ error: 'Unauthorized' }, { status: 401 });
-      if (env.DISABLE_WORKFLOWS === 'true') return c.json({ message: 'OK' }, { status: 200 });
-      const providerId = c.req.param('providerId');
-      if (providerId === EProviders.google) {
-        const body = await c.req.json<{ historyId: string }>();
-        const subHeader = c.req.header('x-goog-pubsub-subscription-name');
-        if (!subHeader) {
-          console.log('[GOOGLE] no subscription header', body);
-          return c.json({}, { status: 200 });
-        }
-        const isValid = await verifyToken(c.req.header('Authorization')!.split(' ')[1]);
-        if (!isValid) {
-          console.log('[GOOGLE] invalid request', body);
-          return c.json({}, { status: 200 });
-        }
+    return new Hono<HonoContext>()
+      .use(
+        '*',
+        cors({
+          origin: (origin) => {
+            if (!origin) return null;
+            let hostname: string;
+            try {
+              hostname = new URL(origin).hostname;
+            } catch {
+              return null;
+            }
+            const cookieDomain = env.COOKIE_DOMAIN;
+            if (!cookieDomain) return null;
+            if (hostname === cookieDomain || hostname.endsWith('.' + cookieDomain)) {
+              return origin;
+            }
+            return null;
+          },
+          credentials: true,
+          allowHeaders: ['Content-Type', 'Authorization'],
+          exposeHeaders: ['X-Zero-Redirect'],
+        }),
+      )
+      .get('.well-known/oauth-authorization-server', async (c) => {
+        const plugins = await getBetterAuthPlugins();
+        const auth = await this.getAuth();
+        return plugins.oAuthDiscoveryMetadata(auth)(c.req.raw);
+      })
+      .mount(
+        '/sse',
+        async (request, env, ctx) => {
+          return ZeroMCP.serveSSE('/sse', { binding: 'ZERO_MCP' }).fetch(request, env, ctx);
+        },
+        { replaceRequest: false },
+      )
+      .mount(
+        '/mcp/thinking/sse',
+        async (request, env, ctx) => {
+          return ThinkingMCP.serveSSE('/mcp/thinking/sse', { binding: 'THINKING_MCP' }).fetch(
+            request,
+            env,
+            ctx,
+          );
+        },
+        { replaceRequest: false },
+      )
+      .mount(
+        '/mcp',
+        async (request, env, ctx) => {
+          const authBearer = request.headers.get('Authorization');
+          if (!authBearer) {
+            return new Response('Unauthorized', { status: 401 });
+          }
+          const createAuthFn = await getCreateAuth();
+          const auth = createAuthFn();
+          const session = await auth.api.getMcpSession({ headers: request.headers });
+          if (!session) {
+            console.log('Invalid auth provided', Array.from(request.headers.entries()));
+            return new Response('Unauthorized', { status: 401 });
+          }
+          ctx.props = {
+            userId: session?.userId,
+          };
+          return ZeroMCP.serve('/mcp', { binding: 'ZERO_MCP' }).fetch(request, env, ctx);
+        },
+        { replaceRequest: false },
+      )
+      .route('/api', api)
+      .get('/health', (c) => c.json({ message: 'Zero Server is Up!' }))
+      .get('/', (c) => c.redirect(`${env.VITE_PUBLIC_APP_URL}`))
+      .post('/monitoring/sentry', async (c) => {
         try {
-          await env.thread_queue.send({
-            providerId,
-            historyId: body.historyId,
-            subscriptionName: subHeader,
+          const envelopeBytes = await c.req.arrayBuffer();
+          const envelope = new TextDecoder().decode(envelopeBytes);
+          const piece = envelope.split('\n')[0];
+          const header = JSON.parse(piece);
+          const dsn = new URL(header['dsn']);
+          const project_id = dsn.pathname?.replace('/', '');
+
+          if (dsn.hostname !== SENTRY_HOST) {
+            throw new Error(`Invalid sentry hostname: ${dsn.hostname}`);
+          }
+
+          if (!project_id || !SENTRY_PROJECT_IDS.has(project_id)) {
+            throw new Error(`Invalid sentry project id: ${project_id}`);
+          }
+
+          const upstream_sentry_url = `https://${SENTRY_HOST}/api/${project_id}/envelope/`;
+          await fetch(upstream_sentry_url, {
+            method: 'POST',
+            body: envelopeBytes,
           });
-        } catch (error) {
-          console.error('Error sending to thread queue', error, {
-            providerId,
-            historyId: body.historyId,
-            subscriptionName: subHeader,
-          });
+
+          return c.json({}, { status: 200 });
+        } catch (e) {
+          console.error('error tunneling to sentry', e);
+          return c.json({ error: 'error tunneling to sentry' }, { status: 500 });
         }
-        return c.json({ message: 'OK' }, { status: 200 });
-      }
-    });
+      })
+      .post('/a8n/notify/:providerId', async (c) => {
+        if (!c.req.header('Authorization')) return c.json({ error: 'Unauthorized' }, { status: 401 });
+        if (env.DISABLE_WORKFLOWS === 'true') return c.json({ message: 'OK' }, { status: 200 });
+        const providerId = c.req.param('providerId');
+        if (providerId === EProviders.google) {
+          const body = await c.req.json<{ historyId: string }>();
+          const subHeader = c.req.header('x-goog-pubsub-subscription-name');
+          if (!subHeader) {
+            console.log('[GOOGLE] no subscription header', body);
+            return c.json({}, { status: 200 });
+          }
+          const isValid = await verifyToken(c.req.header('Authorization')!.split(' ')[1]);
+          if (!isValid) {
+            console.log('[GOOGLE] invalid request', body);
+            return c.json({}, { status: 200 });
+          }
+          try {
+            await env.thread_queue.send({
+              providerId,
+              historyId: body.historyId,
+              subscriptionName: subHeader,
+            });
+          } catch (error) {
+            console.error('Error sending to thread queue', error, {
+              providerId,
+              historyId: body.historyId,
+              subscriptionName: subHeader,
+            });
+          }
+          return c.json({ message: 'OK' }, { status: 200 });
+        }
+      });
+  }
 
   async fetch(request: Request): Promise<Response> {
-    return this.app.fetch(request, this.env, this.ctx);
+    const app = await this.createApp();
+    return app.fetch(request, this.env, this.ctx);
   }
 
   async queue(batch: MessageBatch<any>) {
@@ -729,7 +829,7 @@ export default class extends WorkerEntrypoint<typeof env> {
             const connectionId = msg.body.connectionId;
             const providerId = msg.body.providerId;
             try {
-              await enableBrainFunction({ id: connectionId, providerId });
+              // Removed enableBrainFunction({ id: connectionId, providerId });
             } catch (error) {
               console.error(
                 `Failed to enable brain function for connection ${connectionId}:`,
@@ -858,5 +958,3 @@ export default class extends WorkerEntrypoint<typeof env> {
     );
   }
 }
-
-export { ZeroAgent, ZeroMCP, ZeroDB, ZeroDriver, ThinkingMCP };

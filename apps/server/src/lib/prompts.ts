@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { dedent } from 'dedent';
+import dedent from 'dedent';
 
 export const colors = [
   '#000000',

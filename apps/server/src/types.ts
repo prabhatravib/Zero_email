@@ -53,7 +53,6 @@ export interface Env {
   DISABLE_WORKFLOWS: string;
   AUTORAG_ID: string;
   USE_OPENAI: string;
-  AUTUMN_SECRET_KEY: string;
 }
 
 export type DB = DrizzleD1Database<typeof schema>;
