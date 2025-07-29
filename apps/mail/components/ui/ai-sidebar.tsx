@@ -14,12 +14,22 @@ import { Button } from '@/components/ui/button';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useLabels } from '@/hooks/use-labels';
 
-import { useAgentChat } from 'agents/ai-react';
+// Placeholder for removed agents functionality
+const useAgentChat = () => ({
+  messages: [],
+  sendMessage: async () => {},
+  isLoading: false,
+});
+
+const useAgent = () => ({
+  agent: null,
+  isLoading: false,
+});
+
 import { X, Expand, Plus } from 'lucide-react';
 import { Gauge } from '@/components/ui/gauge';
 import { useParams } from 'react-router';
 
-import { useAgent } from 'agents/react';
 import { useQueryState } from 'nuqs';
 import { cn } from '@/lib/utils';
 import posthog from 'posthog-js';

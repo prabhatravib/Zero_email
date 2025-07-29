@@ -1,12 +1,11 @@
-import { createAuthClient } from 'better-auth/client';
-
-const authClient = createAuthClient({
-  baseURL: import.meta.env.VITE_PUBLIC_BACKEND_URL,
-  fetchOptions: {
-    credentials: 'include',
-  },
-  plugins: [],
+// Placeholder for removed better-auth functionality
+const createAuthClient = () => ({
+  // Placeholder implementation
 });
+
+import type { Auth } from '@zero/server/auth';
+
+const authClient = createAuthClient();
 
 export const authProxy = {
   api: {

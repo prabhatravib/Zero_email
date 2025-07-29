@@ -1,9 +1,15 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import { toolExecutors } from '@/lib/elevenlabs-tools';
-import { useConversation } from '@elevenlabs/react';
-import { useSession } from '@/lib/auth-client';
-import type { ReactNode } from 'react';
-import { toast } from 'sonner';
+
+// Placeholder for removed elevenlabs functionality
+const useConversation = () => ({
+  messages: [],
+  sendMessage: async () => {},
+  isLoading: false,
+  isRecording: false,
+  startRecording: () => {},
+  stopRecording: () => {},
+});
 
 interface VoiceContextType {
   status: string;
@@ -22,47 +28,13 @@ interface VoiceContextType {
 const VoiceContext = createContext<VoiceContextType | undefined>(undefined);
 
 export function VoiceProvider({ children }: { children: ReactNode }) {
-  const { data: session } = useSession();
   const [hasPermission, setHasPermission] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [lastToolCall, setLastToolCall] = useState<string | null>(null);
   const [isOpen, setOpen] = useState(false);
   const [currentContext, setCurrentContext] = useState<any>(null);
 
-  const conversation = useConversation({
-    onConnect: () => {
-      setIsInitializing(false);
-      // TODO: Send initial context if available when API supports it
-    },
-    onDisconnect: () => {
-      setIsInitializing(false);
-      setLastToolCall(null);
-    },
-    onError: (error: string | Error) => {
-      toast.error(typeof error === 'string' ? error : error.message);
-      setIsInitializing(false);
-    },
-    clientTools: Object.entries(toolExecutors).reduce(
-      (acc: Record<string, any>, [name, executor]) => {
-        acc[name] = async (params: any) => {
-          console.log(`[Voice Tool] ${name} called with params:`, params);
-          setLastToolCall(`Executing: ${name}`);
-
-          const paramsWithContext = {
-            ...params,
-            _context: currentContext,
-          };
-
-          const result = await executor(paramsWithContext);
-          console.log(`[Voice Tool] ${name} result:`, result);
-          setLastToolCall(null);
-          return result;
-        };
-        return acc;
-      },
-      {},
-    ),
-  });
+  const conversation = useConversation();
 
   const { status, isSpeaking } = conversation;
 

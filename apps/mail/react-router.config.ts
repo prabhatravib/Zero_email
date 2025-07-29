@@ -11,4 +11,6 @@ export default {
   future: {
     unstable_viteEnvironmentApi: true,
   },
+  serverBuildPath: 'build/server/index.js',
+  serverModuleFormat: 'esm',
 } satisfies Config;
