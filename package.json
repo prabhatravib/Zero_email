@@ -10,7 +10,7 @@
     "deploy:web":    "pnpm run build:web && render deploy --branch main",
     "deploy:full":   "pnpm run build:web && cd apps/server && wrangler deploy -e production",
     "deploy:server-only": "cd apps/server && wrangler deploy -e production",
-    "deploy": "cd apps/server && wrangler deploy -e production"
+    "deploy": "pnpm run build:web && cd apps/server && wrangler deploy -e production"
   },
   "devDependencies": {
     "@types/node": "22.15.29",
