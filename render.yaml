@@ -5,7 +5,7 @@ services:
     buildCommand: |
       export VITE_PUBLIC_BACKEND_URL=https://pitext-mail.prabhatravib.workers.dev
       cd apps/mail && pnpm install && pnpm run build
-    startCommand: cd apps/mail && pnpm exec vite preview --outDir build/client --host 0.0.0.0 --port $PORT
+    startCommand: cd apps/mail && pnpm exec vite preview --host 0.0.0.0 --port $PORT
     envVars:
       - key: NODE_ENV
         value: production
