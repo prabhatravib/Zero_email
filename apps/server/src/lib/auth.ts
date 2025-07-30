@@ -73,7 +73,8 @@ export const createAuth = () => {
   const dub = new Dub();
 
   return betterAuth({
-    adapter: drizzleAdapter(createDb()),
+    // Initialise the Drizzle ORM with the D1 binding and pass the resulting DB instance to the adapter.
+    adapter: drizzleAdapter(createDb(env.DB).db, { provider: 'sqlite' }),
     providers: getSocialProviders(),
     plugins: [
       dubAnalytics({
@@ -204,7 +205,8 @@ const createAuthConfig = () => {
   const cache = redis();
   const { db } = createDb(env.DB);
   return {
-    database: drizzleAdapter(db, { provider: 'pg' }),
+    // Use the SQLite provider (Cloudflare D1) with the Drizzle adapter
+    database: drizzleAdapter(db, { provider: 'sqlite' }),
     secondaryStorage: {
       get: async (key: string) => {
         const value = await cache.get(key);
