@@ -74,74 +74,94 @@ export const mailRouter = router({
 
       console.debug('[listThreads] input:', { folder, maxResults, cursor, q, labelIds });
 
-      if (folder === FOLDERS.DRAFT) {
-        console.debug('[listThreads] Listing drafts');
-        const drafts = await agent.listDrafts({
-          q,
+      try {
+        // Add timeout for large inboxes
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Request timeout')), 30000); // 30 second timeout
+        });
+
+        if (folder === FOLDERS.DRAFT) {
+          console.debug('[listThreads] Listing drafts');
+          const draftsPromise = agent.listDrafts({
+            q,
+            maxResults,
+            pageToken: cursor,
+          });
+          
+          const drafts = await Promise.race([draftsPromise, timeoutPromise]);
+          console.debug('[listThreads] Drafts result:', drafts);
+          return drafts;
+        }
+
+        type ThreadItem = { id: string; historyId: string | null; $raw?: unknown };
+
+        let threadsResponse: IGetThreadsResponse;
+
+        // Apply folder-to-label mapping when no search query is provided
+        const folderLabelId = getFolderLabelId(folder);
+        const effectiveLabelIds = q ? labelIds : [...labelIds, folderLabelId].filter(Boolean);
+
+        const threadsPromise = agent.rawListThreads({
+          folder,
+          query: q,
           maxResults,
+          labelIds: effectiveLabelIds,
           pageToken: cursor,
         });
-        console.debug('[listThreads] Drafts result:', drafts);
-        return drafts;
-      }
 
-      type ThreadItem = { id: string; historyId: string | null; $raw?: unknown };
+        threadsResponse = await Promise.race([threadsPromise, timeoutPromise]);
 
-      let threadsResponse: IGetThreadsResponse;
+        if (folder === FOLDERS.SNOOZED) {
+          const nowTs = Date.now();
+          const filtered: ThreadItem[] = [];
 
-      // Apply folder-to-label mapping when no search query is provided
-      const folderLabelId = getFolderLabelId(folder);
-      const effectiveLabelIds = q ? labelIds : [...labelIds, folderLabelId].filter(Boolean);
+          console.debug('[listThreads] Filtering snoozed threads at', new Date(nowTs).toISOString());
 
-      threadsResponse = await agent.rawListThreads({
-        folder,
-        query: q,
-        maxResults,
-        labelIds: effectiveLabelIds,
-        pageToken: cursor,
-      });
+          await Promise.all(
+            threadsResponse.threads.map(async (t: ThreadItem) => {
+              const keyName = `${t.id}__${activeConnection.id}`;
+              try {
+                const wakeAtIso = await env.snoozed_emails.get(keyName);
+                if (!wakeAtIso) {
+                  filtered.push(t);
+                  return;
+                }
 
-      if (folder === FOLDERS.SNOOZED) {
-        const nowTs = Date.now();
-        const filtered: ThreadItem[] = [];
+                const wakeAt = new Date(wakeAtIso).getTime();
+                if (wakeAt > nowTs) {
+                  filtered.push(t);
+                  return;
+                }
 
-        console.debug('[listThreads] Filtering snoozed threads at', new Date(nowTs).toISOString());
+                console.debug('[UNSNOOZE_ON_ACCESS] Expired thread', t.id, {
+                  wakeAtIso,
+                  now: new Date(nowTs).toISOString(),
+                });
 
-        await Promise.all(
-          threadsResponse.threads.map(async (t: ThreadItem) => {
-            const keyName = `${t.id}__${activeConnection.id}`;
-            try {
-              const wakeAtIso = await env.snoozed_emails.get(keyName);
-              if (!wakeAtIso) {
-                filtered.push(t);
-                return;
+                await agent.modifyLabels([t.id], ['INBOX'], ['SNOOZED']);
+                await env.snoozed_emails.delete(keyName);
+              } catch (error) {
+                console.error('[UNSNOOZE_ON_ACCESS] Failed for', t.id, error);
               }
+            }),
+          );
 
-              const wakeAt = new Date(wakeAtIso).getTime();
-              if (wakeAt > nowTs) {
-                filtered.push(t);
-                return;
-              }
+          return {
+            ...threadsResponse,
+            threads: filtered,
+          };
+        }
 
-              console.debug('[UNSNOOZE_ON_ACCESS] Expired thread', t.id, {
-                wakeAtIso,
-                now: new Date(nowTs).toISOString(),
-              });
-
-              await agent.modifyLabels([t.id], ['INBOX'], ['SNOOZED']);
-              await env.snoozed_emails.delete(keyName);
-            } catch (error) {
-              console.error('[UNSNOOZE_ON_ACCESS] Failed for', t.id, error);
-              filtered.push(t);
-            }
-          }),
-        );
-
-        threadsResponse.threads = filtered;
-        console.debug('[listThreads] Snoozed threads after filtering:', filtered);
+        return threadsResponse;
+      } catch (error) {
+        console.error('[listThreads] Error:', error);
+        
+        // Return empty response instead of throwing for better UX
+        return {
+          threads: [],
+          nextPageToken: null,
+        };
       }
-      console.debug('[listThreads] Returning threadsResponse:', threadsResponse);
-      return threadsResponse;
     }),
   markAsRead: activeDriverProcedure
     .input(

@@ -36,7 +36,7 @@ export const authProviders = (env: Record<string, string>): ProviderConfig[] => 
       { name: 'GOOGLE_CLIENT_SECRET', source: 'Google Cloud Console' },
     ],
     config: {
-      prompt: env.FORCE_GOOGLE_AUTH ? 'consent' : undefined,
+      prompt: 'consent', // Always request consent to ensure refresh token
       accessType: 'offline',
       scope: [
         'https://mail.google.com/',
@@ -46,6 +46,7 @@ export const authProviders = (env: Record<string, string>): ProviderConfig[] => 
       ],
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
+      redirectUri: `${env.VITE_PUBLIC_BACKEND_URL}/api/auth/callback/google`,
     },
     required: true,
   },

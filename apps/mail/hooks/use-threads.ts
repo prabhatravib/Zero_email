@@ -19,6 +19,10 @@ export const useThreads = () => {
   const isInQueue = useAtomValue(isThreadInBackgroundQueueAtom);
   const trpc = useTRPC();
   const { labels } = useSearchLabels();
+  const [recent] = useQueryState('recent');
+
+  // Determine maxResults based on recent parameter
+  const maxResults = recent === '50' ? 50 : undefined;
 
   const threadsQuery = useInfiniteQuery(
     trpc.mail.listThreads.infiniteQueryOptions(
@@ -26,6 +30,7 @@ export const useThreads = () => {
         q: searchValue.value,
         folder,
         labelIds: labels,
+        ...(maxResults && { maxResults }),
       },
       {
         initialCursor: '',
@@ -33,6 +38,13 @@ export const useThreads = () => {
         staleTime: 60 * 1000 * 1, // 1 minute
         refetchOnMount: true,
         refetchIntervalInBackground: true,
+        retry: (failureCount, error) => {
+          // Retry up to 3 times for network errors, but not for 500 errors
+          if (failureCount >= 3) return false;
+          if (error?.message?.includes('500')) return false;
+          return true;
+        },
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       },
     ),
   );

@@ -16,10 +16,8 @@ export const brainRouter = router({
   enableBrain: activeConnectionProcedure.mutation(async ({ ctx }) => {
     const connection = ctx.activeConnection as { id: string; providerId: EProviders };
     await setSubscribedState(connection.id, connection.providerId);
-    await env.subscribe_queue.send({
-      connectionId: connection.id,
-      providerId: connection.providerId,
-    } as ISubscribeBatch);
+    // Direct processing instead of queue (for free plan)
+    await enableBrainFunction({ id: connection.id, providerId: connection.providerId });
     return true;
     // return await enableBrainFunction(connection);
   }),

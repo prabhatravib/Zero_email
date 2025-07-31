@@ -702,13 +702,15 @@ const app = new Hono<HonoContext>()
         return c.json({}, { status: 200 });
       }
       try {
-        await env.thread_queue.send({
+        // Direct processing instead of queue (for free plan)
+        const workflowRunner = env.WORKFLOW_RUNNER.get(env.WORKFLOW_RUNNER.newUniqueId());
+        await workflowRunner.runMainWorkflow({
           providerId,
           historyId: body.historyId,
           subscriptionName: subHeader,
         });
       } catch (error) {
-        console.error('Error sending to thread queue', error, {
+        console.error('Error processing thread directly', error, {
           providerId,
           historyId: body.historyId,
           subscriptionName: subHeader,
@@ -719,55 +721,45 @@ const app = new Hono<HonoContext>()
   });
 export default class Entry extends WorkerEntrypoint<Env> {
   async fetch(request: Request): Promise<Response> {
+    const allowedOriginEnv = this.env.CORS_ALLOW_ORIGIN || "*";
+
+    // Handle CORS pre-flight requests early
+    if (request.method === "OPTIONS") {
+      const headers = new Headers();
+      const requestOrigin = request.headers.get("Origin") || "";
+
+      // Echo back the exact origin if it is in our allow-list
+      if (allowedOriginEnv === "*" || allowedOriginEnv.split(",").includes(requestOrigin)) {
+        headers.set("Access-Control-Allow-Origin", requestOrigin);
+      }
+
+      headers.set("Access-Control-Allow-Credentials", "true");
+      headers.set(
+        "Access-Control-Allow-Headers",
+        request.headers.get("Access-Control-Request-Headers") || "*",
+      );
+      headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+      return new Response(null, { status: 204, headers });
+    }
+
+    // Normal requests – proxy to the app and then add CORS headers
     const response = await app.fetch(request, this.env, this.ctx);
-    response.headers.set("Access-Control-Allow-Origin", "*");
-    response.headers.set("Access-Control-Allow-Headers", "*");
-    response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    const requestOrigin = request.headers.get("Origin") || "";
+    if (allowedOriginEnv === "*" || allowedOriginEnv.split(",").includes(requestOrigin)) {
+      response.headers.set("Access-Control-Allow-Origin", requestOrigin);
+    }
+    response.headers.set("Access-Control-Allow-Credentials", "true");
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    // Inform caches that the response varies based on Origin header
+    response.headers.append("Vary", "Origin");
+
     return response;
   }
   async queue(batch: MessageBatch<any>) {
     switch (true) {
-      case batch.queue.startsWith('subscribe-queue'): {
-        console.log('batch', batch);
-        await Promise.all(
-          batch.messages.map(async (msg: Message<ISubscribeBatch>) => {
-            const connectionId = msg.body.connectionId;
-            const providerId = msg.body.providerId;
-            try {
-              await enableBrainFunction({ id: connectionId, providerId });
-            } catch (error) {
-              console.error(
-                `Failed to enable brain function for connection ${connectionId}:`,
-                error,
-              );
-            }
-          }),
-        );
-        console.log('[SUBSCRIBE_QUEUE] batch done');
-        return;
-      }
-      case batch.queue.startsWith('thread-queue'): {
-        await Promise.all(
-          batch.messages.map(async (msg: Message<IThreadBatch>) => {
-            const providerId = msg.body.providerId;
-            const historyId = msg.body.historyId;
-            const subscriptionName = msg.body.subscriptionName;
-
-            try {
-              const workflowRunner = env.WORKFLOW_RUNNER.get(env.WORKFLOW_RUNNER.newUniqueId());
-              const result = await workflowRunner.runMainWorkflow({
-                providerId,
-                historyId,
-                subscriptionName,
-              });
-              console.log('[THREAD_QUEUE] result', result);
-            } catch (error) {
-              console.error('Error running workflow', error);
-            }
-          }),
-        );
-        break;
-      }
+      // Queue processing removed for free plan compatibility
+      // Direct function calls are used instead
     }
   }
   async scheduled() {

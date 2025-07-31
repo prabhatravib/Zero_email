@@ -136,7 +136,8 @@ const connectionHandlerHook = async (account: Account) => {
   }
 
   if (env.GOOGLE_S_ACCOUNT && env.GOOGLE_S_ACCOUNT !== '{}') {
-    await env.subscribe_queue.send({
+    // Direct processing instead of queue (for free plan)
+    await enableBrainFunction({
       connectionId: result.id,
       providerId: account.providerId,
     });
@@ -346,6 +347,8 @@ const createAuthConfig = () => {
       'https://sapi.0.email',
       'https://staging.0.email',
       'https://0.email',
+      'https://zero.prabhatravib.workers.dev',
+      'https://zero-api-production.prabhatravib.workers.dev',
       'http://localhost:3000',
     ],
     session: {

@@ -13,10 +13,25 @@ const ReactCompilerConfig = {
 };
 
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_PUBLIC_BACKEND_URL': JSON.stringify('https://zero-api-production.prabhatravib.workers.dev'),
+    'import.meta.env.VITE_PUBLIC_APP_URL': JSON.stringify('https://zero.prabhatravib.workers.dev'),
+  },
   plugins: [
     oxlintPlugin(),
     reactRouter(),
-    cloudflare(),
+    cloudflare({
+      environments: {
+        production: {
+          name: 'zero-production',
+          vars: {
+            VITE_PUBLIC_BACKEND_URL: 'https://zero-api-production.prabhatravib.workers.dev',
+            VITE_PUBLIC_APP_URL: 'https://zero.prabhatravib.workers.dev',
+          },
+        },
+      },
+      env: 'production',
+    }),
     babel({
       filter: /\.[jt]sx?$/,
       babelConfig: {

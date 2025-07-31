@@ -46,6 +46,7 @@ import { useQueryState } from 'nuqs';
 import { Categories } from './mail';
 import { useAtom } from 'jotai';
 
+
 const Thread = memo(
   function Thread({
     message,
@@ -925,6 +926,7 @@ export const MailList = memo(
                         clear filters
                       </button>
                     </p>
+
                   </div>
                 </div>
               </div>
