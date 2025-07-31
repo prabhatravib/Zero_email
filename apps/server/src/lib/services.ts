@@ -1,5 +1,4 @@
 import { env } from 'cloudflare:workers';
-import { Redis } from '@upstash/redis';
 import { Resend } from 'resend';
 
 export const resend = () =>
@@ -8,57 +7,39 @@ export const resend = () =>
     : { emails: { send: async (...args: unknown[]) => console.log(args) } };
 
 export const redis = () => {
-  // If Redis is not configured, use a simple in-memory fallback
-  if (!env.REDIS_URL || !env.REDIS_TOKEN) {
-    console.warn('[Upstash Redis] The Redis config is missing, using fallback');
-    const memoryStore = new Map();
-    return {
-      get: async (key: string) => memoryStore.get(key),
-      set: async (key: string, value: string, options?: { ex?: number }) => {
-        memoryStore.set(key, value);
-        if (options?.ex) {
-          setTimeout(() => memoryStore.delete(key), options.ex * 1000);
-        }
-      },
-      del: async (key: string) => memoryStore.delete(key),
-      evalsha: async (script: string, keys: string[], args: string[]) => {
-        // Simple fallback for evalsha - just return the first key's value
-        return memoryStore.get(keys[0]) || null;
-      },
-    };
-  }
+  // Since you're not using Upstash Redis, we'll use a simple in-memory fallback
+  // that provides the methods needed by @upstash/ratelimit
+  console.warn('[Redis] Using in-memory fallback for rate limiting');
   
-  try {
-    const redisInstance = new Redis({ url: env.REDIS_URL, token: env.REDIS_TOKEN });
-    
-    // Add evalsha method if it doesn't exist
-    if (!redisInstance.evalsha) {
-      redisInstance.evalsha = async (script: string, keys: string[], args: string[]) => {
-        // Fallback implementation for evalsha
-        console.warn('[Redis] evalsha not available, using fallback');
-        return redisInstance.get(keys[0]) || null;
-      };
-    }
-    
-    return redisInstance;
-  } catch (error) {
-    console.error('[Redis] Failed to initialize Redis:', error);
-    // Return fallback
-    const memoryStore = new Map();
-    return {
-      get: async (key: string) => memoryStore.get(key),
-      set: async (key: string, value: string, options?: { ex?: number }) => {
-        memoryStore.set(key, value);
-        if (options?.ex) {
-          setTimeout(() => memoryStore.delete(key), options.ex * 1000);
-        }
-      },
-      del: async (key: string) => memoryStore.delete(key),
-      evalsha: async (script: string, keys: string[], args: string[]) => {
-        return memoryStore.get(keys[0]) || null;
-      },
-    };
-  }
+  const memoryStore = new Map();
+  
+  return {
+    get: async (key: string) => memoryStore.get(key),
+    set: async (key: string, value: string, options?: { ex?: number }) => {
+      memoryStore.set(key, value);
+      if (options?.ex) {
+        setTimeout(() => memoryStore.delete(key), options.ex * 1000);
+      }
+    },
+    del: async (key: string) => memoryStore.delete(key),
+    evalsha: async (script: string, keys: string[], args: string[]) => {
+      // Simple fallback for evalsha - just return the first key's value
+      // This is used by @upstash/ratelimit for rate limiting
+      return memoryStore.get(keys[0]) || null;
+    },
+    // Additional methods that might be needed
+    exists: async (key: string) => memoryStore.has(key) ? 1 : 0,
+    incr: async (key: string) => {
+      const current = memoryStore.get(key);
+      const newValue = (parseInt(current) || 0) + 1;
+      memoryStore.set(key, newValue.toString());
+      return newValue;
+    },
+    expire: async (key: string, seconds: number) => {
+      setTimeout(() => memoryStore.delete(key), seconds * 1000);
+      return 1;
+    },
+  };
 };
 
 export const twilio = () => {

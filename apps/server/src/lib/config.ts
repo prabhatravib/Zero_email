@@ -1,10 +1,6 @@
 import { env } from 'cloudflare:workers';
 
 export interface AppConfig {
-  redis: {
-    url?: string;
-    token?: string;
-  };
   auth: {
     secret: string;
     cookieDomain: string;
@@ -20,10 +16,6 @@ export interface AppConfig {
 
 export function getConfig(): AppConfig {
   const config: AppConfig = {
-    redis: {
-      url: env.REDIS_URL,
-      token: env.REDIS_TOKEN,
-    },
     auth: {
       secret: env.BETTER_AUTH_SECRET || '',
       cookieDomain: env.COOKIE_DOMAIN || 'localhost',

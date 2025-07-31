@@ -176,7 +176,12 @@ export class DbRpcDO extends RpcTarget {
 }
 
 class ZeroDB extends DurableObject<Env> {
-  db: DB = createDb(env.HYPERDRIVE.connectionString).db;
+  db: DB;
+
+  constructor(state: DurableObjectState, env: Env) {
+    super(state, env);
+    this.db = createDb(env.HYPERDRIVE.connectionString).db;
+  }
 
   async setMetaData(userId: string) {
     return new DbRpcDO(this, userId);
@@ -541,7 +546,7 @@ const api = new Hono<HonoContext>()
       endpoint: '/api/trpc',
       router: appRouter,
       createContext: (_, c) => {
-        return { c, sessionUser: c.var['sessionUser'], db: c.var['db'] };
+        return { c, sessionUser: c.var['sessionUser'] };
       },
       allowMethodOverride: true,
       onError: (opts) => {
