@@ -31,6 +31,7 @@ import { focusedIndexAtom } from '@/hooks/use-mail-navigation';
 import { type ThreadDestination } from '@/lib/thread-actions';
 import { handleUnsubscribe } from '@/lib/email-utils.client';
 import { useThread, useThreads } from '@/hooks/use-threads';
+import { useAISidebar } from '@/components/ui/ai-sidebar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { ParsedMessage, Attachment } from '@/types';
 import { MailDisplaySkeleton } from './mail-skeleton';
@@ -52,6 +53,8 @@ import { useQueryState } from 'nuqs';
 import { format } from 'date-fns';
 import { useAtom } from 'jotai';
 import { toast } from 'sonner';
+import { AnimatePresence, motion } from 'motion/react';
+import { useAnimations } from '@/hooks/use-animations';
 
 const formatFileSize = (size: number) => {
   const sizeInMB = (size / (1024 * 1024)).toFixed(2);
@@ -159,6 +162,7 @@ function ThreadActionButton({
 const isFullscreen = false;
 export function ThreadDisplay() {
   const isMobile = useIsMobile();
+  const { toggleOpen: toggleAISidebar } = useAISidebar();
   const params = useParams<{ folder: string }>();
 
   const folder = params?.folder ?? 'inbox';
@@ -167,6 +171,10 @@ export function ThreadDisplay() {
   const [, items] = useThreads();
   const [isStarred, setIsStarred] = useState(false);
   const [isImportant, setIsImportant] = useState(false);
+  
+  const [navigationDirection, setNavigationDirection] = useState<'previous' | 'next' | null>(null);
+  
+  const animationsEnabled = useAnimations();
 
   // Collect all attachments from all messages in the thread
   const allThreadAttachments = useMemo(() => {
@@ -202,6 +210,9 @@ export function ThreadDisplay() {
         setDraftId(null);
         setThreadId(prevThread.id);
         setFocusedIndex(focusedIndex - 1);
+        if (animationsEnabled) {
+          setNavigationDirection('previous');
+        }
       }
     }
   }, [
@@ -213,6 +224,7 @@ export function ThreadDisplay() {
     setMode,
     setActiveReplyId,
     setDraftId,
+    animationsEnabled,
   ]);
 
   const handleNext = useCallback(() => {
@@ -228,6 +240,9 @@ export function ThreadDisplay() {
         setDraftId(null);
         setThreadId(nextThread.id);
         setFocusedIndex(focusedIndex + 1);
+        if (animationsEnabled) {
+          setNavigationDirection('next');
+        }
       }
     }
   }, [
@@ -239,6 +254,7 @@ export function ThreadDisplay() {
     setMode,
     setActiveReplyId,
     setDraftId,
+    animationsEnabled,
   ]);
 
   const handleUnsubscribeProcess = () => {
@@ -722,6 +738,10 @@ export function ThreadDisplay() {
     }
   }, [mode, activeReplyId]);
 
+  const handleAnimationComplete = useCallback(() => {
+    setNavigationDirection(null);
+  }, [setNavigationDirection]);
+
   return (
     <div
       className={cn(
@@ -747,6 +767,17 @@ export function ThreadDisplay() {
                   Choose an email to view details
                 </p>
                 <div className="mt-4 grid grid-cols-1 gap-2 xl:grid-cols-2">
+                  <button
+                    onClick={toggleAISidebar}
+                    className="inline-flex h-7 items-center justify-center gap-0.5 overflow-hidden rounded-lg border bg-white px-2 dark:border-none dark:bg-[#313131]"
+                  >
+                    <Sparkles className="mr-1 h-3.5 w-3.5 fill-[#959595]" />
+                    <div className="flex items-center justify-center gap-2.5 px-0.5">
+                      <div className="text-base-gray-950 justify-start text-sm leading-none">
+                        Zero chat
+                      </div>
+                    </div>
+                  </button>
                   <button
                     onClick={() => setIsComposeOpen('true')}
                     className="inline-flex h-7 items-center justify-center gap-0.5 overflow-hidden rounded-lg border bg-white px-2 dark:border-none dark:bg-[#313131]"
@@ -979,45 +1010,52 @@ export function ThreadDisplay() {
               </div>
             </div>
             <div className={cn('flex min-h-0 flex-1 flex-col', isMobile && 'h-full')}>
-              <ScrollArea
-                className={cn('flex-1', isMobile ? 'h-[calc(100%-1px)]' : 'h-full')}
-                type="auto"
-              >
-                <div className="pb-4">
-                  {(emailData.messages || []).map((message, index) => {
-                    const isLastMessage = index === emailData.messages.length - 1;
-                    const isReplyingToThisMessage = mode && activeReplyId === message.id;
+              {animationsEnabled ? (
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={id} 
+                    initial={{
+                      opacity: 0,
+                      x: navigationDirection === 'previous' ? -25 : navigationDirection === 'next' ? 25 : 0,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      x: 0,
+                    }}
+                    exit={{
+                      opacity: 0,
+                      x: navigationDirection === 'previous' ? 25 : navigationDirection === 'next' ? -25 : 0,
+                    }}
+                    transition={{
+                      duration: 0.08, 
+                      ease: [0.4, 0, 0.2, 1],
+                    }}
+                    onAnimationComplete={handleAnimationComplete}
+                    className="h-full w-full"
+                  >
+                    <MessageList
+                      messages={emailData.messages}
+                      isFullscreen={isFullscreen}
+                      totalReplies={emailData?.totalReplies}
+                      allThreadAttachments={allThreadAttachments}
+                      mode={mode || undefined}
+                      activeReplyId={activeReplyId || undefined}
+                      isMobile={isMobile}
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              ) : (
+                <MessageList
+                  messages={emailData.messages}
+                  isFullscreen={isFullscreen}
+                  totalReplies={emailData?.totalReplies}
+                  allThreadAttachments={allThreadAttachments}
+                  mode={mode || undefined}
+                  activeReplyId={activeReplyId || undefined}
+                  isMobile={isMobile}
+                />
+              )}
 
-                    return (
-                      <div
-                        key={message.id}
-                        className={cn(
-                          'transition-all duration-200',
-                          index > 0 && 'border-border border-t',
-                        )}
-                      >
-                        <MailDisplay
-                          emailData={message}
-                          isFullscreen={isFullscreen}
-                          isMuted={false}
-                          isLoading={false}
-                          index={index}
-                          totalEmails={emailData?.totalReplies}
-                          threadAttachments={index === 0 ? allThreadAttachments : undefined}
-                        />
-                        {/* Inline Reply Compose for non-last messages */}
-                        {isReplyingToThisMessage && !isLastMessage && (
-                          <div className="px-4 py-2" id={`reply-composer-${message.id}`}>
-                            <ReplyCompose messageId={message.id} />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-
-              {/* Sticky Reply Compose at Bottom - Only for last message */}
               {mode &&
                 activeReplyId &&
                 activeReplyId === emailData.messages[emailData.messages.length - 1]?.id && (
@@ -1035,3 +1073,60 @@ export function ThreadDisplay() {
     </div>
   );
 }
+
+interface MessageListProps {
+  messages: ParsedMessage[];
+  isFullscreen: boolean;
+  totalReplies?: number;
+  allThreadAttachments?: Attachment[];
+  mode?: string;
+  activeReplyId?: string;
+  isMobile: boolean;
+}
+
+const MessageList = ({ 
+  messages, 
+  isFullscreen, 
+  totalReplies, 
+  allThreadAttachments, 
+  mode, 
+  activeReplyId,
+  isMobile 
+}: MessageListProps) => (
+  <ScrollArea
+    className={cn('flex-1', isMobile ? 'h-[calc(100%-1px)]' : 'h-full')}
+    type="auto"
+  >
+    <div className="pb-4">
+      {(messages || []).map((message, index) => {
+        const isLastMessage = index === messages.length - 1;
+        const isReplyingToThisMessage = mode && activeReplyId === message.id;
+
+        return (
+          <div
+            key={message.id}
+            className={cn(
+              'transition-all duration-200',
+              index > 0 && 'border-border border-t',
+            )}
+          >
+            <MailDisplay
+              emailData={message}
+              isFullscreen={isFullscreen}
+              isMuted={false}
+              isLoading={false}
+              index={index}
+              totalEmails={totalReplies}
+              threadAttachments={index === 0 ? allThreadAttachments : undefined}
+            />
+            {isReplyingToThisMessage && !isLastMessage && (
+              <div className="px-4 py-2" id={`reply-composer-${message.id}`}>
+                <ReplyCompose messageId={message.id} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  </ScrollArea>
+);

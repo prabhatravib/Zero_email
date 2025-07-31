@@ -1,13 +1,13 @@
-import type { User } from 'better-auth';
-import type { HonoContext as BaseHonoContext } from 'hono';
-import type { Session } from 'better-auth';
-import type { DB } from './db';
+import type { env } from 'cloudflare:workers';
+import type { Autumn } from 'autumn-js';
+import type { Auth } from './lib/auth';
 
-export type HonoContext = BaseHonoContext<{
-  Variables: {
-    sessionUser: User | undefined;
-    auth: any;
-    db: DB | undefined;
-  };
-  Bindings: any;
-}>;
+export type SessionUser = NonNullable<Awaited<ReturnType<Auth['api']['getSession']>>>['user'];
+
+export type HonoVariables = {
+  auth: Auth;
+  sessionUser?: SessionUser;
+  autumn: Autumn;
+};
+
+export type HonoContext = { Variables: HonoVariables; Bindings: typeof env };

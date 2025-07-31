@@ -1,16 +1,24 @@
-// Simple auth proxy that doesn't break the app
+import { createAuthClient } from 'better-auth/client';
+
+const authClient = createAuthClient({
+  baseURL: import.meta.env.VITE_PUBLIC_BACKEND_URL,
+  fetchOptions: {
+    credentials: 'include',
+  },
+  plugins: [],
+});
+
 export const authProxy = {
   api: {
     getSession: async ({ headers }: { headers: Headers }) => {
-      try {
-        // For now, return null to prevent app from breaking
-        // This will be replaced with actual auth implementation later
-        console.log('Auth proxy called - returning null for now');
-        return null;
-      } catch (error) {
-        console.error('Auth proxy error:', error);
+      const session = await authClient.getSession({
+        fetchOptions: { headers, credentials: 'include' },
+      });
+      if (session.error) {
+        console.error(`Failed to get session: ${session.error}`, session);
         return null;
       }
+      return session.data;
     },
   },
 };

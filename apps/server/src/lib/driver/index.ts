@@ -1,8 +1,10 @@
 import type { MailManager, ManagerConfig } from './types';
+import { OutlookMailManager } from './microsoft';
 import { GoogleMailManager } from './google';
 
 const supportedProviders = {
   google: GoogleMailManager,
+  microsoft: OutlookMailManager,
 };
 
 export const createDriver = (

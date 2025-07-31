@@ -54,15 +54,13 @@ This is a pnpm workspace monorepo with the following structure:
 
 ## Tech Stack
 
-- **Frontend**: React Router, TypeScript, Tailwind CSS
-- **Backend**: Cloudflare Workers, Hono, tRPC
-- **Database**: D1 Database, Drizzle ORM
-- **Authentication**: Better Auth
-- **Deployment**: Render (frontend), Cloudflare Workers (backend)
-- **Package Manager**: pnpm
+- **Frontend**: Next.js, React 19, TypeScript, TailwindCSS, Shadcn UI
+- **Backend**: Node.js, tRPC, Drizzle ORM
+- **Database**: PostgreSQL
+- **Authentication**: Better Auth, Google OAuth
+- **Package Manager**: pnpm (v10+)
 - **Build Tool**: Turbo
-- **Code Quality**: ESLint, Prettier
-- **Git Hooks**: Husky
+- **Linting**: ESLint, Oxlint, Prettier
 
 ## Code Style & Conventions
 
@@ -104,6 +102,7 @@ This is a pnpm workspace monorepo with the following structure:
 ## Notes
 
 - Uses Husky for git hooks
-- Integrates with Cloudflare Workers for backend deployment
+- Integrates with Sentry for error tracking
+- Uses Cloudflare Workers for backend deployment
 - iOS app is part of the monorepo
 - CLI tool `nizzy` helps manage environment and sync operations

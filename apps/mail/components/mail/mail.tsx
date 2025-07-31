@@ -41,8 +41,10 @@ import { PricingDialog } from '../ui/pricing-dialog';
 // import { Textarea } from '@/components/ui/textarea';
 // import { useBrainState } from '@/hooks/use-summary';
 import { clearBulkSelectionAtom } from './use-mail';
+import AISidebar from '@/components/ui/ai-sidebar';
 import { useThreads } from '@/hooks/use-threads';
 // import { useBilling } from '@/hooks/use-billing';
+import AIToggleButton from '../ai-toggle-button';
 import { useIsMobile } from '@/hooks/use-mobile';
 // import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -618,6 +620,9 @@ export function MailLayout() {
               </div>
             </div>
           )}
+
+          {activeConnection?.id ? <AISidebar /> : null}
+          {activeConnection?.id ? <AIToggleButton /> : null}
         </ResizablePanelGroup>
       </div>
     </TooltipProvider>

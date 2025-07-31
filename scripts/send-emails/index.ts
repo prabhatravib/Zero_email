@@ -1,5 +1,6 @@
 import { command, option, subcommands, string as stringType, number as numberType } from 'cmd-ts';
 import { faker } from '@faker-js/faker';
+import { Resend } from 'resend';
 
 const RandomEmails = (companyName: string) => [
   {
@@ -64,6 +65,7 @@ const slugify = (text: string) => {
 };
 
 const handleSend = async (inputs: { to: string; quantity: number }) => {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   const to = inputs.to ?? 'nizabizaher@gmail.com';
   const quantity = inputs.quantity ?? 1;
 
@@ -72,15 +74,32 @@ const handleSend = async (inputs: { to: string; quantity: number }) => {
     const randomEmail =
       RandomEmails(companyName)[Math.floor(Math.random() * RandomEmails(companyName).length)];
     if (randomEmail) {
-      // Email sending functionality removed to reduce bundle size
-      console.log('Would send email:', {
+      const response = await resend.emails.send({
         from: `${faker.person.fullName()} <${slugify(companyName)}@n8n.new>`,
         to,
         subject: randomEmail.subject,
         html: randomEmail.body,
       });
+
+      if (response.error) {
+        console.log('Error sending email:', response.error);
+      } else {
+        console.log('Email sent successfully');
+      }
     }
   }
+  //   for (const item of arr) {
+
+  //     const randomDelay = Math.floor(Math.random() * 1000);
+  //     console.log('Sleeping for', randomDelay, 'ms...');
+  //     await new Promise((resolve) => setTimeout(resolve, randomDelay));
+
+  //     if (response.error) {
+  //       console.log('Error sending email:', response.error);
+  //     } else {
+  //       console.log('Email sent successfully');
+  //     }
+  //   }
 };
 
 const send = command({

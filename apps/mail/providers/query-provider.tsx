@@ -14,46 +14,15 @@ import { get, set, del } from 'idb-keyval';
 import superjson from 'superjson';
 
 function createIDBPersister(idbValidKey: IDBValidKey = 'zero-query-cache') {
-  // If IndexedDB is not available (e.g. in 3rd-party iframes or browser privacy mode)
-  // react-query persistence would hang forever, leaving the app on the spinner.
-  // We fall back to a no-op in-memory persister so hydration can finish.
-
-  const noopPersister: Persister = {
-    persistClient: async () => {},
-    restoreClient: async () => undefined,
-    removeClient: async () => {},
-  };
-
-  try {
-    if (typeof indexedDB === 'undefined') return noopPersister;
-    // simple feature-test — will throw in some restricted contexts
-    const test = indexedDB.open('__test__');
-    test.onerror = () => {};
-  } catch {
-    return noopPersister;
-  }
-
   return {
     persistClient: async (client: PersistedClient) => {
-      try {
-        await set(idbValidKey, client);
-      } catch {
-        /* ignore */
-      }
+      await set(idbValidKey, client);
     },
     restoreClient: async () => {
-      try {
-        return await get<PersistedClient>(idbValidKey);
-      } catch {
-        return undefined;
-      }
+      return await get<PersistedClient>(idbValidKey);
     },
     removeClient: async () => {
-      try {
-        await del(idbValidKey);
-      } catch {
-        /* ignore */
-      }
+      await del(idbValidKey);
     },
   } satisfies Persister;
 }

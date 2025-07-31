@@ -1,11 +1,13 @@
-import { drizzle } from 'drizzle-orm/d1';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres, { type Sql } from 'postgres';
 import * as schema from './schema';
 
-const createDrizzle = (db: D1Database) => drizzle(db, { schema });
+const createDrizzle = (conn: Sql) => drizzle(conn, { schema });
 
-export const createDb = (db: D1Database) => {
-  const drizzleDb = createDrizzle(db);
-  return { db: drizzleDb, conn: db };
+export const createDb = (url: string) => {
+  const conn = postgres(url);
+  const db = createDrizzle(conn);
+  return { db, conn };
 };
 
 export type DB = ReturnType<typeof createDrizzle>;

@@ -22,6 +22,7 @@ import { useEmailAliases } from '@/hooks/use-email-aliases';
 import { Globe, Clock, Mail, InfoIcon } from 'lucide-react';
 import { getLocale, setLocale } from '@/paraglide/runtime';
 import { useState, useEffect, useMemo, memo } from 'react';
+import { userSettingsSchema } from '@zero/server/schemas';
 import { locales } from '@/project.inlang/settings.json';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,15 +38,7 @@ import { m } from '@/paraglide/messages';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import * as z from 'zod';
-
-// Placeholder for removed @zero/server/schemas dependency
-const userSettingsSchema = z.object({
-  externalImages: z.boolean(),
-  trustedSenders: z.array(z.string()),
-  timezone: z.string(),
-  displayName: z.string().optional(),
-  signature: z.string().optional(),
-});
+import { useCallback } from 'react';
 
 const TimezoneSelect = memo(
   ({ field }: { field: ControllerRenderProps<z.infer<typeof userSettingsSchema>, 'timezone'> }) => {
@@ -142,6 +135,7 @@ export default function GeneralPage() {
       customPrompt: '',
       zeroSignature: true,
       defaultEmailAlias: '',
+      animations: false,
     },
   });
 
@@ -185,6 +179,20 @@ export default function GeneralPage() {
       setIsSaving(false);
     }
   }
+
+  const renderAnimationsField = useCallback(({ field }: { field: any }) => (
+    <FormItem className="flex max-w-xl flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+      <div className="space-y-0.5">
+        <FormLabel>{m['pages.settings.general.animations']()}</FormLabel>
+        <FormDescription>
+          {m['pages.settings.general.animationsDescription']()}
+        </FormDescription>
+      </div>
+      <FormControl>
+        <Switch checked={field.value} onCheckedChange={field.onChange} />
+      </FormControl>
+    </FormItem>
+  ), []);
 
   return (
     <div className="grid gap-6">
@@ -314,6 +322,11 @@ export default function GeneralPage() {
                   </FormControl>
                 </FormItem>
               )}
+            />
+            <FormField
+              control={form.control}
+              name="animations"
+              render={renderAnimationsField}
             />
           </form>
         </Form>

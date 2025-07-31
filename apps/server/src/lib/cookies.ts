@@ -1,10 +1,4 @@
-// Simple enum to replace coinbase cookie manager
-enum TrackingCategory {
-  NECESSARY = 'necessary',
-  FUNCTIONAL = 'functional',
-  PERFORMANCE = 'performance',
-  TARGETING = 'targeting',
-}
+import { TrackingCategory } from '@coinbase/cookie-manager';
 
 export type CookieCategory = 'necessary' | 'functional' | 'analytics' | 'marketing';
 

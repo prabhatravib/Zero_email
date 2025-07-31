@@ -79,7 +79,7 @@ export const verifyToken = async (token: string) => {
 };
 
 export const resetConnection = async (connectionId: string) => {
-  const { db, conn } = createDb(env.DB);
+  const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
   await db
     .update(connection)
     .set({

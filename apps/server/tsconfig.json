@@ -9,7 +9,6 @@
     "evals/**/*.ts"
   ],
   "compilerOptions": {
-    "types": ["@cloudflare/workers-types"],
     "plugins": [
       {
         "name": "@effect/language-service"

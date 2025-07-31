@@ -1,6 +1,8 @@
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
+import { cloudflare } from '@cloudflare/vite-plugin';
 import { reactRouter } from '@react-router/dev/vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
+import oxlintPlugin from 'vite-plugin-oxlint';
 import babel from 'vite-plugin-babel';
 import tailwindcss from 'tailwindcss';
 import { defineConfig } from 'vite';
@@ -12,7 +14,9 @@ const ReactCompilerConfig = {
 
 export default defineConfig({
   plugins: [
+    oxlintPlugin(),
     reactRouter(),
+    cloudflare(),
     babel({
       filter: /\.[jt]sx?$/,
       babelConfig: {
@@ -49,11 +53,6 @@ export default defineConfig({
     warmup: {
       clientFiles: ['./app/**/*', './components/**/*'],
     },
-  },
-  preview: {
-    host: '0.0.0.0',
-    allowedHosts: ['pitext-email.onrender.com', '.onrender.com'],
-    port: 10000,
   },
   css: {
     postcss: {

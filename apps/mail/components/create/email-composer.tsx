@@ -43,14 +43,9 @@ import { useForm } from 'react-hook-form';
 import { Button } from '../ui/button';
 import { useQueryState } from 'nuqs';
 import { Toolbar } from './toolbar';
-import { z } from 'zod';
+import pluralize from 'pluralize';
 import { toast } from 'sonner';
-
-// A very small util to pluralize an English word. Currently only needed for "file" but behaves generically.
-const pluralize = (word: string, count: number, includeCount = false): string => {
-  const pluralWord = count === 1 ? word : `${word}s`;
-  return includeCount ? `${count} ${pluralWord}` : pluralWord;
-};
+import { z } from 'zod';
 const shortcodeRegex = /:([a-zA-Z0-9_+-]+):/g;
 
 type ThreadContent = {

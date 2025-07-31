@@ -1,12 +1,6 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
-// Placeholder for removed @zero/server/auth-providers dependency
-type EnvVarInfo = {
-  name: string;
-  description: string;
-  required: boolean;
-  defaultValue?: string;
-};
+import type { EnvVarInfo } from '@zero/server/auth-providers';
 import { Google, Microsoft } from '@/components/icons/icons';
 import ErrorMessage from '@/app/(auth)/login/error-message';
 import { Button } from '@/components/ui/button';

@@ -1,9 +1,14 @@
+import { QueryProvider } from './query-provider';
+import { AutumnProvider } from 'autumn-js/react';
 import type { PropsWithChildren } from 'react';
 
-// Minimal server providers that don't use client-side hooks
 export function ServerProviders({
   children,
   connectionId,
 }: PropsWithChildren<{ connectionId: string | null }>) {
-  return <>{children}</>;
+  return (
+    <AutumnProvider backendUrl={import.meta.env.VITE_PUBLIC_BACKEND_URL}>
+      <QueryProvider connectionId={connectionId}>{children}</QueryProvider>
+    </AutumnProvider>
+  );
 }

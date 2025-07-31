@@ -20,10 +20,11 @@ import { Button } from '@/components/ui/button';
 import { getLocale } from '@/paraglide/runtime';
 import { siteConfig } from '@/lib/site-config';
 import { signOut } from '@/lib/auth-client';
+import type { Route } from './+types/root';
 import { AlertCircle } from 'lucide-react';
 import { m } from '@/paraglide/messages';
 import { ArrowLeft } from 'lucide-react';
-import { Loader2 } from 'lucide-react';
+import * as Sentry from '@sentry/react';
 import superjson from 'superjson';
 import './globals.css';
 
@@ -50,11 +51,11 @@ export const meta: MetaFunction = () => {
     { property: 'og:image', content: siteConfig.openGraph.images[0].url },
     { property: 'og:url', content: siteConfig.alternates.canonical },
     { property: 'og:type', content: 'website' },
-    { rel: 'manifest', href: '/manifest.json' },
+    { rel: 'manifest', href: '/manifest.webmanifest' },
   ];
 };
 
-export async function loader() {
+export async function loader(_: LoaderFunctionArgs) {
   //   const trpc = getServerTrpc(request);
   //   const defaultConnection = await trpc.connections.getDefault
   //     .query()
@@ -82,7 +83,7 @@ export function Layout({ children }: PropsWithChildren) {
       </head>
       <body className="antialiased">
         <ServerProviders connectionId={connectionId}>
-          <ClientProviders connectionId={connectionId}>{children}</ClientProviders>
+          <ClientProviders>{children}</ClientProviders>
           <DubAnalytics
             domainsConfig={{
               refer: 'mail0.com',
@@ -96,19 +97,19 @@ export function Layout({ children }: PropsWithChildren) {
   );
 }
 
-export function HydrateFallback() {
-  return (
-    <div className="flex h-screen w-full items-center justify-center">
-      <Loader2 className="h-10 w-10 animate-spin" />
-    </div>
-  );
-}
+// export function HydrateFallback() {
+//   return (
+//     <div className="flex h-screen w-full items-center justify-center">
+//       <Loader2 className="h-10 w-10 animate-spin" />
+//     </div>
+//   );
+// }
 
 export default function App() {
   return <Outlet />;
 }
 
-export function ErrorBoundary({ error }: { error: Error }) {
+export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = 'Oops!';
   let details = 'An unexpected error occurred.';
   let stack: string | undefined;
@@ -128,6 +129,35 @@ export function ErrorBoundary({ error }: { error: Error }) {
   useEffect(() => {
     console.error(error);
     console.error({ message, details, stack });
+
+    // Report error to Sentry
+    if (isRouteErrorResponse(error)) {
+      Sentry.captureException(new Error(`Route Error ${error.status}: ${error.statusText}`), {
+        tags: {
+          type: 'route_error',
+          status: error.status,
+        },
+        extra: {
+          statusText: error.statusText,
+          data: error.data,
+        },
+      });
+    } else if (error instanceof Error) {
+      Sentry.captureException(error, {
+        tags: {
+          type: 'app_error',
+        },
+      });
+    } else {
+      Sentry.captureException(new Error('Unknown error occurred'), {
+        tags: {
+          type: 'unknown_error',
+        },
+        extra: {
+          error: error,
+        },
+      });
+    }
   }, [error, message, details, stack]);
 
   return (

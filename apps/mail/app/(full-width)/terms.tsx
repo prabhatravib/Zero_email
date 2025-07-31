@@ -7,6 +7,8 @@ import Footer from '@/components/home/footer';
 import { createSectionId } from '@/lib/utils';
 
 
+import React from 'react';
+
 const LAST_UPDATED = 'February 13, 2025';
 
 export default function TermsOfService() {

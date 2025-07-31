@@ -13,101 +13,15 @@ import { parseAddressList, parseFrom, wasSentWithTLS } from '../email-utils';
 import type { IOutgoingMessage, Label, ParsedMessage } from '../../types';
 import { sanitizeTipTapHtml } from '../sanitize-tip-tap-html';
 import type { MailManager, ManagerConfig } from './types';
+import { type gmail_v1, gmail } from '@googleapis/gmail';
 import { OAuth2Client } from 'google-auth-library';
 import type { CreateDraftData } from '../schemas';
+import { createMimeMessage } from 'mimetext';
+import { people } from '@googleapis/people';
 import { cleanSearchValue } from '../utils';
 import { env } from 'cloudflare:workers';
 import { Effect } from 'effect';
 import * as he from 'he';
-
-// Simple MIME message builder
-class SimpleMimeMessage {
-  private headers: Map<string, string> = new Map();
-  private body: string = '';
-  private boundary: string;
-
-  constructor() {
-    this.boundary = `boundary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  setSender(sender: string) {
-    this.headers.set('From', sender);
-  }
-
-  setRecipients(recipients: Array<{ name: string; addr: string }>) {
-    const to = recipients.map(r => r.name ? `${r.name} <${r.addr}>` : r.addr).join(', ');
-    this.headers.set('To', to);
-  }
-
-  setCc(recipients: Array<{ name: string; addr: string }>) {
-    const cc = recipients.map(r => r.name ? `${r.name} <${r.addr}>` : r.addr).join(', ');
-    this.headers.set('Cc', cc);
-  }
-
-  setBcc(recipients: Array<{ name: string; addr: string }>) {
-    const bcc = recipients.map(r => r.name ? `${r.name} <${r.addr}>` : r.addr).join(', ');
-    this.headers.set('Bcc', bcc);
-  }
-
-  setSubject(subject: string) {
-    this.headers.set('Subject', subject);
-  }
-
-  setBody(body: string) {
-    this.body = body;
-  }
-
-  setReplyTo(replyTo: string) {
-    this.headers.set('In-Reply-To', replyTo);
-    this.headers.set('References', replyTo);
-  }
-
-  addAttachment(filename: string, contentType: string, data: string) {
-    // For now, we'll just append attachments to the body
-    // This is a simplified version
-    this.body += `\n\n--${this.boundary}\n`;
-    this.body += `Content-Type: ${contentType}; name="${filename}"\n`;
-    this.body += `Content-Disposition: attachment; filename="${filename}"\n`;
-    this.body += `Content-Transfer-Encoding: base64\n\n`;
-    this.body += data;
-  }
-
-  build(): string {
-    let message = '';
-    
-    // Add headers
-    for (const [key, value] of this.headers) {
-      message += `${key}: ${value}\n`;
-    }
-    
-    // Add content type header
-    message += `Content-Type: text/html; charset=UTF-8\n`;
-    message += `MIME-Version: 1.0\n\n`;
-    
-    // Add body
-    message += this.body;
-    
-    return message;
-  }
-}
-
-function createMimeMessage(): SimpleMimeMessage {
-  return new SimpleMimeMessage();
-}
-
-// Lazy load heavy imports
-let gmailApi: typeof import('@googleapis/gmail') | undefined;
-let peopleApi: typeof import('@googleapis/people') | undefined;
-
-async function getGmail() {
-  if (!gmailApi) gmailApi = await import('@googleapis/gmail');
-  return gmailApi.gmail;
-}
-
-async function getPeople() {
-  if (!peopleApi) peopleApi = await import('@googleapis/people');
-  return peopleApi.people;
-}
 
 export class GoogleMailManager implements MailManager {
   private auth;
@@ -141,16 +55,7 @@ export class GoogleMailManager implements MailManager {
         scope: this.getScope(),
       });
 
-    // Initialize gmail lazily
-    this.gmail = null as any;
-  }
-
-  private async getGmailInstance() {
-    if (!this.gmail) {
-      const gmailModule = await getGmail();
-      this.gmail = gmailModule({ version: 'v1', auth: this.auth });
-    }
-    return this.gmail;
+    this.gmail = gmail({ version: 'v1', auth: this.auth });
   }
   public getScope(): string {
     return [
@@ -164,8 +69,7 @@ export class GoogleMailManager implements MailManager {
     return this.withErrorHandler(
       'listHistory',
       async () => {
-        const gmail = await this.getGmailInstance();
-        const response = await gmail.users.history.list({
+        const response = await this.gmail.users.history.list({
           userId: 'me',
           startHistoryId: historyId,
         });
@@ -182,8 +86,7 @@ export class GoogleMailManager implements MailManager {
     return this.withErrorHandler(
       'getAttachment',
       async () => {
-        const gmail = await this.getGmailInstance();
-        const response = await gmail.users.messages.attachments.get({
+        const response = await this.gmail.users.messages.attachments.get({
           userId: 'me',
           messageId,
           id: attachmentId,
@@ -203,56 +106,40 @@ export class GoogleMailManager implements MailManager {
     return this.withErrorHandler(
       'getMessageAttachments',
       async () => {
-        const gmail = await this.getGmailInstance();
-        const res = await gmail.users.messages.get({
+        const res = await this.gmail.users.messages.get({
           userId: 'me',
           id: messageId,
-          format: 'full',
         });
+        const attachmentParts = res.data.payload?.parts
+          ? this.findAttachments(res.data.payload.parts)
+          : [];
 
-        const message = res.data;
-        if (!message.payload) {
-          return [];
-        }
-
-        const attachments: Array<{
-          id: string;
-          filename: string;
-          mimeType: string;
-          size: number;
-          data: Uint8Array;
-        }> = [];
-
-        const processParts = async (parts: any[]) => {
-          for (const part of parts) {
-            if (part.filename && part.body?.attachmentId) {
-              const attachment = await this.getAttachment(messageId, part.body.attachmentId);
-              attachments.push({
-                id: part.body.attachmentId,
-                filename: part.filename,
-                mimeType: part.mimeType || 'application/octet-stream',
-                size: part.body.size || 0,
-                data: attachment,
-              });
+        const attachments = await Promise.all(
+          attachmentParts.map(async (part) => {
+            const attachmentId = part.body?.attachmentId;
+            if (!attachmentId) {
+              return null;
             }
-            if (part.parts) {
-              await processParts(part.parts);
-            }
-          }
-        };
 
-        if (message.payload.parts) {
-          await processParts(message.payload.parts);
-        } else if (message.payload.filename && message.payload.body?.attachmentId) {
-          const attachment = await this.getAttachment(messageId, message.payload.body.attachmentId);
-          attachments.push({
-            id: message.payload.body.attachmentId,
-            filename: message.payload.filename,
-            mimeType: message.payload.mimeType || 'application/octet-stream',
-            size: message.payload.body.size || 0,
-            data: attachment,
-          });
-        }
+            try {
+              const attachmentData = await this.getAttachment(messageId, attachmentId);
+              return {
+                filename: part.filename || '',
+                mimeType: part.mimeType || '',
+                size: Number(part.body?.size || 0),
+                attachmentId: attachmentId,
+                headers:
+                  part.headers?.map((h) => ({
+                    name: h.name ?? '',
+                    value: h.value ?? '',
+                  })) ?? [],
+                body: attachmentData ?? '',
+              };
+            } catch {
+              return null;
+            }
+          }),
+        ).then((attachments) => attachments.filter((a): a is NonNullable<typeof a> => a !== null));
 
         return attachments;
       },
@@ -260,24 +147,36 @@ export class GoogleMailManager implements MailManager {
     );
   }
   public getEmailAliases() {
-    return this.withErrorHandler(
-      'getEmailAliases',
-      async () => {
-        const gmail = await this.getGmailInstance();
-        const profile = await gmail.users.getProfile({
-          userId: 'me',
+    return this.withErrorHandler('getEmailAliases', async () => {
+      const profile = await this.gmail.users.getProfile({
+        userId: 'me',
+      });
+
+      const primaryEmail = profile.data.emailAddress || '';
+      const aliases: { email: string; name?: string; primary?: boolean }[] = [
+        { email: primaryEmail, primary: true },
+      ];
+
+      const settings = await this.gmail.users.settings.sendAs.list({
+        userId: 'me',
+      });
+
+      if (settings.data.sendAs) {
+        settings.data.sendAs.forEach((alias) => {
+          if (alias.isPrimary && alias.sendAsEmail === primaryEmail) {
+            return;
+          }
+
+          aliases.push({
+            email: alias.sendAsEmail || '',
+            name: alias.displayName || undefined,
+            primary: alias.isPrimary || false,
+          });
         });
+      }
 
-        const settings = await gmail.users.settings.sendAs.list({
-          userId: 'me',
-        });
-
-        const aliases = settings.data.sendAs || [];
-        const primaryEmail = profile.data.emailAddress || '';
-
-        return [primaryEmail, ...aliases.map((alias) => alias.sendAsEmail || '')].filter(Boolean);
-      },
-    );
+      return aliases;
+    });
   }
   public markAsRead(threadIds: string[]) {
     return this.withErrorHandler(
@@ -322,12 +221,10 @@ export class GoogleMailManager implements MailManager {
     return this.withErrorHandler(
       'getUserInfo',
       async () => {
-        const res = await getPeople().then((people) =>
-          people.people.get({
-            resourceName: 'people/me',
-            personFields: 'names,photos,emailAddresses',
-          }),
-        );
+        const res = await people({ version: 'v1', auth: this.auth }).people.get({
+          resourceName: 'people/me',
+          personFields: 'names,photos,emailAddresses',
+        });
         return {
           address: res.data.emailAddresses?.[0]?.value ?? '',
           name: res.data.names?.[0]?.displayName ?? '',
@@ -354,31 +251,27 @@ export class GoogleMailManager implements MailManager {
         type LabelCount = { label: string; count: number };
 
         const getUserLabelsEffect = Effect.tryPromise({
-          try: () => getGmail().then((gmail) => gmail.users.labels.list({ userId: 'me' })),
+          try: () => this.gmail.users.labels.list({ userId: 'me' }),
           catch: (error) => ({ _tag: 'LabelListFailed' as const, error }),
         });
 
         const getArchiveCountEffect = Effect.tryPromise({
           try: () =>
-            getGmail().then((gmail) =>
-              gmail.users.threads.list({
-                userId: 'me',
-                q: 'in:archive',
-                maxResults: 1,
-              }),
-            ),
+            this.gmail.users.threads.list({
+              userId: 'me',
+              q: 'in:archive',
+              maxResults: 1,
+            }),
           catch: (error) => ({ _tag: 'ArchiveFetchFailed' as const, error }),
         });
 
         const processLabelEffect = (label: any) =>
           Effect.tryPromise({
             try: () =>
-              getGmail().then((gmail) =>
-                gmail.users.labels.get({
-                  userId: 'me',
-                  id: label.id ?? undefined,
-                }),
-              ),
+              this.gmail.users.labels.get({
+                userId: 'me',
+                id: label.id ?? undefined,
+              }),
             catch: (error) => ({ _tag: 'LabelFetchFailed' as const, error, labelId: label.id }),
           }).pipe(
             Effect.map((res) => {
@@ -449,84 +342,192 @@ export class GoogleMailManager implements MailManager {
     labelIds?: string[];
     pageToken?: string;
   }) {
+    const { folder, query: q, maxResults = 100, labelIds: _labelIds = [], pageToken } = params;
     return this.withErrorHandler(
       'list',
       async () => {
-        const gmail = await this.getGmailInstance();
-        const res = await gmail.users.threads.list({
+        const { folder: normalizedFolder, q: normalizedQ } = this.normalizeSearch(folder, q ?? '');
+        const labelIds = [..._labelIds];
+        if (normalizedFolder) labelIds.push(normalizedFolder.toUpperCase());
+
+        const res = await this.gmail.users.threads.list({
           userId: 'me',
-          q: this.normalizeSearch(params.folder, params.query || ''),
-          maxResults: params.maxResults || 20,
-          pageToken: params.pageToken,
-          labelIds: params.labelIds,
+          q: normalizedQ ? normalizedQ : undefined,
+          labelIds: folder === 'inbox' ? labelIds : [],
+          maxResults,
+          pageToken: pageToken ? pageToken : undefined,
+          quotaUser: this.getQuotaUser(),
         });
 
-        const threads = res.data.threads || [];
-        const nextPageToken = res.data.nextPageToken;
+        const threads = res.data.threads ?? [];
 
         return {
-          threads: threads.map((thread) => ({
-            id: thread.id || '',
-            snippet: thread.snippet || '',
-            historyId: thread.historyId || '',
-          })),
-          nextPageToken,
+          threads: threads
+            .filter((thread) => typeof thread.id === 'string')
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            .map((thread) => ({
+              id: thread.id!,
+              historyId: thread.historyId ?? null,
+              $raw: thread,
+            })),
+          nextPageToken: res.data.nextPageToken ?? null,
         };
       },
-      params,
+      { folder, q, maxResults, _labelIds, pageToken, email: this.config.auth?.email },
     );
   }
   public get(id: string) {
     return this.withErrorHandler(
       'get',
       async () => {
-        const gmail = await this.getGmailInstance();
-        const res = await gmail.users.threads.get({
+        const res = await this.gmail.users.threads.get({
           userId: 'me',
           id,
           format: 'full',
+          quotaUser: this.getQuotaUser(),
         });
 
-        const thread = res.data;
-        if (!thread.messages) {
-          throw new Error('No messages in thread');
-        }
+        if (!res.data.messages)
+          return {
+            messages: [],
+            latest: undefined,
+            hasUnread: false,
+            totalReplies: 0,
+            labels: [],
+          };
+        let hasUnread = false;
+        const labels = new Set<string>();
+        const messages: ParsedMessage[] = await Promise.all(
+          res.data.messages.map(async (message) => {
+            const bodyData =
+              message.payload?.body?.data ||
+              (message.payload?.parts ? findHtmlBody(message.payload.parts) : '') ||
+              message.payload?.parts?.[0]?.body?.data ||
+              '';
 
-        const messages = thread.messages.map((message) => this.parse(message));
-        const lastMessage = messages[messages.length - 1];
+            const decodedBody = bodyData
+              ? he
+                  .decode(fromBinary(bodyData))
+                  .replace(/<[^>]*>/g, '')
+                  .trim() === fromBinary(bodyData).trim()
+                ? he.decode(fromBinary(bodyData).replace(/\n/g, '<br>'))
+                : he.decode(fromBinary(bodyData))
+              : '';
+
+            let processedBody = decodedBody;
+            if (message.payload?.parts) {
+              const inlineImages = message.payload.parts.filter((part) => {
+                const contentDisposition =
+                  part.headers?.find((h) => h.name?.toLowerCase() === 'content-disposition')
+                    ?.value || '';
+                const isInline = contentDisposition.toLowerCase().includes('inline');
+                const hasContentId = part.headers?.some(
+                  (h) => h.name?.toLowerCase() === 'content-id',
+                );
+                return isInline && hasContentId;
+              });
+
+              for (const part of inlineImages) {
+                const contentId = part.headers?.find(
+                  (h) => h.name?.toLowerCase() === 'content-id',
+                )?.value;
+                if (contentId && part.body?.attachmentId) {
+                  try {
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                    const imageData = await this.getAttachment(message.id!, part.body.attachmentId);
+                    if (imageData) {
+                      const cleanContentId = contentId.replace(/[<>]/g, '');
+
+                      const escapedContentId = cleanContentId.replace(
+                        /[.*+?^${}()|[\]\\]/g,
+                        '\\$&',
+                      );
+                      processedBody = processedBody.replace(
+                        new RegExp(`cid:${escapedContentId}`, 'g'),
+                        `data:${part.mimeType};base64,${imageData}`,
+                      );
+                    }
+                  } catch {}
+                }
+              }
+            }
+
+            const parsedData = this.parse(message);
+            if (parsedData.tags) {
+              parsedData.tags.forEach((tag) => {
+                if (tag.id) {
+                  if (labels.has(tag.id)) return;
+                  labels.add(tag.id);
+                }
+              });
+            }
+
+            // Only store attachment metadata, not the actual attachment data
+            const attachmentParts = message.payload?.parts
+              ? this.findAttachments(message.payload.parts)
+              : [];
+
+            const attachments = attachmentParts.map((part) => ({
+              filename: part.filename || '',
+              mimeType: part.mimeType || '',
+              size: Number(part.body?.size || 0),
+              attachmentId: part.body?.attachmentId || '',
+              headers:
+                part.headers?.map((h) => ({
+                  name: h.name ?? '',
+                  value: h.value ?? '',
+                })) ?? [],
+              body: '', // Empty body - fetch on demand with getMessageAttachments
+            }));
+
+            const fullEmailData = {
+              ...parsedData,
+              body: '',
+              processedHtml: '',
+              blobUrl: '',
+              decodedBody: processedBody,
+              attachments,
+            };
+
+            if (fullEmailData.unread) hasUnread = true;
+
+            return fullEmailData;
+          }),
+        );
 
         return {
-          id: thread.id || '',
-          historyId: thread.historyId || '',
+          labels: Array.from(labels).map((id) => ({ id, name: id })),
           messages,
-          snippet: thread.snippet || '',
-          labelIds: lastMessage.labelIds,
+          latest: messages.findLast((e) => e.isDraft !== true),
+          hasUnread,
+          totalReplies: messages.filter((e) => !e.isDraft).length,
         };
       },
-      { id },
+      { id, email: this.config.auth?.email },
     );
   }
   public create(data: IOutgoingMessage) {
     return this.withErrorHandler(
       'create',
       async () => {
-        const gmail = await this.getGmailInstance();
-        const res = await gmail.users.messages.send({
+        const { raw } = await this.parseOutgoing(data);
+        const res = await this.gmail.users.messages.send({
           userId: 'me',
-          requestBody: await this.parseOutgoing(data),
+          requestBody: {
+            raw,
+            threadId: data.threadId,
+          },
         });
-
         return res.data;
       },
-      data,
+      { data, email: this.config.auth?.email },
     );
   }
   public delete(id: string) {
     return this.withErrorHandler(
       'delete',
       async () => {
-        const gmail = await this.getGmailInstance();
-        const res = await gmail.users.messages.delete({ userId: 'me', id });
+        const res = await this.gmail.users.messages.delete({ userId: 'me', id });
         return res.data;
       },
       { id },
@@ -574,15 +575,17 @@ export class GoogleMailManager implements MailManager {
     return this.withErrorHandler(
       'sendDraft',
       async () => {
-        const gmail = await this.getGmailInstance();
-        await gmail.users.drafts.send({
+        const { raw } = await this.parseOutgoing(data);
+        await this.gmail.users.drafts.send({
           userId: 'me',
           requestBody: {
             id: draftId,
+            message: {
+              raw,
+              id: draftId,
+            },
           },
         });
-
-        return this.create(data);
       },
       { draftId, data },
     );
@@ -591,91 +594,179 @@ export class GoogleMailManager implements MailManager {
     return this.withErrorHandler(
       'getDraft',
       async () => {
-        const gmail = await this.getGmailInstance();
-        const res = await gmail.users.drafts.get({
+        const res = await this.gmail.users.drafts.get({
           userId: 'me',
           id: draftId,
+          format: 'full',
         });
 
-        const draft = res.data;
-        if (!draft.message) {
-          throw new Error('No message in draft');
+        if (!res.data) {
+          throw new Error('Draft not found');
         }
 
-        return this.parseDraft(draft);
+        const parsedDraft = await this.parseDraft(res.data);
+        if (!parsedDraft) {
+          throw new Error('Failed to parse draft');
+        }
+
+        return parsedDraft;
       },
       { draftId },
     );
   }
   public listDrafts(params: { q?: string; maxResults?: number; pageToken?: string }) {
+    const { q, maxResults = 20, pageToken } = params;
     return this.withErrorHandler(
       'listDrafts',
       async () => {
-        const gmail = await this.getGmailInstance();
-        const res = await gmail.users.drafts.list({
+        const { q: normalizedQ } = this.normalizeSearch('draft', q ?? '');
+        const res = await this.gmail.users.drafts.list({
           userId: 'me',
-          q: params.q,
-          maxResults: params.maxResults || 20,
-          pageToken: params.pageToken,
+          q: normalizedQ ? normalizedQ : undefined,
+          maxResults,
+          pageToken: pageToken ? pageToken : undefined,
         });
 
-        const drafts = res.data.drafts || [];
-        const nextPageToken = res.data.nextPageToken;
+        const drafts = await Promise.all(
+          (res.data.drafts || []).map(async (draft) => {
+            if (!draft.id) return null;
+            try {
+              const msg = await this.gmail.users.drafts.get({
+                userId: 'me',
+                id: draft.id,
+                format: 'full',
+              });
+              const message = msg.data.message;
+              if (!message) return null;
 
-        const draftDetails = await Promise.all(
-          drafts.map(async (draft) => {
-            const msg = await gmail.users.drafts.get({
-              userId: 'me',
-              id: draft.id || '',
-            });
-            return this.parseDraft(msg.data);
+              const parsed = this.parse(message);
+              const headers = message.payload?.headers || [];
+              const date = headers.find((h) => h.name?.toLowerCase() === 'date')?.value;
+
+              return {
+                ...parsed,
+                id: draft.id,
+                threadId: draft.message?.id,
+                receivedOn: date || new Date().toISOString(),
+              };
+            } catch {
+              return null;
+            }
           }),
         );
 
+        const sortedDrafts = [...drafts]
+          .filter((draft) => draft !== null)
+          .sort((a, b) => {
+            const dateA = new Date(a?.receivedOn || new Date()).getTime();
+            const dateB = new Date(b?.receivedOn || new Date()).getTime();
+            return dateB - dateA;
+          });
+
         return {
-          drafts: draftDetails,
-          nextPageToken,
+          threads: sortedDrafts.map((draft) => ({
+            id: draft.id,
+            historyId: draft.threadId ?? null,
+            $raw: draft,
+          })),
+          nextPageToken: res.data.nextPageToken ?? null,
         };
       },
-      params,
+      { q, maxResults, pageToken },
     );
   }
   public createDraft(data: CreateDraftData) {
     return this.withErrorHandler(
       'createDraft',
       async () => {
-        const gmail = await this.getGmailInstance();
-        const message = await this.parseOutgoing(data);
+        const { html: message, inlineImages } = await sanitizeTipTapHtml(data.message);
+        const msg = createMimeMessage();
+        msg.setSender('me');
+        // name <email@example.com>
+        const to = data.to.split(', ').map((recipient: string) => {
+          if (recipient.includes('<')) {
+            const [name, email] = recipient.split('<');
+            return { addr: email.replace('>', ''), name: name.replace('>', '') };
+          }
+          return { addr: recipient };
+        });
+
+        msg.setTo(to);
+        if (data.cc)
+          msg.setCc(data.cc?.split(', ').map((recipient: string) => ({ addr: recipient })));
+        if (data.bcc)
+          msg.setBcc(data.bcc?.split(', ').map((recipient: string) => ({ addr: recipient })));
+
+        msg.setSubject(data.subject);
+        msg.addMessage({
+          contentType: 'text/html',
+          data: message || '',
+        });
+
+        if (inlineImages.length > 0) {
+          for (const image of inlineImages) {
+            msg.addAttachment({
+              inline: true,
+              filename: `${image.cid}`,
+              contentType: image.mimeType,
+              data: image.data,
+              headers: {
+                'Content-ID': `<${image.cid}>`,
+                'Content-Disposition': 'inline',
+              },
+            });
+          }
+        }
+
+        if (data.attachments && data.attachments?.length > 0) {
+          for (const attachment of data.attachments) {
+            const base64Data = attachment.base64;
+            msg.addAttachment({
+              filename: attachment.name,
+              contentType: attachment.type,
+              data: base64Data,
+            });
+          }
+        }
+
+        const mimeMessage = msg.asRaw();
+        const encodedMessage = Buffer.from(mimeMessage)
+          .toString('base64')
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+
+        const requestBody = {
+          message: {
+            raw: encodedMessage,
+            threadId: data.threadId,
+          },
+        };
 
         let res;
+
         if (data.id) {
-          res = await gmail.users.drafts.update({
+          res = await this.gmail.users.drafts.update({
             userId: 'me',
             id: data.id,
-            requestBody: {
-              message,
-            },
+            requestBody,
           });
         } else {
-          res = await gmail.users.drafts.create({
+          res = await this.gmail.users.drafts.create({
             userId: 'me',
-            requestBody: {
-              message,
-            },
+            requestBody,
           });
         }
 
-        return this.parseDraft(res.data);
+        return res.data;
       },
-      data,
+      { data },
     );
   }
   public async getUserLabels() {
-    const res = await getGmail().then((gmail) =>
-      gmail.users.labels.list({
-        userId: 'me',
-      }),
-    );
+    const res = await this.gmail.users.labels.list({
+      userId: 'me',
+    });
     // wtf google, null values for EVERYTHING?
     return (
       res.data.labels?.map((label) => ({
@@ -690,12 +781,10 @@ export class GoogleMailManager implements MailManager {
     );
   }
   public async getLabel(labelId: string): Promise<Label> {
-    const res = await getGmail().then((gmail) =>
-      gmail.users.labels.get({
-        userId: 'me',
-        id: labelId,
-      }),
-    );
+    const res = await this.gmail.users.labels.get({
+      userId: 'me',
+      id: labelId,
+    });
     return {
       id: labelId,
       name: res.data.name ?? '',
@@ -710,47 +799,41 @@ export class GoogleMailManager implements MailManager {
     name: string;
     color?: { backgroundColor: string; textColor: string };
   }) {
-    await getGmail().then((gmail) =>
-      gmail.users.labels.create({
-        userId: 'me',
-        requestBody: {
-          name: label.name,
-          labelListVisibility: 'labelShow',
-          messageListVisibility: 'show',
-          color: label.color
-            ? mapToGoogleLabelColor({
-                backgroundColor: label.color.backgroundColor,
-                textColor: label.color.textColor,
-              })
-            : undefined,
-        },
-      }),
-    );
+    await this.gmail.users.labels.create({
+      userId: 'me',
+      requestBody: {
+        name: label.name,
+        labelListVisibility: 'labelShow',
+        messageListVisibility: 'show',
+        color: label.color
+          ? mapToGoogleLabelColor({
+              backgroundColor: label.color.backgroundColor,
+              textColor: label.color.textColor,
+            })
+          : undefined,
+      },
+    });
   }
   public async updateLabel(id: string, label: Label) {
-    await getGmail().then((gmail) =>
-      gmail.users.labels.update({
-        userId: 'me',
-        id: id,
-        requestBody: {
-          name: label.name,
-          color: label.color
-            ? mapToGoogleLabelColor({
-                backgroundColor: label.color.backgroundColor,
-                textColor: label.color.textColor,
-              })
-            : undefined,
-        },
-      }),
-    );
+    await this.gmail.users.labels.update({
+      userId: 'me',
+      id: id,
+      requestBody: {
+        name: label.name,
+        color: label.color
+          ? mapToGoogleLabelColor({
+              backgroundColor: label.color.backgroundColor,
+              textColor: label.color.textColor,
+            })
+          : undefined,
+      },
+    });
   }
   public async deleteLabel(id: string) {
-    await getGmail().then((gmail) =>
-      gmail.users.labels.delete({
-        userId: 'me',
-        id: id,
-      }),
-    );
+    await this.gmail.users.labels.delete({
+      userId: 'me',
+      id: id,
+    });
   }
   public async revokeToken(token: string) {
     if (!token) return false;
@@ -811,8 +894,7 @@ export class GoogleMailManager implements MailManager {
     return this.withErrorHandler(
       'getThreadMetadata',
       async () => {
-        const gmail = await this.getGmailInstance();
-        const res = await gmail.users.threads.get({
+        const res = await this.gmail.users.threads.get({
           userId: 'me',
           id: threadId,
           format: 'metadata', // Fetch only metadata,
@@ -833,7 +915,7 @@ export class GoogleMailManager implements MailManager {
 
   private async modifyThreadLabels(
     threadIds: string[],
-    requestBody: any, // Changed from gmail_v1.Schema$ModifyThreadRequest to any for now
+    requestBody: gmail_v1.Schema$ModifyThreadRequest,
   ) {
     if (threadIds.length === 0) {
       return;
@@ -854,8 +936,7 @@ export class GoogleMailManager implements MailManager {
       const effects = chunk.map((threadId) =>
         Effect.tryPromise({
           try: async () => {
-            const gmail = await this.getGmailInstance();
-            const response = await gmail.users.threads.modify({
+            const response = await this.gmail.users.threads.modify({
               userId: 'me',
               id: threadId,
               requestBody,
@@ -1101,14 +1182,29 @@ export class GoogleMailManager implements MailManager {
     const { html: processedMessage, inlineImages } = await sanitizeTipTapHtml(message.trim());
 
     if (originalMessage) {
-      msg.setBody(`${processedMessage}${originalMessage}`);
+      msg.addMessage({
+        contentType: 'text/html',
+        data: `${processedMessage}${originalMessage}`,
+      });
     } else {
-      msg.setBody(processedMessage);
+      msg.addMessage({
+        contentType: 'text/html',
+        data: processedMessage,
+      });
     }
 
     if (inlineImages.length > 0) {
       for (const image of inlineImages) {
-        msg.addAttachment(image.cid, image.mimeType, image.data);
+        msg.addAttachment({
+          inline: true,
+          filename: `${image.cid}`,
+          contentType: image.mimeType,
+          data: image.data,
+          headers: {
+            'Content-ID': `<${image.cid}>`,
+            'Content-Disposition': 'inline',
+          },
+        });
       }
     }
 
@@ -1124,7 +1220,7 @@ export class GoogleMailManager implements MailManager {
                 if (!ref.endsWith('>')) ref = `${ref}>`;
                 return ref;
               });
-            msg.setReplyTo(refs.join(' '));
+            msg.setHeader(key, refs.join(' '));
           } else {
             msg.setHeader(key, value);
           }
@@ -1136,11 +1232,15 @@ export class GoogleMailManager implements MailManager {
       for (const file of attachments) {
         const base64Content = file.base64;
 
-        msg.addAttachment(file.name, file.type || 'application/octet-stream', base64Content);
+        msg.addAttachment({
+          filename: file.name,
+          contentType: file.type || 'application/octet-stream',
+          data: base64Content,
+        });
       }
     }
 
-    const emailContent = msg.build();
+    const emailContent = msg.asRaw();
     const encodedMessage = Buffer.from(emailContent).toString('base64');
 
     return {

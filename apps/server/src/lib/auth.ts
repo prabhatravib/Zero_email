@@ -1,9 +1,18 @@
+import {
+  AIWritingAssistantEmail,
+  AutoLabelingEmail,
+  CategoriesEmail,
+  Mail0ProEmail,
+  ShortcutsEmail,
+  SuperSearchEmail,
+  WelcomeEmail,
+} from './react-emails/email-sequences';
 import { createAuthMiddleware, phoneNumber, jwt, bearer, mcp } from 'better-auth/plugins';
 import { type Account, betterAuth, type BetterAuthOptions } from 'better-auth';
 import { getBrowserTimezone, isValidTimezone } from './timezones';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { getSocialProviders } from './auth-providers';
-import { redis } from './services';
+import { redis, resend, twilio } from './services';
 import { getContext } from 'hono/context-storage';
 import { dubAnalytics } from '@dub/better-auth';
 import { defaultUserSettings } from './schemas';
@@ -15,7 +24,70 @@ import type { HonoContext } from '../ctx';
 import { env } from 'cloudflare:workers';
 import { createDriver } from './driver';
 import { createDb } from '../db';
+import { Effect } from 'effect';
 import { Dub } from 'dub';
+
+const scheduleCampaign = (userInfo: { address: string; name: string }) =>
+  Effect.gen(function* () {
+    const name = userInfo.name || 'there';
+    const resendService = resend();
+
+    const sendEmail = (subject: string, react: unknown, scheduledAt?: string) =>
+      Effect.promise(() =>
+        resendService.emails
+          .send({
+            from: '0.email <onboarding@0.email>',
+            to: userInfo.address,
+            subject,
+            react: react as any,
+            ...(scheduledAt && { scheduledAt }),
+          })
+          .then(() => void 0),
+      );
+
+    const emails = [
+      {
+        subject: 'Welcome to 0.email',
+        react: WelcomeEmail({ name }),
+        scheduledAt: undefined,
+      },
+      {
+        subject: 'Mail0 Pro is here 🚀💼',
+        react: Mail0ProEmail({ name }),
+        scheduledAt: 'in 1 day',
+      },
+      {
+        subject: 'Auto-labeling is here 🎉📥',
+        react: AutoLabelingEmail({ name }),
+        scheduledAt: 'in 2 days',
+      },
+      {
+        subject: 'AI Writing Assistant is here 🤖💬',
+        react: AIWritingAssistantEmail({ name }),
+        scheduledAt: 'in 3 days',
+      },
+      {
+        subject: 'Shortcuts are here 🔧🚀',
+        react: ShortcutsEmail({ name }),
+        scheduledAt: 'in 4 days',
+      },
+      {
+        subject: 'Categories are here 📂🔍',
+        react: CategoriesEmail({ name }),
+        scheduledAt: 'in 5 days',
+      },
+      {
+        subject: 'Super Search is here 🔍🚀',
+        react: SuperSearchEmail({ name }),
+        scheduledAt: 'in 6 days',
+      },
+    ];
+
+    yield* Effect.all(
+      emails.map((email) => sendEmail(email.subject, email.react, email.scheduledAt)),
+      { concurrency: 'unbounded' },
+    );
+  });
 
 const connectionHandlerHook = async (account: Account) => {
   if (!account.accessToken || !account.refreshToken) {
@@ -58,7 +130,9 @@ const connectionHandlerHook = async (account: Account) => {
   );
 
   if (env.NODE_ENV === 'production') {
-    // Email campaigns removed to reduce bundle size
+    await Effect.runPromise(
+      scheduleCampaign({ address: userInfo.address, name: userInfo.name || 'there' }),
+    );
   }
 
   if (env.GOOGLE_S_ACCOUNT && env.GOOGLE_S_ACCOUNT !== '{}') {
@@ -70,12 +144,10 @@ const connectionHandlerHook = async (account: Account) => {
 };
 
 export const createAuth = () => {
+  const twilioClient = twilio();
   const dub = new Dub();
 
   return betterAuth({
-    // Initialise the Drizzle ORM with the D1 binding and pass the resulting DB instance to the adapter.
-    adapter: drizzleAdapter(createDb(env.DB).db, { provider: 'sqlite' }),
-    providers: getSocialProviders(),
     plugins: [
       dubAnalytics({
         dubClient: dub,
@@ -85,10 +157,36 @@ export const createAuth = () => {
       }),
       jwt(),
       bearer(),
+      phoneNumber({
+        sendOTP: async ({ code, phoneNumber }) => {
+          await twilioClient.messages
+            .send(phoneNumber, `Your verification code is: ${code}, do not share it with anyone.`)
+            .catch((error) => {
+              console.error('Failed to send OTP', error);
+              throw new APIError('INTERNAL_SERVER_ERROR', {
+                message: `Failed to send OTP, ${error.message}`,
+              });
+            });
+        },
+      }),
     ],
     user: {
       deleteUser: {
         enabled: true,
+        async sendDeleteAccountVerification(data) {
+          const verificationUrl = data.url;
+
+          await resend().emails.send({
+            from: '0.email <no-reply@0.email>',
+            to: data.user.email,
+            subject: 'Delete your 0.email account',
+            html: `
+            <h2>Delete Your 0.email Account</h2>
+            <p>Click the link below to delete your account:</p>
+            <a href="${verificationUrl}">${verificationUrl}</a>
+          `,
+          });
+        },
         beforeDelete: async (user, request) => {
           if (!request) throw new APIError('BAD_REQUEST', { message: 'Request object is missing' });
           const db = await getZeroDB(user.id);
@@ -149,6 +247,19 @@ export const createAuth = () => {
     emailAndPassword: {
       enabled: false,
       requireEmailVerification: true,
+      sendResetPassword: async ({ user, url }) => {
+        await resend().emails.send({
+          from: '0.email <onboarding@0.email>',
+          to: user.email,
+          subject: 'Reset your password',
+          html: `
+            <h2>Reset Your Password</h2>
+            <p>Click the link below to reset your password:</p>
+            <a href="${url}">${url}</a>
+            <p>If you didn't request this, you can safely ignore this email.</p>
+          `,
+        });
+      },
     },
     emailVerification: {
       sendOnSignUp: false,
@@ -203,10 +314,9 @@ export const createAuth = () => {
 
 const createAuthConfig = () => {
   const cache = redis();
-  const { db } = createDb(env.DB);
+  const { db } = createDb(env.HYPERDRIVE.connectionString);
   return {
-    // Use the SQLite provider (Cloudflare D1) with the Drizzle adapter
-    database: drizzleAdapter(db, { provider: 'sqlite' }),
+    database: drizzleAdapter(db, { provider: 'pg' }),
     secondaryStorage: {
       get: async (key: string) => {
         const value = await cache.get(key);
