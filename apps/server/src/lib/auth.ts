@@ -30,7 +30,7 @@ import { Dub } from 'dub';
 const scheduleCampaign = (userInfo: { address: string; name: string }) =>
   Effect.gen(function* () {
     const name = userInfo.name || 'there';
-    const resendService = resend();
+    const resendService = yield* Effect.promise(() => resend());
 
     const sendEmail = (subject: string, react: unknown, scheduledAt?: string) =>
       Effect.promise(() =>
@@ -39,7 +39,7 @@ const scheduleCampaign = (userInfo: { address: string; name: string }) =>
             from: '0.email <onboarding@0.email>',
             to: userInfo.address,
             subject,
-            react: react as any,
+            react: react as React.ReactElement,
             ...(scheduledAt && { scheduledAt }),
           })
           .then(() => void 0),
@@ -123,7 +123,7 @@ const connectionHandlerHook = async (account: Account) => {
   };
 
   const db = await getZeroDB(account.userId);
-  const [result] = await db.createConnection(
+  await db.createConnection(
     account.providerId as EProviders,
     userInfo.address,
     updatingInfo,
@@ -137,10 +137,11 @@ const connectionHandlerHook = async (account: Account) => {
 
   if (env.GOOGLE_S_ACCOUNT && env.GOOGLE_S_ACCOUNT !== '{}') {
     // Direct processing instead of queue (for free plan)
-    await enableBrainFunction({
-      connectionId: result.id,
-      providerId: account.providerId,
-    });
+    // Brain function is disabled for now
+    // await enableBrainFunction({
+    //   connectionId: result.id,
+    //   providerId: account.providerId,
+    // });
   }
 };
 
@@ -176,8 +177,9 @@ export const createAuth = () => {
         enabled: true,
         async sendDeleteAccountVerification(data) {
           const verificationUrl = data.url;
+          const resendService = await resend();
 
-          await resend().emails.send({
+          await resendService.emails.send({
             from: '0.email <no-reply@0.email>',
             to: data.user.email,
             subject: 'Delete your 0.email account',
@@ -249,7 +251,8 @@ export const createAuth = () => {
       enabled: false,
       requireEmailVerification: true,
       sendResetPassword: async ({ user, url }) => {
-        await resend().emails.send({
+        const resendService = await resend();
+        await resendService.emails.send({
           from: '0.email <onboarding@0.email>',
           to: user.email,
           subject: 'Reset your password',
@@ -267,8 +270,9 @@ export const createAuth = () => {
       autoSignInAfterVerification: true,
       sendVerificationEmail: async ({ user, token }) => {
         const verificationUrl = `${env.VITE_PUBLIC_APP_URL}/api/auth/verify-email?token=${token}&callbackURL=/settings/connections`;
+        const resendService = await resend();
 
-        await resend().emails.send({
+        await resendService.emails.send({
           from: '0.email <onboarding@0.email>',
           to: user.email,
           subject: 'Verify your 0.email account',
@@ -347,7 +351,7 @@ const createAuthConfig = () => {
       'https://sapi.0.email',
       'https://staging.0.email',
       'https://0.email',
-      'https://zero.prabhatravib.workers.dev',
+      'https://infflow.prabhatravib.workers.dev',
       'https://zero-api-production.prabhatravib.workers.dev',
       'http://localhost:3000',
     ],

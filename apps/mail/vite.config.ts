@@ -7,6 +7,7 @@ import babel from 'vite-plugin-babel';
 import tailwindcss from 'tailwindcss';
 import { defineConfig } from 'vite';
 import dedent from 'dedent';
+import path from 'path';
 
 const ReactCompilerConfig = {
   /* ... */
@@ -15,7 +16,7 @@ const ReactCompilerConfig = {
 export default defineConfig({
   define: {
     'import.meta.env.VITE_PUBLIC_BACKEND_URL': JSON.stringify('https://zero-api-production.prabhatravib.workers.dev'),
-    'import.meta.env.VITE_PUBLIC_APP_URL': JSON.stringify('https://zero.prabhatravib.workers.dev'),
+    'import.meta.env.VITE_PUBLIC_APP_URL': JSON.stringify('https://infflow.prabhatravib.workers.dev'),
   },
   plugins: [
     oxlintPlugin(),
@@ -26,7 +27,7 @@ export default defineConfig({
           name: 'zero-production',
           vars: {
             VITE_PUBLIC_BACKEND_URL: 'https://zero-api-production.prabhatravib.workers.dev',
-            VITE_PUBLIC_APP_URL: 'https://zero.prabhatravib.workers.dev',
+            VITE_PUBLIC_APP_URL: 'https://infflow.prabhatravib.workers.dev',
           },
         },
       },
@@ -55,6 +56,18 @@ export default defineConfig({
                 Cache-Control: public, immutable, max-age=31536000
           `,
         });
+      },
+    },
+    {
+      name: 'cleanup-paraglide',
+      buildStart() {
+        // Ensure clean paraglide directory
+        const fs = require('fs');
+        const path = require('path');
+        const paraglideDir = path.resolve('./paraglide');
+        if (fs.existsSync(paraglideDir)) {
+          fs.rmSync(paraglideDir, { recursive: true, force: true });
+        }
       },
     },
     paraglideVitePlugin({
@@ -87,6 +100,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@': path.resolve(__dirname, './'),
       tslib: 'tslib/tslib.es6.js',
     },
   },

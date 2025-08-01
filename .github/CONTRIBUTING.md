@@ -170,7 +170,7 @@ Zero uses PostgreSQL with Drizzle ORM. Here's how to work with it:
 ### JavaScript/TypeScript Guidelines
 
 - Use TypeScript for new code
-- Follow ESLint and Prettier configurations
+- Follow ESLint configurations
 - Use async/await for asynchronous operations
 - Properly handle errors and edge cases
 - Use proper TypeScript types and interfaces

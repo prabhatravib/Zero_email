@@ -1,6 +1,4 @@
-import { Html } from '@react-email/components';
-import { render } from '@react-email/render';
-import sanitizeHtml from 'sanitize-html';
+import { getReactEmailComponents, getReactEmailRender, getSanitizeHtml } from './lazy-modules';
 import { v4 as uuidv4 } from 'uuid';
 import React from 'react';
 
@@ -29,10 +27,14 @@ export const sanitizeTipTapHtml = async (
     },
   );
 
-  const clean = sanitizeHtml(processedHtml, {
-    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
+  const sanitizeHtmlModule = await getSanitizeHtml();
+  const { render } = await getReactEmailRender();
+  const { Html } = await getReactEmailComponents();
+
+  const clean = sanitizeHtmlModule.default(processedHtml, {
+    allowedTags: sanitizeHtmlModule.defaults.allowedTags.concat(['img']),
     allowedAttributes: {
-      ...sanitizeHtml.defaults.allowedAttributes,
+      ...sanitizeHtmlModule.defaults.allowedAttributes,
       img: ['src', 'alt', 'width', 'height', 'style'],
     },
     allowedSchemes: ['http', 'https', 'cid', 'data'],

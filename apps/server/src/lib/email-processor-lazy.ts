@@ -1,11 +1,15 @@
-// @ts-expect-error - Email processor module may not have proper types
-import { CssSanitizer } from '@barkleapp/css-sanitizer';
+// Email processor with lazy loading
+// This replaces the original email-processor.ts to use lazy loading
+
 import { getSanitizeHtml } from './lazy-modules';
 import * as cheerio from 'cheerio';
 
+// @ts-expect-error - Email processor module may not have proper types
+import { CssSanitizer } from '@barkleapp/css-sanitizer';
+
 const sanitizer = new CssSanitizer();
 
-interface ProcessEmailOptions {
+export interface ProcessEmailOptions {
   html: string;
   shouldLoadImages: boolean;
   theme: 'light' | 'dark';
@@ -50,7 +54,7 @@ export async function preprocessEmailHtml(html: string): Promise<string> {
     },
 
     transformTags: {
-      a: (tagName, attribs) => {
+      a: (tagName: string, attribs: any) => {
         return {
           tagName,
           attribs: {
@@ -66,6 +70,7 @@ export async function preprocessEmailHtml(html: string): Promise<string> {
   const sanitized = sanitizeHtmlModule.default(html, sanitizeConfig);
   const $ = cheerio.load(sanitized);
 
+  // Sanitize CSS in style tags
   $('style').each((_, el) => {
     const css = $(el).html() || '';
     const safe = sanitizer.sanitizeCss(css, {
@@ -229,11 +234,11 @@ export function applyEmailPreferences(
   };
 }
 
-// Original function for backward compatibility
+// Main function for backward compatibility
 export async function processEmailHtml({ html, shouldLoadImages, theme }: ProcessEmailOptions): Promise<{
   processedHtml: string;
   hasBlockedImages: boolean;
 }> {
   const preprocessed = await preprocessEmailHtml(html);
   return applyEmailPreferences(preprocessed, theme, shouldLoadImages);
-}
+} 

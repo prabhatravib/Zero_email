@@ -13,19 +13,17 @@ import { parseAddressList, parseFrom, wasSentWithTLS } from '../email-utils';
 import type { IOutgoingMessage, Label, ParsedMessage } from '../../types';
 import { sanitizeTipTapHtml } from '../sanitize-tip-tap-html';
 import type { MailManager, ManagerConfig } from './types';
-import { type gmail_v1, gmail } from '@googleapis/gmail';
-import { OAuth2Client } from 'google-auth-library';
+import { getGmailClient, getGoogleAuth } from '../lazy-modules';
 import type { CreateDraftData } from '../schemas';
 import { createMimeMessage } from 'mimetext';
-import { people } from '@googleapis/people';
 import { cleanSearchValue } from '../utils';
 import { env } from 'cloudflare:workers';
 import { Effect } from 'effect';
 import * as he from 'he';
 
 export class GoogleMailManager implements MailManager {
-  private auth;
-  private gmail;
+  private auth: unknown; // Will be lazily initialized
+  private gmail: unknown; // Will be lazily initialized
 
   private labelIdCache: Record<string, string> = {};
 
@@ -47,15 +45,31 @@ export class GoogleMailManager implements MailManager {
   ]);
 
   constructor(public config: ManagerConfig) {
-    this.auth = new OAuth2Client(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET);
+    // Remove immediate initialization - will be done lazily
+  }
 
-    if (config.auth)
-      this.auth.setCredentials({
-        refresh_token: config.auth.refreshToken,
-        scope: this.getScope(),
-      });
+  // Lazy initialization method
+  private async initializeAuth() {
+    if (!this.auth) {
+      const { OAuth2Client } = await getGoogleAuth();
+      this.auth = new OAuth2Client(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET);
 
-    this.gmail = gmail({ version: 'v1', auth: this.auth });
+      if (this.config.auth) {
+        this.auth.setCredentials({
+          refresh_token: this.config.auth.refreshToken,
+          scope: this.getScope(),
+        });
+      }
+
+      const gmailModule = await getGmailClient();
+      this.gmail = gmailModule({ version: 'v1', auth: this.auth });
+    }
+    return this.auth;
+  }
+
+  // Ensure auth is initialized before any operation
+  private async ensureAuth() {
+    await this.initializeAuth();
   }
   public getScope(): string {
     return [
@@ -69,6 +83,7 @@ export class GoogleMailManager implements MailManager {
     return this.withErrorHandler(
       'listHistory',
       async () => {
+        await this.ensureAuth();
         const response = await this.gmail.users.history.list({
           userId: 'me',
           startHistoryId: historyId,
@@ -86,6 +101,7 @@ export class GoogleMailManager implements MailManager {
     return this.withErrorHandler(
       'getAttachment',
       async () => {
+        await this.ensureAuth();
         const response = await this.gmail.users.messages.attachments.get({
           userId: 'me',
           messageId,
@@ -106,6 +122,7 @@ export class GoogleMailManager implements MailManager {
     return this.withErrorHandler(
       'getMessageAttachments',
       async () => {
+        await this.ensureAuth();
         const res = await this.gmail.users.messages.get({
           userId: 'me',
           id: messageId,
@@ -265,7 +282,7 @@ export class GoogleMailManager implements MailManager {
           catch: (error) => ({ _tag: 'ArchiveFetchFailed' as const, error }),
         });
 
-        const processLabelEffect = (label: any) =>
+        const processLabelEffect = (label: Record<string, unknown>) =>
           Effect.tryPromise({
             try: () =>
               this.gmail.users.labels.get({
@@ -943,7 +960,7 @@ export class GoogleMailManager implements MailManager {
             });
             return { threadId, status: 'fulfilled' as const, value: response.data };
           },
-          catch: (error: any) => {
+          catch: (error: unknown) => {
             const errorMessage = error?.errors?.[0]?.message || error.message || error;
             return { threadId, status: 'rejected' as const, reason: { error: errorMessage } };
           },

@@ -30,10 +30,8 @@ This is a pnpm workspace monorepo with the following structure:
 - `pnpm deploy:backend` - Deploy backend
 
 ### Code Quality
-- `pnpm check` - Run format check and lint
+- `pnpm check` - Run lint check
 - `pnpm lint` - Run ESLint across all packages
-- `pnpm format` - Format code with Prettier
-- `pnpm check:format` - Check code formatting
 
 ### Database
 - `pnpm db:push` - Push schema changes to database
@@ -60,7 +58,7 @@ This is a pnpm workspace monorepo with the following structure:
 - **Authentication**: Better Auth, Google OAuth
 - **Package Manager**: pnpm (v10+)
 - **Build Tool**: Turbo
-- **Linting**: ESLint, Oxlint, Prettier
+- **Linting**: ESLint, Oxlint
 
 ## Code Style & Conventions
 
@@ -69,7 +67,6 @@ This is a pnpm workspace monorepo with the following structure:
 - Single quotes
 - 100 character line width
 - Semicolons required
-- Uses Prettier with sort-imports and Tailwind plugins
 
 ### File Organization
 - TypeScript strict mode enabled

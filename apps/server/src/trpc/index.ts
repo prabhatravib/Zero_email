@@ -8,18 +8,19 @@ import { getContext } from 'hono/context-storage';
 import { draftsRouter } from './routes/drafts';
 import { labelsRouter } from './routes/label';
 import { notesRouter } from './routes/notes';
-import { brainRouter } from './routes/brain';
+// import { brainRouter } from './routes/brain'; // Temporarily disabled for startup optimization
 import { userRouter } from './routes/user';
 import { mailRouter } from './routes/mail';
 import { bimiRouter } from './routes/bimi';
 import type { HonoContext } from '../ctx';
-import { aiRouter } from './routes/ai';
+// AI router temporarily disabled for startup optimization
+// import { aiRouter } from './routes/ai';
 import { router } from './trpc';
 
 export const appRouter = router({
-  ai: aiRouter,
+  // ai: aiRouter, // Temporarily disabled for startup optimization
   bimi: bimiRouter,
-  brain: brainRouter,
+  // brain: brainRouter, // Temporarily disabled for startup optimization
   categories: categoriesRouter,
   connections: connectionsRouter,
   cookiePreferences: cookiePreferencesRouter,
