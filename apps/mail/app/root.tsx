@@ -71,7 +71,7 @@ export function Layout({ children }: PropsWithChildren) {
     <html lang={getLocale()} suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#141414" media="(prefers-color-scheme: dark)" />
         <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
         <link rel="manifest" href="/manifest.json" />
@@ -81,7 +81,7 @@ export function Layout({ children }: PropsWithChildren) {
         )}
         <Links />
       </head>
-      <body className="antialiased w-full h-full">
+      <body className="antialiased">
         <ServerProviders connectionId={connectionId}>
           <ClientProviders>{children}</ClientProviders>
           <DubAnalytics
