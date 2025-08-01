@@ -405,7 +405,7 @@
         "NODE_ENV": "production",
         "COOKIE_DOMAIN": "prabhatravib.workers.dev",
         "VITE_PUBLIC_BACKEND_URL": "https://zero-api-production.prabhatravib.workers.dev",
-        "VITE_PUBLIC_APP_URL": "https://zero.prabhatravib.workers.dev",
+        "VITE_PUBLIC_APP_URL": "https://infflow.prabhatravib.workers.dev",
         "JWT_SECRET": "egwrgwrgndnznzgnfhnzxdgnnethzhnzhtyjtudi5e6u4u75tei6",
         "DISABLE_CALLS": "true",
         "DROP_AGENT_TABLES": "false",

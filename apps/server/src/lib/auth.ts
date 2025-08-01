@@ -348,6 +348,7 @@ const createAuthConfig = () => {
       'https://staging.0.email',
       'https://0.email',
       'https://zero.prabhatravib.workers.dev',
+      'https://infflow.prabhatravib.workers.dev',
       'https://zero-api-production.prabhatravib.workers.dev',
       'http://localhost:3000',
     ],

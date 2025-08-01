@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "zero",
+  "name": "infflow",
   "compatibility_date": "2025-06-27",
   "observability": {
     "enabled": true,
@@ -12,7 +12,7 @@
   },
   "vars": {
     "VITE_PUBLIC_BACKEND_URL": "https://zero-api-production.prabhatravib.workers.dev",
-    "VITE_PUBLIC_APP_URL": "https://zero.prabhatravib.workers.dev",
+    "VITE_PUBLIC_APP_URL": "https://infflow.prabhatravib.workers.dev",
   },
   "env": {
     "local": {
@@ -30,10 +30,10 @@
       },
     },
     "production": {
-      "name": "zero-production",
+      "name": "infflow-production",
       "vars": {
         "VITE_PUBLIC_BACKEND_URL": "https://zero-api-production.prabhatravib.workers.dev",
-        "VITE_PUBLIC_APP_URL": "https://zero.prabhatravib.workers.dev",
+        "VITE_PUBLIC_APP_URL": "https://infflow.prabhatravib.workers.dev",
       },
     },
   },
