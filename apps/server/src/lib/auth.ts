@@ -349,6 +349,7 @@ const createAuthConfig = () => {
       'https://0.email',
       'https://zero.prabhatravib.workers.dev',
       'https://zero-api-production.prabhatravib.workers.dev',
+      'https://pitext-email.prabhatravib.workers.dev',
       'http://localhost:3000',
     ],
     session: {
