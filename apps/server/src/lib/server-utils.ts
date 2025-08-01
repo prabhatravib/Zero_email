@@ -47,12 +47,12 @@ export const getActiveConnection = async () => {
   return firstConnection;
 };
 
-export const connectionToDriver = async (activeConnection: typeof connection.$inferSelect) => {
+export const connectionToDriver = (activeConnection: typeof connection.$inferSelect) => {
   if (!activeConnection.accessToken || !activeConnection.refreshToken) {
     throw new Error(`Invalid connection ${JSON.stringify(activeConnection?.id)}`);
   }
 
-  return await createDriver(activeConnection.providerId, {
+  return createDriver(activeConnection.providerId, {
     auth: {
       userId: activeConnection.userId,
       accessToken: activeConnection.accessToken,

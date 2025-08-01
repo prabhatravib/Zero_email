@@ -1,4 +1,7 @@
-
+import {
+  getWritingStyleMatrixForConnectionId,
+  type WritingStyleMatrix,
+} from '../../../services/writing-style-service';
 import { escapeXml } from '../../../thread-workflow-utils/workflow-utils';
 import { StyledEmailAssistantSystemPrompt } from '../../../lib/prompts';
 import { webSearch } from '../../../routes/agent/tools';
@@ -30,7 +33,9 @@ type ComposeEmailInput = {
 export async function composeEmail(input: ComposeEmailInput) {
   const { prompt, threadMessages = [], cc, emailSubject, to, username, connectionId } = input;
 
-
+  const writingStyleMatrix = await getWritingStyleMatrixForConnectionId({
+    connectionId,
+  });
 
   const systemPrompt = await getPrompt(
     `${connectionId}-${EPrompts.Compose}`,
@@ -41,7 +46,7 @@ export async function composeEmail(input: ComposeEmailInput) {
     recipients: [...(to ?? []), ...(cc ?? [])],
     prompt,
     username,
-    styleProfile: null,
+    styleProfile: writingStyleMatrix?.style as WritingStyleMatrix,
   });
 
   const threadUserMessages = threadMessages.map((message) => ({
@@ -198,7 +203,7 @@ const EmailAssistantPrompt = ({
   recipients?: string[];
   prompt: string;
   username: string;
-  styleProfile?: any | null;
+  styleProfile?: WritingStyleMatrix | null;
 }) => {
   const parts: string[] = [];
 
@@ -243,7 +248,7 @@ const EmailAssistantPrompt = ({
   return parts.join('\n\n');
 };
 
-const generateSubject = async (message: string, styleProfile?: any | null) => {
+const generateSubject = async (message: string, styleProfile?: WritingStyleMatrix | null) => {
   const parts: string[] = [];
 
   parts.push('# Email Subject Generation Task');

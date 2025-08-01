@@ -5,6 +5,7 @@ import {
   boolean,
   integer,
   jsonb,
+  primaryKey,
   unique,
   index,
 } from 'drizzle-orm/pg-core';
@@ -200,7 +201,30 @@ export const userSettings = createTable(
   (t) => [index('user_settings_settings_idx').on(t.settings)],
 );
 
-
+export const writingStyleMatrix = createTable(
+  'writing_style_matrix',
+  {
+    connectionId: text()
+      .notNull()
+      .references(() => connection.id, { onDelete: 'cascade' }),
+    numMessages: integer().notNull(),
+    // TODO: way too much pain to get this type to work,
+    // revisit later
+    style: jsonb().$type<unknown>().notNull(),
+    updatedAt: timestamp()
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return [
+      primaryKey({
+        columns: [table.connectionId],
+      }),
+      index('writing_style_matrix_style_idx').on(table.style),
+    ];
+  },
+);
 
 export const jwks = createTable(
   'jwks',

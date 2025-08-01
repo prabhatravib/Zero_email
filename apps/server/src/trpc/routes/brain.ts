@@ -26,30 +26,29 @@ export const brainRouter = router({
     return await disableBrainFunction(connection);
   }),
 
-  // generateSummary removed - Vectorize dependency
-  // generateSummary: activeConnectionProcedure
-  //   .input(
-  //     z.object({
-  //       threadId: z.string(),
-  //     }),
-  //   )
-  //   .query(async ({ input, ctx }) => {
-  //     const { threadId } = input;
-  //     const response = await env.VECTORIZE.getByIds([threadId]);
-  //     if (response.length && response?.[0]?.metadata?.['summary']) {
-  //       const result = response[0].metadata as { summary: string; connection: string };
-  //       if (result.connection !== ctx.activeConnection.id) return null;
-  //       const shortResponse = await env.AI.run('@cf/facebook/bart-large-cnn', {
-  //         input_text: result.summary,
-  //       });
-  //       return {
-  //         data: {
-  //           short: shortResponse.summary,
-  //         },
-  //       };
-  //     }
-  //     return null;
-  //   }),
+  generateSummary: activeConnectionProcedure
+    .input(
+      z.object({
+        threadId: z.string(),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const { threadId } = input;
+      const response = await env.VECTORIZE.getByIds([threadId]);
+      if (response.length && response?.[0]?.metadata?.['summary']) {
+        const result = response[0].metadata as { summary: string; connection: string };
+        if (result.connection !== ctx.activeConnection.id) return null;
+        const shortResponse = await env.AI.run('@cf/facebook/bart-large-cnn', {
+          input_text: result.summary,
+        });
+        return {
+          data: {
+            short: shortResponse.summary,
+          },
+        };
+      }
+      return null;
+    }),
   getState: activeConnectionProcedure.query(async ({ ctx }) => {
     const connection = ctx.activeConnection;
     const state = await env.subscribed_accounts.get(`${connection.id}__${connection.providerId}`);

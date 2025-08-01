@@ -12,9 +12,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "eval": "evalite",
-    "eval:dev": "evalite watch",
-    "test:lazy": "node test-lazy-loading.js",
-    "test:lazy:simple": "node test-lazy-loading-simple.js"
+    "eval:dev": "evalite watch"
   },
   "exports": {
     "./trpc": "./src/trpc/index.ts",

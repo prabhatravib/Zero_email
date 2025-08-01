@@ -3,8 +3,8 @@ import type { HonoContext } from '../ctx';
 import { env } from 'cloudflare:workers';
 import { Hono } from 'hono';
 
-const sanitizeCustomerBody = (body: Record<string, unknown>) => {
-  const bodyCopy = { ...body };
+const sanitizeCustomerBody = (body: any) => {
+  let bodyCopy = { ...body };
   delete bodyCopy.id;
   delete bodyCopy.name;
   delete bodyCopy.email;

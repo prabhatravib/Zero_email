@@ -98,8 +98,7 @@ export const defaultMailCategories: MailCategory[] = [
   },
 ];
 
-// Lazy-loaded schema to reduce startup overhead
-const categoriesSchema = () => z.array(mailCategorySchema).superRefine((cats, ctx) => {
+const categoriesSchema = z.array(mailCategorySchema).superRefine((cats, ctx) => {
   const orders = cats.map((c) => c.order);
   if (new Set(orders).size !== orders.length) {
     ctx.addIssue({
@@ -127,7 +126,7 @@ export const userSettingsSchema = z.object({
   trustedSenders: z.string().array().optional(),
   colorTheme: z.enum(['light', 'dark', 'system']).default('system'),
   zeroSignature: z.boolean().default(true),
-  categories: categoriesSchema().optional(),
+  categories: categoriesSchema.optional(),
   defaultEmailAlias: z.string().optional(),
   imageCompression: z.enum(['low', 'medium', 'original']).default('medium'),
   autoRead: z.boolean().default(true),

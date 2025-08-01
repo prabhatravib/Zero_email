@@ -3,9 +3,9 @@ import {
   IGetThreadsResponseSchema,
   type IGetThreadsResponse,
 } from '../../lib/driver/types';
-
+import { updateWritingStyleMatrix } from '../../services/writing-style-service';
 import { activeDriverProcedure, router, privateProcedure } from '../trpc';
-import { processEmailHtml } from '../../lib/email-processor-lazy';
+import { processEmailHtml } from '../../lib/email-processor';
 import { defaultPageSize, FOLDERS } from '../../lib/utils';
 import { serializedFileSchema } from '../../lib/schemas';
 import type { DeleteAllSpamResponse } from '../../types';
@@ -15,8 +15,7 @@ import { env } from 'cloudflare:workers';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-// Lazy-loaded schemas to reduce startup overhead
-const senderSchema = () => z.object({
+const senderSchema = z.object({
   name: z.string().optional(),
   email: z.string(),
 });
@@ -58,13 +57,15 @@ export const mailRouter = router({
       return await agent.count();
     }),
   listThreads: activeDriverProcedure
-    .input(() => z.object({
-      folder: z.string().optional().default('inbox'),
-      q: z.string().optional().default(''),
-      maxResults: z.number().optional().default(defaultPageSize),
-      cursor: z.string().optional().default(''),
-      labelIds: z.array(z.string()).optional().default([]),
-    }))
+    .input(
+      z.object({
+        folder: z.string().optional().default('inbox'),
+        q: z.string().optional().default(''),
+        maxResults: z.number().optional().default(defaultPageSize),
+        cursor: z.string().optional().default(''),
+        labelIds: z.array(z.string()).optional().default([]),
+      }),
+    )
     .output(IGetThreadsResponseSchema)
     .query(async ({ ctx, input }) => {
       const { folder, maxResults, cursor, q, labelIds } = input;
@@ -94,6 +95,8 @@ export const mailRouter = router({
 
         type ThreadItem = { id: string; historyId: string | null; $raw?: unknown };
 
+        let threadsResponse: IGetThreadsResponse;
+
         // Apply folder-to-label mapping when no search query is provided
         const folderLabelId = getFolderLabelId(folder);
         const effectiveLabelIds = q ? labelIds : [...labelIds, folderLabelId].filter(Boolean);
@@ -106,7 +109,7 @@ export const mailRouter = router({
           pageToken: cursor,
         });
 
-        const threadsResponse = await Promise.race([threadsPromise, timeoutPromise]);
+        threadsResponse = await Promise.race([threadsPromise, timeoutPromise]);
 
         if (folder === FOLDERS.SNOOZED) {
           const nowTs = Date.now();
@@ -161,18 +164,22 @@ export const mailRouter = router({
       }
     }),
   markAsRead: activeDriverProcedure
-    .input(() => z.object({
-      ids: z.string().array(),
-    }))
+    .input(
+      z.object({
+        ids: z.string().array(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       const { activeConnection } = ctx;
       const agent = await getZeroAgent(activeConnection.id);
       return agent.markAsRead(input.ids);
     }),
   markAsUnread: activeDriverProcedure
-    .input(() => z.object({
-      ids: z.string().array(),
-    }))
+    .input(
+      z.object({
+        ids: z.string().array(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       const { activeConnection } = ctx;
       const agent = await getZeroAgent(activeConnection.id);
@@ -367,27 +374,35 @@ export const mailRouter = router({
     }),
 
   send: activeDriverProcedure
-    .input(() => z.object({
-      to: z.array(senderSchema()),
-      subject: z.string(),
-      message: z.string(),
-      attachments: z.array(serializedFileSchema).optional().default([]),
-      headers: z.record(z.string()).optional().default({}),
-      cc: z.array(senderSchema()).optional(),
-      bcc: z.array(senderSchema()).optional(),
-      threadId: z.string().optional(),
-      fromEmail: z.string().optional(),
-      draftId: z.string().optional(),
-      isForward: z.boolean().optional(),
-      originalMessage: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        to: z.array(senderSchema),
+        subject: z.string(),
+        message: z.string(),
+        attachments: z.array(serializedFileSchema).optional().default([]),
+        headers: z.record(z.string()).optional().default({}),
+        cc: z.array(senderSchema).optional(),
+        bcc: z.array(senderSchema).optional(),
+        threadId: z.string().optional(),
+        fromEmail: z.string().optional(),
+        draftId: z.string().optional(),
+        isForward: z.boolean().optional(),
+        originalMessage: z.string().optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const { activeConnection } = ctx;
       const agent = await getZeroAgent(activeConnection.id);
       const { draftId, ...mail } = input;
 
       const afterTask = async () => {
-        // Writing style analysis removed
+        try {
+          console.warn('Saving writing style matrix...');
+          await updateWritingStyleMatrix(activeConnection.id, input.message);
+          console.warn('Saved writing style matrix.');
+        } catch (error) {
+          console.error('Failed to save writing style matrix', error);
+        }
       };
 
       if (draftId) {

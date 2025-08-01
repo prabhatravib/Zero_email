@@ -1,4 +1,4 @@
-
+import React from 'react';
 import {
   Html,
   Head,
@@ -79,11 +79,11 @@ export const WelcomeEmail = ({ name }: EmailProps) => {
             <Heading style={h1}>Welcome to Mail0 👋</Heading>
             <Text style={text}>Hey {name ? name : 'there'},</Text>
             <Text style={text}>
-              I&apos;m Nizzy, founder of Mail0 (aka Zero)
+              I'm Nizzy, founder of Mail0 (aka Zero)
             </Text>
             <Text style={text}>
-              If you&apos;ve ever screamed into the void trying to find that one email thread from 6 months ago, 
-              or spent 10 minutes writing &quot;sounds good,&quot; you&apos;re in the right place 😅
+              If you've ever screamed into the void trying to find that one email thread from 6 months ago, 
+              or spent 10 minutes writing "sounds good," you're in the right place 😅
             </Text>
             <Text style={text}>Mail0 is built different:</Text>
             <Text style={listItem}>• AI-native from day one</Text>
@@ -91,7 +91,7 @@ export const WelcomeEmail = ({ name }: EmailProps) => {
             <Text style={listItem}>• Summarizes long threads, drafts replies, and lets you search your inbox like a conversation</Text>
             <Text style={listItem}>• Respects your privacy and your time</Text>
             <Text style={text}>
-              It&apos;s still early. It&apos;s raw. But it&apos;s real. And it&apos;s yours 💪
+              It's still early. It's raw. But it's real. And it's yours 💪
             </Text>
             <Text style={text}>
               Mail0 is for people like us: curious, technical, and tired of bloated tools pretending to be minimal 🙃
