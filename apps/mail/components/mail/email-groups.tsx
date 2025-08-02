@@ -85,9 +85,6 @@ export function EmailGroups({
                         <h3 className="font-medium text-base mb-2 line-clamp-1 text-[#2c5aa0]">
                           {group.name}
                         </h3>
-                        <p className="text-sm text-[#5a7ba8]">
-                          {group.count} emails
-                        </p>
                       </div>
                     </div>
                   </div>

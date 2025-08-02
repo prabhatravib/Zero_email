@@ -50,6 +50,7 @@ import type { WSMessage } from 'partyserver';
 import { tools as authTools } from './tools';
 import { processToolCalls } from './utils';
 import { env } from 'cloudflare:workers';
+import type { D1Database } from '@cloudflare/workers-types';
 import type { Connection } from 'agents';
 import { openai } from '@ai-sdk/openai';
 import { createDb } from '../../db';
@@ -283,17 +284,92 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
   private syncThreadsInProgress: Map<string, boolean> = new Map();
   private driver: MailManager | null = null;
   private agent: DurableObjectStub<ZeroAgent> | null = null;
+  private db: D1Database | null = null;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
+    
+    // Initialize D1 database if available
+    if (env.DB) {
+      this.db = env.DB;
+      console.log('[ZeroDriver] D1 database initialized');
+      // Initialize tables asynchronously
+      this.createTables().catch(error => {
+        console.error('[ZeroDriver] Failed to initialize tables:', error);
+      });
+    } else {
+      console.warn('[ZeroDriver] D1 database not available, using fallback');
+    }
+    
     if (shouldDropTables) this.dropTables();
   }
 
-  // Add the missing sql method
-  private sql(strings: TemplateStringsArray, ...values: any[]) {
-    // Fallback to empty array since database is not available
-    console.log('Database not available, returning empty result for sql');
-    return [];
+  private async createTables() {
+    if (!this.db) return;
+    
+    try {
+      await this.sql`
+        CREATE TABLE IF NOT EXISTS threads (
+          id TEXT PRIMARY KEY,
+          thread_id TEXT NOT NULL,
+          provider_id TEXT NOT NULL,
+          latest_sender TEXT,
+          latest_received_on TEXT,
+          latest_subject TEXT,
+          latest_label_ids TEXT,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+      
+      await this.sql`
+        CREATE TABLE IF NOT EXISTS sessions (
+          id TEXT PRIMARY KEY,
+          data TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+      
+      await this.sql`
+        CREATE TABLE IF NOT EXISTS connections (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          provider_id TEXT NOT NULL,
+          email TEXT NOT NULL,
+          access_token TEXT,
+          refresh_token TEXT,
+          expires_at DATETIME,
+          scope TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+      
+      console.log('[ZeroDriver] Database tables created successfully');
+    } catch (error) {
+      console.error('[ZeroDriver] Failed to create tables:', error);
+    }
+  }
+
+  // Updated sql method to properly handle D1 database
+  private async sql(strings: TemplateStringsArray, ...values: any[]) {
+    if (!this.db) {
+      console.log('Database not available, returning empty result for sql');
+      return [];
+    }
+    
+    try {
+      const query = strings.reduce((result, str, i) => {
+        return result + str + (values[i] !== undefined ? '?' : '');
+      }, '');
+      
+      const stmt = this.db.prepare(query);
+      const result = await stmt.bind(...values).all();
+      return result.results || [];
+    } catch (error) {
+      console.error('[ZeroDriver] SQL query failed:', error);
+      return [];
+    }
   }
 
   getAllSubjects() {
@@ -799,14 +875,21 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
 
   async dropTables() {
     console.log('Dropping tables');
-    return this.sql`
-        DROP TABLE IF EXISTS threads;`;
+    try {
+      await this.sql`DROP TABLE IF EXISTS threads;`;
+      await this.sql`DROP TABLE IF EXISTS sessions;`;
+      await this.sql`DROP TABLE IF EXISTS connections;`;
+    } catch (error) {
+      console.error('[dropTables] Failed to drop tables:', error);
+    }
   }
 
   async deleteThread(id: string) {
-    void this.sql`
-      DELETE FROM threads WHERE thread_id = ${id};
-    `;
+    try {
+      await this.sql`DELETE FROM threads WHERE thread_id = ${id};`;
+    } catch (error) {
+      console.error('[deleteThread] Failed to delete thread:', error);
+    }
     this.agent?.broadcastChatMessage({
       type: OutgoingMessageType.Mail_List,
       folder: 'bin',
@@ -922,7 +1005,7 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
 
         // Update database
         yield* Effect.tryPromise(() =>
-          Promise.resolve(this.sql`
+          this.sql`
           INSERT OR REPLACE INTO threads (
             id,
             thread_id,
@@ -942,7 +1025,7 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
             ${JSON.stringify(latest.tags.map((tag) => tag.id))},
             CURRENT_TIMESTAMP
           )
-        `),
+        `,
         ).pipe(
           Effect.tap(() =>
             Effect.sync(() => console.log(`[syncThread] Updated database for ${threadId}`)),
@@ -1004,15 +1087,15 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
   }
 
   async getThreadCount() {
-    const count = this.sql`SELECT COUNT(*) FROM threads`;
-    return count[0]['COUNT(*)'] as number;
+    const count = await this.sql`SELECT COUNT(*) FROM threads`;
+    return count[0]?.['COUNT(*)'] as number || 0;
   }
 
   async getFolderThreadCount(folder: string) {
-    const count = this.sql`SELECT COUNT(*) FROM threads WHERE EXISTS (
+    const count = await this.sql`SELECT COUNT(*) FROM threads WHERE EXISTS (
       SELECT 1 FROM json_each(latest_label_ids) WHERE value = ${folder}
     )`;
-    return count[0]['COUNT(*)'] as number;
+    return count[0]?.['COUNT(*)'] as number || 0;
   }
 
   async syncThreads(folder: string): Promise<FolderSyncResult> {
@@ -1403,7 +1486,7 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
   async modifyThreadLabelsInDB(threadId: string, addLabels: string[], removeLabels: string[]) {
     try {
       // Get current labels
-      const result = this.sql`
+      const result = await this.sql`
         SELECT latest_label_ids
         FROM threads
         WHERE thread_id = ${threadId}
@@ -1440,7 +1523,7 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
       }
 
       // Update the database
-      void this.sql`
+      await this.sql`
         UPDATE threads
         SET latest_label_ids = ${JSON.stringify(updatedLabels)},
             updated_at = CURRENT_TIMESTAMP
@@ -1711,7 +1794,11 @@ export class ZeroAgent extends AIChatAgent<typeof env> {
         }
         case IncomingMessageType.ChatClear: {
           this.destroyAbortControllers();
-          void this.sql`delete from cf_ai_chat_agent_messages`;
+          try {
+            await this.sql`delete from cf_ai_chat_agent_messages`;
+          } catch (error) {
+            console.error('[ChatClear] Failed to clear messages from database:', error);
+          }
           this.messages = [];
           this.broadcastChatMessage(
             {
