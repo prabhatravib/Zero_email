@@ -58,27 +58,27 @@ export function EmailGroups({
       {/* Group Panels */}
       <div className="flex-1 p-6 overflow-hidden">
         <div className="max-w-7xl mx-auto h-full">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-[#2c5aa0]">Groups</h2>
-            {selectedGroupId && (
-              <button 
-                onClick={() => onGroupSelect(null)} 
-                className="text-sm transition-colors hover:opacity-80 text-[#4a8dd9]"
-              >
-                View All Groups
-              </button>
-            )}
-          </div>
+                     <div className="flex items-center justify-between mb-4">
+             <h2 className="text-lg font-medium text-[#2c5aa0]">Groups</h2>
+             {selectedGroupId && (
+               <button 
+                 onClick={() => onGroupSelect(null)} 
+                 className="text-sm transition-colors hover:opacity-80 text-[#4a8dd9]"
+               >
+                 View all mails
+               </button>
+             )}
+           </div>
           
           <div className="h-full overflow-x-auto overflow-y-hidden">
-            <div className="flex gap-4 h-full pb-4">
+            <div className="flex gap-4 h-full pb-6">
               {groups.map(group => (
                 <motion.div 
                   key={group.id} 
                   whileHover={{ y: -2, scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className={cn(
-                    "flex-shrink-0 w-72 h-32 rounded-xl border cursor-pointer transition-all duration-200",
+                    "flex-shrink-0 w-72 h-40 rounded-xl border cursor-pointer transition-all duration-200",
                     selectedGroupId === group.id 
                       ? "shadow-lg ring-2 ring-[#4a8dd9]" 
                       : "hover:shadow-md"
@@ -91,64 +91,19 @@ export function EmailGroups({
                   }}
                   onClick={() => onGroupSelect(selectedGroupId === group.id ? null : group.id)}
                 >
-                  <div className="p-4 flex flex-col justify-between h-full rounded-xl bg-white/90">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-base mb-1 line-clamp-1 text-[#2c5aa0]">
-                          {group.name}
-                        </h3>
-                        <p className="text-sm text-[#5a7ba8]">
-                          {group.count} emails
-                        </p>
-                      </div>
-                      <div 
-                        className="w-4 h-4 rounded-full flex-shrink-0 ml-2"
-                        style={{
-                          background: "linear-gradient(135deg, #7bb3f0 0%, #5a9de8 50%, #4a8dd9 100%)"
-                        }}
-                      />
-                    </div>
+                  <div className="p-5 flex flex-col justify-between h-full rounded-xl bg-white/90">
+                                         <div className="flex items-start">
+                       <div className="flex-1">
+                         <h3 className="font-medium text-base mb-2 line-clamp-1 text-[#2c5aa0]">
+                           {group.name}
+                         </h3>
+                         <p className="text-sm text-[#5a7ba8]">
+                           {group.count} emails
+                         </p>
+                       </div>
+                     </div>
                     
-                    <div className="flex items-center justify-between">
-                      <div className="flex -space-x-1">
-                        {group.emails.slice(0, 3).map((email, index) => (
-                          <div 
-                            key={email.id} 
-                            className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-medium"
-                            style={{
-                              zIndex: 3 - index,
-                              backgroundColor: "#e1f0ff",
-                              borderColor: "rgba(255, 255, 255, 0.9)",
-                              color: "#4a8dd9"
-                            }}
-                          >
-                            {email.sender.charAt(0).toUpperCase()}
-                          </div>
-                        ))}
-                        {group.emails.length > 3 && (
-                          <div 
-                            className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-medium"
-                            style={{
-                              backgroundColor: "#e1f0ff",
-                              borderColor: "rgba(255, 255, 255, 0.9)",
-                              color: "#4a8dd9"
-                            }}
-                          >
-                            +{group.emails.length - 3}
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="text-xs text-[#5a7ba8]">
-                        {group.emails.length > 0 && 
-                          new Date(Math.max(...group.emails.map(e => e.timestamp.getTime())))
-                            .toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric'
-                            })
-                        }
-                      </div>
-                    </div>
+                    
                   </div>
                 </motion.div>
               ))}

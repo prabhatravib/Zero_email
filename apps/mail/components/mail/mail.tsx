@@ -475,7 +475,7 @@ export function MailLayout() {
       <PricingDialog />
       <div className="rounded-inherit relative z-[5] flex flex-col p-0 md:mr-0.5 md:mt-1">
         {/* Email Groups Section */}
-        <div className="h-64 mb-2">
+        <div className="h-80 mb-2">
           <EmailGroups
             groups={emailGroups}
             selectedGroupId={selectedGroupId}
