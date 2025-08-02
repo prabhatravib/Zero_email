@@ -2,6 +2,7 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { cloudflare } from '@cloudflare/vite-plugin';
 import { reactRouter } from '@react-router/dev/vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
+import oxlintPlugin from 'vite-plugin-oxlint';
 import babel from 'vite-plugin-babel';
 import tailwindcss from 'tailwindcss';
 import { defineConfig } from 'vite';
@@ -17,6 +18,7 @@ export default defineConfig({
     'import.meta.env.VITE_PUBLIC_APP_URL': JSON.stringify('https://zero.prabhatravib.workers.dev'),
   },
   plugins: [
+    oxlintPlugin(),
     reactRouter(),
     cloudflare({
       environments: {

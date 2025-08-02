@@ -42,21 +42,22 @@ export function EmailGroups({
             <h1 className="text-xl font-semibold mb-1 text-[#2c5aa0]">Email Groups</h1>
             <p className="text-sm text-[#5a7ba8]">Your emails organized by topic</p>
           </div>
-          {selectedGroupId && (
-            <button 
-              onClick={() => onGroupSelect(null)} 
-              className="text-sm transition-colors hover:opacity-80 text-[#4a8dd9]"
-            >
-              View all mails
-            </button>
-          )}
+          <div className="flex items-center gap-6 text-sm">
+            {selectedGroupId && (
+              <button 
+                onClick={() => onGroupSelect(null)} 
+                className="text-sm transition-colors hover:opacity-80 text-[#4a8dd9]"
+              >
+                View all mails
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Group Panels */}
       <div className="flex-1 p-6 overflow-hidden">
         <div className="max-w-7xl mx-auto h-full">
-          
           <div className="h-full overflow-x-auto overflow-y-hidden">
             <div className="flex gap-4 h-full pb-6">
               {groups.map(group => (
@@ -79,18 +80,16 @@ export function EmailGroups({
                   onClick={() => onGroupSelect(selectedGroupId === group.id ? null : group.id)}
                 >
                   <div className="p-5 flex flex-col justify-between h-full rounded-xl bg-white/90">
-                                         <div className="flex items-start">
-                       <div className="flex-1">
-                         <h3 className="font-medium text-base mb-2 line-clamp-1 text-[#2c5aa0]">
-                           {group.name}
-                         </h3>
-                         <p className="text-sm text-[#5a7ba8]">
-                           {group.count} emails
-                         </p>
-                       </div>
-                     </div>
-                    
-                    
+                    <div className="flex items-start">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-base mb-2 line-clamp-1 text-[#2c5aa0]">
+                          {group.name}
+                        </h3>
+                        <p className="text-sm text-[#5a7ba8]">
+                          {group.count} emails
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               ))}

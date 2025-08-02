@@ -230,17 +230,17 @@ const Thread = memo(
             data-thread-id={idToUse}
             key={idToUse}
             className={cn(
-              'hover:bg-[#e1f0ff] group relative mx-1 flex cursor-pointer flex-col items-start rounded-lg py-2 text-left text-sm transition-all hover:opacity-100',
+              'hover:bg-offsetLight hover:bg-primary/5 group relative mx-1 flex cursor-pointer flex-col items-start rounded-lg py-2 text-left text-sm transition-all hover:opacity-100',
               (isMailSelected || isMailBulkSelected || isKeyboardFocused) &&
-                'border-[#b8d4f0] bg-[#e1f0ff] opacity-100',
-              isKeyboardFocused && 'ring-[#4a8dd9]/50',
+                'border-border bg-primary/5 opacity-100',
+              isKeyboardFocused && 'ring-primary/50',
               'relative',
               'group',
             )}
           >
             <div
               className={cn(
-                'absolute right-2 z-[25] flex -translate-y-1/2 items-center gap-1 rounded-xl border bg-white p-1 opacity-0 shadow-sm group-hover:opacity-100 border-[#b8d4f0]',
+                'dark:bg-panelDark absolute right-2 z-[25] flex -translate-y-1/2 items-center gap-1 rounded-xl border bg-white p-1 opacity-0 shadow-sm group-hover:opacity-100',
                 index === 0 ? 'top-4' : 'top-[-1]',
               )}
             >
@@ -257,14 +257,14 @@ const Thread = memo(
                         'h-4 w-4',
                         displayStarred
                           ? 'fill-yellow-400 stroke-yellow-400'
-                          : 'fill-transparent stroke-[#5a7ba8]',
+                          : 'fill-transparent stroke-[#9D9D9D] dark:stroke-[#9D9D9D]',
                       )}
                     />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent
                   side={index === 0 ? 'bottom' : 'top'}
-                  className="mb-1 bg-white text-[#2c5aa0]"
+                  className="mb-1 bg-white dark:bg-[#1A1A1A]"
                 >
                   {displayStarred
                     ? m['common.threadDisplay.unstar']()
@@ -278,18 +278,18 @@ const Thread = memo(
                     size="icon"
                     className={cn(
                       'h-6 w-6 [&_svg]:size-3.5',
-                      displayImportant ? 'hover:bg-orange-200/70' : '',
+                      displayImportant ? 'hover:bg-orange-200/70 dark:hover:bg-orange-800/40' : '',
                     )}
                     onClick={handleToggleImportant}
                   >
                     <ExclamationCircle
-                      className={cn(displayImportant ? 'fill-orange-400' : 'fill-[#5a7ba8]')}
+                      className={cn(displayImportant ? 'fill-orange-400' : 'fill-[#9D9D9D]')}
                     />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent
                   side={index === 0 ? 'bottom' : 'top'}
-                  className="mb-1 bg-white text-[#2c5aa0]"
+                  className="dark:bg-panelDark mb-1 bg-white"
                 >
                   {m['common.mail.toggleImportant']()}
                 </TooltipContent>
@@ -305,12 +305,12 @@ const Thread = memo(
                       moveThreadTo('archive');
                     }}
                   >
-                    <Archive2 className="fill-[#5a7ba8]" />
+                    <Archive2 className="fill-[#9D9D9D]" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent
                   side={index === 0 ? 'bottom' : 'top'}
-                  className="mb-1 bg-white text-[#2c5aa0]"
+                  className="dark:bg-panelDark mb-1 bg-white"
                 >
                   {m['common.threadDisplay.archive']()}
                 </TooltipContent>
@@ -321,7 +321,7 @@ const Thread = memo(
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 hover:bg-[#FDE4E9] [&_svg]:size-3.5"
+                      className="h-6 w-6 hover:bg-[#FDE4E9] dark:hover:bg-[#411D23] [&_svg]:size-3.5"
                       onClick={(e: React.MouseEvent) => {
                         e.stopPropagation();
                         moveThreadTo('bin');
@@ -332,7 +332,7 @@ const Thread = memo(
                   </TooltipTrigger>
                   <TooltipContent
                     side={index === 0 ? 'bottom' : 'top'}
-                    className="mb-1 bg-white text-[#2c5aa0]"
+                    className="dark:bg-panelDark mb-1 bg-white"
                   >
                     {m['common.actions.Bin']()}
                   </TooltipContent>
@@ -371,8 +371,8 @@ const Thread = memo(
                       displayUnread && !isMailSelected && !isFolderSent ? '' : 'border',
                     )}
                   >
-                    <div className="flex h-full w-full items-center justify-center rounded-full bg-[#e1f0ff] p-2">
-                      <GroupPeople className="h-4 w-4 fill-[#5a7ba8]" />
+                    <div className="flex h-full w-full items-center justify-center rounded-full bg-[#FFFFFF] p-2 dark:bg-[#373737]">
+                      <GroupPeople className="h-4 w-4" />
                     </div>
                   </Avatar>
                 ) : (
@@ -399,21 +399,21 @@ const Thread = memo(
                     <div className="flex flex-row items-center gap-[4px]">
                       <span
                         className={cn(
-                          displayUnread && !isMailSelected ? 'font-semibold' : 'font-medium',
-                          'text-base flex items-baseline gap-1 group-hover:opacity-100 text-[#2c5aa0]',
+                          displayUnread && !isMailSelected ? 'font-bold' : 'font-medium',
+                          'text-md flex items-baseline gap-1 group-hover:opacity-100',
                         )}
                       >
                         {isFolderSent ? (
-                                                      <span
-                              className={cn(
-                                'overflow-hidden truncate text-base md:max-w-[15ch] xl:max-w-[25ch]',
-                              )}
-                            >
+                          <span
+                            className={cn(
+                              'overflow-hidden truncate text-sm md:max-w-[15ch] xl:max-w-[25ch]',
+                            )}
+                          >
                             {highlightText(latestMessage.subject, searchValue.highlight)}
                           </span>
                         ) : (
                           <div className="flex items-center gap-1">
-                            <span className={cn('line-clamp-1 overflow-hidden text-base')}>
+                            <span className={cn('line-clamp-1 overflow-hidden text-sm')}>
                               {highlightText(
                                 cleanNameDisplay(latestMessage.sender.name) || '',
                                 searchValue.highlight,
@@ -435,11 +435,11 @@ const Thread = memo(
                       {getThreadData.totalReplies > 1 ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span className="rounded-md text-sm opacity-70">
+                            <span className="rounded-md text-xs opacity-70">
                               [{getThreadData.totalReplies}]
                             </span>
                           </TooltipTrigger>
-                          <TooltipContent className="p-1 text-sm">
+                          <TooltipContent className="p-1 text-xs">
                             {m['common.mail.replies']({ count: getThreadData.totalReplies })}
                           </TooltipContent>
                         </Tooltip>
@@ -451,7 +451,7 @@ const Thread = memo(
                               <PencilCompose className="h-3 w-3 fill-blue-500 dark:fill-blue-400" />
                             </span>
                           </TooltipTrigger>
-                          <TooltipContent className="p-1 text-sm">Draft</TooltipContent>
+                          <TooltipContent className="p-1 text-xs">Draft</TooltipContent>
                         </Tooltip>
                       ) : null}
                       {/* {hasNotes ? (
@@ -464,7 +464,7 @@ const Thread = memo(
                     {latestMessage.receivedOn ? (
                       <p
                         className={cn(
-                          'text-[#5a7ba8] text-nowrap text-sm font-normal opacity-70 transition-opacity group-hover:opacity-100',
+                          'text-muted-foreground text-nowrap text-xs font-normal opacity-70 transition-opacity group-hover:opacity-100 dark:text-[#8C8C8C]',
                           isMailSelected && 'opacity-100',
                         )}
                       >
@@ -476,7 +476,7 @@ const Thread = memo(
                     {isFolderSent ? (
                       <p
                         className={cn(
-                          'mt-1 line-clamp-1 max-w-[50ch] overflow-hidden text-sm text-[#5a7ba8] md:max-w-[25ch]',
+                          'mt-1 line-clamp-1 max-w-[50ch] overflow-hidden text-sm text-[#8C8C8C] md:max-w-[25ch]',
                         )}
                       >
                         {latestMessage.to.map((e) => e.email).join(', ')}
@@ -484,7 +484,7 @@ const Thread = memo(
                     ) : (
                       <p
                         className={cn(
-                          'mt-1 line-clamp-1 w-[95%] min-w-0 overflow-hidden text-sm text-[#5a7ba8]',
+                          'mt-1 line-clamp-1 w-[95%] min-w-0 overflow-hidden text-sm text-[#8C8C8C]',
                         )}
                       >
                         {highlightText(latestMessage.subject, searchValue.highlight)}
@@ -501,12 +501,12 @@ const Thread = memo(
                     )}
                   </div>
                   {emailContent && (
-                    <div className="text-muted-foreground mt-2 line-clamp-2 text-sm">
+                    <div className="text-muted-foreground mt-2 line-clamp-2 text-xs">
                       {highlightText(emailContent, searchValue.highlight)}
                     </div>
                   )}
                   {/* {mainSearchTerm && (
-                    <div className="text-muted-foreground mt-1 flex items-center gap-1 text-sm">
+                    <div className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
                       <span className="bg-primary/10 text-primary rounded px-1.5 py-0.5">
                         {mainSearchTerm}
                       </span>
@@ -638,7 +638,7 @@ const Draft = memo(({ message }: { message: { id: string } }) => {
                 {draft.rawMessage?.internalDate && (
                   <p
                     className={cn(
-                      'text-muted-foreground text-nowrap text-sm font-normal opacity-70 transition-opacity group-hover:opacity-100 dark:text-[#8C8C8C]',
+                      'text-muted-foreground text-nowrap text-xs font-normal opacity-70 transition-opacity group-hover:opacity-100 dark:text-[#8C8C8C]',
                     )}
                   >
                     {formatDate(Number(draft.rawMessage?.internalDate))}
@@ -996,7 +996,7 @@ export const MailLabels = memo(
                     {getLabelIcon(label.name)}
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent className="hidden px-1 py-0 text-sm">
+                <TooltipContent className="hidden px-1 py-0 text-xs">
                   {m['common.notes.title']()}
                 </TooltipContent>
               </Tooltip>

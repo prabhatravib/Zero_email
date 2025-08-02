@@ -751,7 +751,7 @@ export function ThreadDisplay() {
     >
       <div
         className={cn(
-          'bg-white relative flex flex-col overflow-hidden rounded-xl transition-all duration-300',
+          'bg-panelLight dark:bg-panelDark relative flex flex-col overflow-hidden rounded-xl transition-all duration-300',
           isMobile ? 'h-full' : 'h-full',
           !isMobile && !isFullscreen && 'rounded-r-lg',
           isFullscreen ? 'fixed inset-0 z-50' : '',
@@ -763,28 +763,28 @@ export function ThreadDisplay() {
               <EmptyStateIcon width={200} height={200} />
               <div className="mt-4">
                 <p className="text-lg">It's empty here</p>
-                <p className="text-md text-[#5a7ba8]">
+                <p className="text-md text-muted-foreground dark:text-white/50">
                   Choose an email to view details
                 </p>
                 <div className="mt-4 grid grid-cols-1 gap-2 xl:grid-cols-2">
                   <button
                     onClick={toggleAISidebar}
-                    className="inline-flex h-7 items-center justify-center gap-0.5 overflow-hidden rounded-lg border bg-white px-2 border-[#b8d4f0]"
+                    className="inline-flex h-7 items-center justify-center gap-0.5 overflow-hidden rounded-lg border bg-white px-2 dark:border-none dark:bg-[#313131]"
                   >
-                    <Sparkles className="mr-1 h-3.5 w-3.5 fill-[#5a7ba8]" />
+                    <Sparkles className="mr-1 h-3.5 w-3.5 fill-[#959595]" />
                     <div className="flex items-center justify-center gap-2.5 px-0.5">
-                      <div className="text-[#2c5aa0] justify-start text-sm leading-none">
+                      <div className="text-base-gray-950 justify-start text-sm leading-none">
                         Zero chat
                       </div>
                     </div>
                   </button>
                   <button
                     onClick={() => setIsComposeOpen('true')}
-                    className="inline-flex h-7 items-center justify-center gap-0.5 overflow-hidden rounded-lg border bg-white px-2 border-[#b8d4f0]"
+                    className="inline-flex h-7 items-center justify-center gap-0.5 overflow-hidden rounded-lg border bg-white px-2 dark:border-none dark:bg-[#313131]"
                   >
-                    <Mail className="mr-1 h-3.5 w-3.5 fill-[#5a7ba8]" />
+                    <Mail className="mr-1 h-3.5 w-3.5 fill-[#959595]" />
                     <div className="flex items-center justify-center gap-2.5 px-0.5">
-                      <div className="text-[#2c5aa0] justify-start text-sm leading-none">
+                      <div className="dark:text-base-gray-950 justify-start text-sm leading-none">
                         Send email
                       </div>
                     </div>
@@ -806,7 +806,7 @@ export function ThreadDisplay() {
             <div
               className={cn(
                 'flex flex-shrink-0 items-center px-1 pb-[10px] md:px-3 md:pb-[11px] md:pt-[12px]',
-                isMobile && 'bg-white sticky top-0 z-10 mt-2',
+                isMobile && 'bg-panelLight dark:bg-panelDark sticky top-0 z-10 mt-2',
               )}
             >
               <div className="flex flex-1 items-center gap-2">
@@ -1060,7 +1060,7 @@ export function ThreadDisplay() {
                 activeReplyId &&
                 activeReplyId === emailData.messages[emailData.messages.length - 1]?.id && (
                   <div
-                    className="border-[#b8d4f0] bg-white sticky bottom-0 z-10 border-t px-4 py-2"
+                    className="border-border bg-panelLight dark:bg-panelDark sticky bottom-0 z-10 border-t px-4 py-2"
                     id={`reply-composer-${activeReplyId}`}
                   >
                     <ReplyCompose messageId={activeReplyId} />

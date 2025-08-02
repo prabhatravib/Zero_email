@@ -489,14 +489,14 @@ export function MailLayout() {
         <ResizablePanelGroup
           direction="horizontal"
           autoSaveId="mail-panel-layout"
-          className="rounded-inherit overflow-hidden bg-[#f8fbff]"
+          className="rounded-inherit overflow-hidden"
         >
           <ResizablePanel
             defaultSize={35}
             minSize={35}
             maxSize={35}
             className={cn(
-              `bg-white mb-1 w-fit shadow-sm md:mr-[3px] md:rounded-2xl lg:flex lg:h-[calc(100dvh-8px)] lg:shadow-sm`,
+              `bg-panelLight dark:bg-panelDark mb-1 w-fit shadow-sm md:mr-[3px] md:rounded-2xl lg:flex lg:h-[calc(100dvh-8px)] lg:shadow-sm`,
               isDesktop && threadId && 'hidden lg:block',
             )}
             onMouseEnter={handleMailListMouseEnter}
@@ -516,11 +516,11 @@ export function MailLayout() {
                         <Button
                           variant="outline"
                           className={cn(
-                            'text-[#5a7ba8] relative flex h-8 w-full select-none items-center justify-start overflow-hidden rounded-lg border bg-white pl-2 text-left text-sm font-normal shadow-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 border-[#b8d4f0]',
+                            'text-muted-foreground relative flex h-8 w-full select-none items-center justify-start overflow-hidden rounded-lg border bg-white pl-2 text-left text-sm font-normal shadow-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-none dark:bg-[#141414]',
                           )}
                           onClick={() => setIsCommandPaletteOpen('true')}
                         >
-                          <Search className="fill-[#5a7ba8]" />
+                          <Search className="fill-[#71717A] dark:fill-[#6F6F6F]" />
 
                           <span className="hidden truncate pr-20 lg:inline-block">
                             {activeFilters.length > 0
@@ -552,7 +552,7 @@ export function MailLayout() {
                                 Clear
                               </Button>
                             )}
-                            <kbd className="bg-[#e1f0ff] text-[#5a7ba8] text-md pointer-events-none mr-0.5 hidden h-7 select-none flex-row items-center gap-1 rounded-md border-none px-2 font-medium !leading-[0] opacity-100 sm:flex">
+                            <kbd className="bg-muted text-md pointer-events-none mr-0.5 hidden h-7 select-none flex-row items-center gap-1 rounded-md border-none px-2 font-medium !leading-[0] opacity-100 sm:flex dark:bg-[#262626] dark:text-[#929292]">
                               <span
                                 className={cn(
                                   'h-min !leading-[0.2]',
@@ -577,7 +577,7 @@ export function MailLayout() {
                       variant="ghost"
                       className="md:h-fit md:px-2"
                     >
-                      <RefreshCcw className="text-[#5a7ba8] h-4 w-4 cursor-pointer" />
+                      <RefreshCcw className="text-muted-foreground h-4 w-4 cursor-pointer" />
                     </Button>
                     {mail.bulkSelected.length > 0 ? (
                       <div className="flex items-center gap-2">
@@ -587,9 +587,9 @@ export function MailLayout() {
                               onClick={() => {
                                 setMail({ ...mail, bulkSelected: [] });
                               }}
-                              className="flex h-6 items-center gap-1 rounded-md bg-[#e1f0ff] px-2 text-xs text-[#5a7ba8] hover:bg-[#b8d4f0]"
+                              className="flex h-6 items-center gap-1 rounded-md bg-[#313131] px-2 text-xs text-[#A0A0A0] hover:bg-[#252525]"
                             >
-                              <X className="h-3 w-3 fill-[#5a7ba8]" />
+                              <X className="h-3 w-3 fill-[#A0A0A0]" />
                               <span>esc</span>
                             </button>
                           </TooltipTrigger>
@@ -621,7 +621,7 @@ export function MailLayout() {
           {isDesktop && (
             <ResizablePanel
               className={cn(
-                'bg-white mb-1 mr-0.5 w-fit rounded-2xl shadow-sm lg:h-[calc(100dvh-8px)]',
+                'bg-panelLight dark:bg-panelDark mb-1 mr-0.5 w-fit rounded-2xl shadow-sm lg:h-[calc(100dvh-8px)]',
                 // Only show on md screens and larger when there is a threadId
                 !threadId && 'hidden lg:block',
               )}
