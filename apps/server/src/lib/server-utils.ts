@@ -13,10 +13,23 @@ export const getZeroDB = async (userId: string) => {
 };
 
 export const getZeroAgent = async (connectionId: string) => {
-  const stub = env.ZERO_DRIVER.get(env.ZERO_DRIVER.idFromName(connectionId));
-  const rpcTarget = await stub.setMetaData(connectionId);
-  await rpcTarget.setupAuth();
-  return rpcTarget;
+  try {
+    console.debug('[getZeroAgent] Getting agent for connection:', connectionId);
+    const stub = env.ZERO_DRIVER.get(env.ZERO_DRIVER.idFromName(connectionId));
+    const rpcTarget = await stub.setMetaData(connectionId);
+    console.debug('[getZeroAgent] Agent metadata set, calling setupAuth');
+    await rpcTarget.setupAuth();
+    console.debug('[getZeroAgent] Agent setup completed successfully');
+    return rpcTarget;
+  } catch (error) {
+    console.error('[getZeroAgent] Error setting up agent:', error);
+    console.error('[getZeroAgent] Error details:', {
+      connectionId,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error;
+  }
 };
 
 export const getZeroSocketAgent = async (connectionId: string) => {

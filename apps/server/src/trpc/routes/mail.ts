@@ -70,11 +70,13 @@ export const mailRouter = router({
     .query(async ({ ctx, input }) => {
       const { folder, maxResults, cursor, q, labelIds } = input;
       const { activeConnection } = ctx;
-      const agent = await getZeroAgent(activeConnection.id);
 
-      console.debug('[listThreads] input:', { folder, maxResults, cursor, q, labelIds });
+      console.debug('[listThreads] Starting with input:', { folder, maxResults, cursor, q, labelIds });
 
       try {
+        const agent = await getZeroAgent(activeConnection.id);
+        console.debug('[listThreads] Agent obtained successfully');
+
         // Add timeout for large inboxes
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Request timeout')), 30000); // 30 second timeout
@@ -101,6 +103,14 @@ export const mailRouter = router({
         const folderLabelId = getFolderLabelId(folder);
         const effectiveLabelIds = q ? labelIds : [...labelIds, folderLabelId].filter(Boolean);
 
+        console.debug('[listThreads] Calling rawListThreads with params:', {
+          folder,
+          query: q,
+          maxResults,
+          labelIds: effectiveLabelIds,
+          pageToken: cursor,
+        });
+
         const threadsPromise = agent.rawListThreads({
           folder,
           query: q,
@@ -110,6 +120,10 @@ export const mailRouter = router({
         });
 
         threadsResponse = await Promise.race([threadsPromise, timeoutPromise]);
+        console.debug('[listThreads] Raw threads response received:', {
+          threadCount: threadsResponse.threads?.length || 0,
+          hasNextPage: !!threadsResponse.nextPageToken,
+        });
 
         if (folder === FOLDERS.SNOOZED) {
           const nowTs = Date.now();
@@ -155,6 +169,11 @@ export const mailRouter = router({
         return threadsResponse;
       } catch (error) {
         console.error('[listThreads] Error:', error);
+        console.error('[listThreads] Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          activeConnectionId: activeConnection?.id,
+        });
         
         // Return empty response instead of throwing for better UX
         return {

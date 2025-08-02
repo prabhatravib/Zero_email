@@ -503,6 +503,41 @@ class ZeroDB extends DurableObject<Env> {
 
 const api = new Hono<HonoContext>()
   .use(contextStorage())
+  .get('/health', async (c) => {
+    return c.json({ status: 'ok', timestamp: new Date().toISOString() });
+  })
+  .get('/diagnostic', async (c) => {
+    try {
+      const { sessionUser } = c.var;
+      if (!sessionUser) {
+        return c.json({ error: 'No session user found' }, 401);
+      }
+
+      const db = await getZeroDB(sessionUser.id);
+      const userData = await db.findUser();
+      const connections = await db.findManyConnections();
+      
+      return c.json({
+        status: 'ok',
+        user: userData ? { id: userData.id, email: userData.email } : null,
+        connections: connections.map(conn => ({
+          id: conn.id,
+          providerId: conn.providerId,
+          email: conn.email,
+          hasAccessToken: !!conn.accessToken,
+          hasRefreshToken: !!conn.refreshToken,
+        })),
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('[diagnostic] Error:', error);
+      return c.json({ 
+        error: 'Diagnostic failed', 
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      }, 500);
+    }
+  })
   .use('*', async (c, next) => {
     const auth = createAuth();
     c.set('auth', auth);
