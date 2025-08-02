@@ -1,18 +1,136 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "zero-api",
+  "name": "infflow-api-production",
   "account_id": "5d42835376e52c0332f76de9f9877fc8",
   "compatibility_date": "2025-05-01",
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/main.ts",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "zero-email-demo",
+      "database_id": "c4a56b0c-911a-4b90-ac0c-0061e9f6da32"
+    }
+  ],
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
       "id": "d405f5f77f174d5a970bf4ec35a1be59"
     }
   ],
+  "ai": {
+    "binding": "AI",
+  },
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "threads-vector",
+    },
+    {
+      "binding": "VECTORIZE_MESSAGE",
+      "index_name": "messages-vector",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ZERO_AGENT",
+        "class_name": "ZeroAgent",
+      },
+      {
+        "name": "ZERO_MCP",
+        "class_name": "ZeroMCP",
+      },
+      {
+        "name": "ZERO_DB",
+        "class_name": "ZeroDB",
+      },
+      {
+        "name": "ZERO_DRIVER",
+        "class_name": "ZeroDriver",
+      },
+      {
+        "name": "THINKING_MCP",
+        "class_name": "ThinkingMCP",
+      },
+      {
+        "name": "WORKFLOW_RUNNER",
+        "class_name": "WorkflowRunner",
+      },
+    ],
+  },
+  "kv_namespaces": [
+    {
+      "binding": "gmail_history_id",
+      "id": "b44f19d549e74cf8a6b277ca176479b1",
+    },
+    {
+      "binding": "gmail_processing_threads",
+      "id": "bfb34c9256f0419ba4cc035bf672fea6",
+    },
+    {
+      "binding": "subscribed_accounts",
+      "id": "ca0f0a63f8384dd99140ae522f926f4f",
+    },
+    {
+      "binding": "connection_labels",
+      "id": "9e8d7f79bb4c4871b780838950ba7e32",
+    },
+    {
+      "binding": "prompts_storage",
+      "id": "5d5271041b654598a16891e97532e67e",
+    },
+    {
+      "binding": "gmail_sub_age",
+      "id": "a5a116a808654759a9b0cb6e53b06534",
+    },
+    {
+      "binding": "snoozed_emails",
+      "id": "fd52df19f84b49fb99ea084812551dc4",
+    },
+  ],
+  "vars": {
+    "NODE_ENV": "production",
+    "COOKIE_DOMAIN": "prabhatravib.workers.dev",
+    "CORS_ALLOW_ORIGIN": "https://infflow.prabhatravib.workers.dev",
+    "VITE_PUBLIC_BACKEND_URL": "https://infflow-api-production.prabhatravib.workers.dev",
+    "VITE_PUBLIC_APP_URL": "https://infflow.prabhatravib.workers.dev",
+    "JWT_SECRET": "egwrgwrgndnznzgnfhnzxdgnnethzhnzhtyjtudi5e6u4u75tei6",
+    "DISABLE_CALLS": "true",
+    "DROP_AGENT_TABLES": "false",
+    "THREAD_SYNC_MAX_COUNT": "10",
+    "THREAD_SYNC_LOOP": "true",
+    "DISABLE_WORKFLOWS": "true",
+    "TWILIO_ACCOUNT_SID": "dummy",
+    "TWILIO_AUTH_TOKEN": "dummy",
+    "TWILIO_PHONE_NUMBER": "10000000000",
+    "GOOGLE_CLIENT_ID": "363401296279-vo7al766jmct0gcat24rrn2grv2jh1p5.apps.googleusercontent.com",
+    "GOOGLE_CLIENT_SECRET": "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",
+    "AUTUMN_SECRET_KEY": "dummy",
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": [
+        "ZeroAgent",
+        "ZeroMCP",
+        "ZeroDB",
+        "ZeroDriver",
+        "ThinkingMCP",
+        "WorkflowRunner"
+      ]
+    }
+  ],
   "env": {
     "local": {
+      "migrations_dir": "src/db/migrations",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "zero-email-local",
+          "database_id": "3ad0192a-0c8b-44c6-9f21-c02e435bd7e7"
+        }
+      ],
       "hyperdrive": [
         {
           "binding": "HYPERDRIVE",
@@ -404,7 +522,126 @@
       "vars": {
         "NODE_ENV": "production",
         "COOKIE_DOMAIN": "prabhatravib.workers.dev",
-        "VITE_PUBLIC_BACKEND_URL": "https://zero-api-production.prabhatravib.workers.dev",
+        "CORS_ALLOW_ORIGIN": "https://infflow.prabhatravib.workers.dev",
+        "VITE_PUBLIC_BACKEND_URL": "https://infflow-api-production.prabhatravib.workers.dev",
+        "VITE_PUBLIC_APP_URL": "https://infflow.prabhatravib.workers.dev",
+        "JWT_SECRET": "egwrgwrgndnznzgnfhnzxdgnnethzhnzhtyjtudi5e6u4u75tei6",
+        "DISABLE_CALLS": "true",
+        "DROP_AGENT_TABLES": "false",
+        "THREAD_SYNC_MAX_COUNT": "10",
+        "THREAD_SYNC_LOOP": "true",
+        "DISABLE_WORKFLOWS": "true",
+        "TWILIO_ACCOUNT_SID": "dummy",
+        "TWILIO_AUTH_TOKEN": "dummy",
+        "TWILIO_PHONE_NUMBER": "10000000000",
+        "GOOGLE_CLIENT_ID": "363401296279-vo7al766jmct0gcat24rrn2grv2jh1p5.apps.googleusercontent.com",
+        "GOOGLE_CLIENT_SECRET": "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",
+        "AUTUMN_SECRET_KEY": "dummy",
+      },
+      "kv_namespaces": [
+        {
+          "binding": "gmail_history_id",
+          "id": "b44f19d549e74cf8a6b277ca176479b1",
+        },
+        {
+          "binding": "gmail_processing_threads",
+          "id": "bfb34c9256f0419ba4cc035bf672fea6",
+        },
+        {
+          "binding": "subscribed_accounts",
+          "id": "ca0f0a63f8384dd99140ae522f926f4f",
+        },
+        {
+          "binding": "connection_labels",
+          "id": "9e8d7f79bb4c4871b780838950ba7e32",
+        },
+        {
+          "binding": "prompts_storage",
+          "id": "5d5271041b654598a16891e97532e67e",
+        },
+        {
+          "binding": "gmail_sub_age",
+          "id": "a5a116a808654759a9b0cb6e53b06534",
+        },
+        {
+          "binding": "snoozed_emails",
+          "id": "fd52df19f84b49fb99ea084812551dc4",
+        },
+      ],
+    },
+    "infflow-api-production": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "zero-email-demo",
+          "database_id": "c4a56b0c-911a-4b90-ac0c-0061e9f6da32"
+        }
+      ],
+      "triggers": {
+        "crons": ["0 0 * * *"],
+      },
+      "ai": {
+        "binding": "AI",
+      },
+      "vectorize": [
+        {
+          "binding": "VECTORIZE",
+          "index_name": "threads-vector",
+        },
+        {
+          "binding": "VECTORIZE_MESSAGE",
+          "index_name": "messages-vector",
+        },
+      ],
+      "observability": {
+        "enabled": true
+      },
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE",
+          "id": "d405f5f77f174d5a970bf4ec35a1be59",
+          "localConnectionString": "postgresql://postgres:gkKY4b29iaueBdfxVHjC@pitext-email-demo.cqr2cig2sg3q.us-east-1.rds.amazonaws.com:5432/postgres?sslmode=require",
+        },
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "ZERO_AGENT",
+            "class_name": "ZeroAgent",
+          },
+          {
+            "name": "ZERO_MCP",
+            "class_name": "ZeroMCP",
+          },
+          {
+            "name": "ZERO_DB",
+            "class_name": "ZeroDB",
+          },
+          {
+            "name": "ZERO_DRIVER",
+            "class_name": "ZeroDriver",
+          },
+          {
+            "name": "THINKING_MCP",
+            "class_name": "ThinkingMCP",
+          },
+          {
+            "name": "WORKFLOW_RUNNER",
+            "class_name": "WorkflowRunner",
+          },
+        ],
+      },
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_sqlite_classes": ["ZeroAgent", "ZeroMCP", "ZeroDB", "ZeroDriver", "ThinkingMCP", "WorkflowRunner"],
+        },
+      ],
+      "vars": {
+        "NODE_ENV": "production",
+        "COOKIE_DOMAIN": "prabhatravib.workers.dev",
+        "CORS_ALLOW_ORIGIN": "https://infflow.prabhatravib.workers.dev",
+        "VITE_PUBLIC_BACKEND_URL": "https://infflow-api-production.prabhatravib.workers.dev",
         "VITE_PUBLIC_APP_URL": "https://infflow.prabhatravib.workers.dev",
         "JWT_SECRET": "egwrgwrgndnznzgnfhnzxdgnnethzhnzhtyjtudi5e6u4u75tei6",
         "DISABLE_CALLS": "true",

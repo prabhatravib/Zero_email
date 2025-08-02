@@ -15,6 +15,15 @@ export interface ProviderConfig {
   customRedirectPath?: string;
 }
 
+// Helper function to get redirect URI for different environments
+function getGoogleRedirectUri(backendUrl: string): string {
+  // Remove all spaces and clean the backend URL
+  const cleanUrl = backendUrl.replace(/\s/g, '').replace(/\/$/, '');
+  const redirectUri = `${cleanUrl}/api/auth/callback/google`;
+  
+  return redirectUri;
+}
+
 export const customProviders: ProviderConfig[] = [
   // {
   //   id: "zero",
@@ -36,7 +45,7 @@ export const authProviders = (env: Record<string, string>): ProviderConfig[] => 
       { name: 'GOOGLE_CLIENT_SECRET', source: 'Google Cloud Console' },
     ],
     config: {
-      prompt: 'consent', // Always request consent to ensure refresh token
+      prompt: 'select_account', // Only show account selection, not consent
       accessType: 'offline',
       scope: [
         'https://mail.google.com/',
@@ -46,7 +55,7 @@ export const authProviders = (env: Record<string, string>): ProviderConfig[] => 
       ],
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
-      redirectUri: `${env.VITE_PUBLIC_BACKEND_URL}/api/auth/callback/google`,
+      redirectUri: getGoogleRedirectUri(env.VITE_PUBLIC_BACKEND_URL),
     },
     required: true,
   },

@@ -165,8 +165,13 @@
       "attachments": "Adjunts",
       "attachmentCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "adjunts",
             "countPlural=one": "adjunt",
@@ -176,8 +181,13 @@
       ],
       "fileCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "fitxers",
             "countPlural=one": "fitxer",
@@ -249,8 +259,13 @@
       "search": "Cerca notes...",
       "noteCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "Afegeix notes",
             "countPlural=one": "# nota",
@@ -312,8 +327,13 @@
     "mail": {
       "replies": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "respostes",
             "countPlural=one": "# resposta",
@@ -452,7 +472,9 @@
         "selectDefaultEmail": "Selecciona el correu predeterminat",
         "defaultEmailDescription": "Aquest correu s'utilitzarà com a adreça predeterminada 'De' quan es redactin nous correus",
         "autoRead": "Lectura automàtica",
-        "autoReadDescription": "Marca automàticament els correus electrònics com a llegits quan hi fas clic."
+        "autoReadDescription": "Marca automàticament els correus electrònics com a llegits quan hi fas clic.",
+        "animations": "Animacions",
+        "animationsDescription": "Habilita animacions suaus en canviar entre correus electrònics"
       },
       "connections": {
         "title": "Connexions Correu",

@@ -101,7 +101,7 @@ export const mailRouter = router({
         const folderLabelId = getFolderLabelId(folder);
         const effectiveLabelIds = q ? labelIds : [...labelIds, folderLabelId].filter(Boolean);
 
-        const threadsPromise = agent.rawListThreads({
+        console.log('[listThreads] About to call agent.rawListThreads with params:', {
           folder,
           query: q,
           maxResults,
@@ -109,7 +109,25 @@ export const mailRouter = router({
           pageToken: cursor,
         });
 
-        threadsResponse = await Promise.race([threadsPromise, timeoutPromise]);
+        try {
+          const threadsPromise = agent.rawListThreads({
+            folder,
+            query: q,
+            maxResults,
+            labelIds: effectiveLabelIds,
+            pageToken: cursor,
+          });
+
+          console.log('[listThreads] Created threadsPromise, awaiting result...');
+          threadsResponse = await Promise.race([threadsPromise, timeoutPromise]);
+          console.log('[listThreads] Promise resolved, threadsResponse:', threadsResponse);
+        } catch (rawListError) {
+          console.error('[listThreads] Error in rawListThreads call:', rawListError);
+          console.error('[listThreads] Error stack:', rawListError.stack);
+          throw rawListError;
+        }
+        
+        console.log('Threads fetched:', threadsResponse); // <--- ADD THIS FOR DEBUGGING
 
         if (folder === FOLDERS.SNOOZED) {
           const nowTs = Date.now();
@@ -154,7 +172,11 @@ export const mailRouter = router({
 
         return threadsResponse;
       } catch (error) {
+        console.error('Error fetching threads:', error);
         console.error('[listThreads] Error:', error);
+        console.error('[listThreads] Error stack:', error.stack);
+        console.error('[listThreads] Error name:', error.name);
+        console.error('[listThreads] Error message:', error.message);
         
         // Return empty response instead of throwing for better UX
         return {

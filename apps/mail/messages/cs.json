@@ -165,8 +165,13 @@
       "attachments": "Přílohy",
       "attachmentCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "příloh",
             "countPlural=one": "příloha",
@@ -176,8 +181,13 @@
       ],
       "fileCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "souborů",
             "countPlural=one": "soubor",
@@ -249,8 +259,13 @@
       "search": "Hledat poznámky...",
       "noteCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "Přidat poznámku",
             "countPlural=one": "# poznámka",
@@ -312,8 +327,13 @@
     "mail": {
       "replies": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "odpovědí",
             "countPlural=one": "# odpověď",
@@ -452,7 +472,9 @@
         "selectDefaultEmail": "Vybrat výchozí e-mail",
         "defaultEmailDescription": "Tento e-mail bude použit jako výchozí adresa 'Od' při psaní nových e-mailů",
         "autoRead": "Automatické přečtení",
-        "autoReadDescription": "Automaticky označit e-maily jako přečtené při kliknutí na ně."
+        "autoReadDescription": "Automaticky označit e-maily jako přečtené při kliknutí na ně.",
+        "animations": "Animace",
+        "animationsDescription": "Povolit plynulé animace při přepínání mezi e-maily"
       },
       "connections": {
         "title": "Propojení emailu",

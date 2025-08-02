@@ -165,8 +165,13 @@
       "attachments": "پیوست‌ها",
       "attachmentCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "پیوست",
             "countPlural=one": "پیوست",
@@ -176,8 +181,13 @@
       ],
       "fileCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "فایل",
             "countPlural=one": "فایل",
@@ -249,8 +259,13 @@
       "search": "جستجوی یادداشت‌ها...",
       "noteCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "افزودن یادداشت‌ها",
             "countPlural=one": "# یادداشت",
@@ -312,8 +327,13 @@
     "mail": {
       "replies": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "پاسخ‌ها",
             "countPlural=one": "# پاسخ",
@@ -452,7 +472,9 @@
         "selectDefaultEmail": "انتخاب ایمیل پیش‌فرض",
         "defaultEmailDescription": "این ایمیل به عنوان آدرس پیش‌فرض 'از طرف' هنگام نوشتن ایمیل‌های جدید استفاده خواهد شد",
         "autoRead": "خواندن خودکار",
-        "autoReadDescription": "به طور خودکار ایمیل‌ها را هنگام کلیک کردن روی آن‌ها به عنوان خوانده شده علامت‌گذاری کنید."
+        "autoReadDescription": "به طور خودکار ایمیل‌ها را هنگام کلیک کردن روی آن‌ها به عنوان خوانده شده علامت‌گذاری کنید.",
+        "animations": "انیمیشن‌ها",
+        "animationsDescription": "فعال کردن انیمیشن‌های روان هنگام جابجایی بین ایمیل‌ها"
       },
       "connections": {
         "title": "اتصالات ایمیل",

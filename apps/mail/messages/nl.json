@@ -165,8 +165,13 @@
       "attachments": "Bijlagen",
       "attachmentCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "bijlagen",
             "countPlural=one": "bijlage",
@@ -176,8 +181,13 @@
       ],
       "fileCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "bestanden",
             "countPlural=one": "bestand",
@@ -249,8 +259,13 @@
       "search": "Notities zoeken...",
       "noteCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "Notities toevoegen",
             "countPlural=one": "# notitie",
@@ -312,8 +327,13 @@
     "mail": {
       "replies": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "reacties",
             "countPlural=one": "# antwoord",
@@ -452,7 +472,9 @@
         "selectDefaultEmail": "Selecteer standaard e-mail",
         "defaultEmailDescription": "Dit e-mailadres wordt gebruikt als standaard 'Van'-adres bij het opstellen van nieuwe e-mails",
         "autoRead": "Automatisch lezen",
-        "autoReadDescription": "E-mails automatisch als gelezen markeren wanneer je erop klikt."
+        "autoReadDescription": "E-mails automatisch als gelezen markeren wanneer je erop klikt.",
+        "animations": "Animaties",
+        "animationsDescription": "Schakel vloeiende animaties in bij het schakelen tussen e-mails"
       },
       "connections": {
         "title": "E-mailverbindingen",

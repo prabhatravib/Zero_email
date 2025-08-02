@@ -21,6 +21,7 @@ import { getZeroDB, verifyToken } from './lib/server-utils';
 import { eq, and, desc, asc, inArray } from 'drizzle-orm';
 import { ThinkingMCP } from './lib/sequential-thinking';
 import { ZeroAgent, ZeroDriver } from './routes/agent';
+import { ZeroDB as D1ZeroDB } from './durable-objects/ZeroDB';
 import { contextStorage } from 'hono/context-storage';
 import { defaultUserSettings } from './lib/schemas';
 import { createLocalJWKSet, jwtVerify } from 'jose';
@@ -526,7 +527,13 @@ const api = new Hono<HonoContext>()
       }
     }
 
-    const autumn = new Autumn({ secretKey: env.AUTUMN_SECRET_KEY });
+    let autumn;
+    try {
+      autumn = new Autumn({ secretKey: env.AUTUMN_SECRET_KEY });
+    } catch (error) {
+      console.warn('Autumn not configured, using fallback:', error.message);
+      autumn = undefined;
+    }
     c.set('autumn', autumn);
 
     await next();
@@ -859,4 +866,4 @@ export default class Entry extends WorkerEntrypoint<Env> {
   }
 }
 
-export { ZeroAgent, ZeroMCP, ZeroDB, ZeroDriver, ThinkingMCP, WorkflowRunner };
+export { ZeroAgent, ZeroMCP, D1ZeroDB as ZeroDB, ZeroDriver, ThinkingMCP, WorkflowRunner };

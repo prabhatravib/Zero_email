@@ -165,8 +165,13 @@
       "attachments": "Tệp đính kèm",
       "attachmentCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "tệp đính kèm",
             "countPlural=one": "tệp đính kèm",
@@ -176,8 +181,13 @@
       ],
       "fileCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "tệp",
             "countPlural=one": "tệp",
@@ -249,8 +259,13 @@
       "search": "Tìm kiếm ghi chú...",
       "noteCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "Thêm ghi chú",
             "countPlural=one": "# ghi chú",
@@ -312,8 +327,13 @@
     "mail": {
       "replies": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "phản hồi",
             "countPlural=one": "# phản hồi",
@@ -452,7 +472,9 @@
         "selectDefaultEmail": "Chọn email mặc định",
         "defaultEmailDescription": "Email này sẽ được sử dụng làm địa chỉ 'Từ' mặc định khi soạn email mới",
         "autoRead": "Tự động đọc",
-        "autoReadDescription": "Tự động đánh dấu email là đã đọc khi bạn nhấp vào chúng."
+        "autoReadDescription": "Tự động đánh dấu email là đã đọc khi bạn nhấp vào chúng.",
+        "animations": "Hoạt hình",
+        "animationsDescription": "Cho phép hoạt ảnh mượt mà khi chuyển đổi giữa các email"
       },
       "connections": {
         "title": "Kết nối email",

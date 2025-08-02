@@ -165,8 +165,13 @@
       "attachments": "附件",
       "attachmentCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "附件",
             "countPlural=one": "附件",
@@ -176,8 +181,13 @@
       ],
       "fileCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "檔案",
             "countPlural=one": "檔案",
@@ -249,8 +259,13 @@
       "search": "搜尋筆記...",
       "noteCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "添加筆記",
             "countPlural=one": "# 筆記",
@@ -312,8 +327,13 @@
     "mail": {
       "replies": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "回覆",
             "countPlural=one": "# 則回覆",
@@ -452,7 +472,9 @@
         "selectDefaultEmail": "選擇預設電子郵件",
         "defaultEmailDescription": "此電子郵件將作為撰寫新郵件時的預設「寄件者」地址",
         "autoRead": "自動標記為已讀",
-        "autoReadDescription": "當您點擊電子郵件時，會自動將其標記為已讀。"
+        "autoReadDescription": "當您點擊電子郵件時，會自動將其標記為已讀。",
+        "animations": "動畫",
+        "animationsDescription": "在電子郵件之間切換時啟用流暢的動畫"
       },
       "connections": {
         "title": "電子郵件連接",

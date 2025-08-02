@@ -165,8 +165,13 @@
       "attachments": "Adjuntos",
       "attachmentCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "sin adjuntos",
             "countPlural=one": "adjunto",
@@ -176,8 +181,13 @@
       ],
       "fileCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "archivos",
             "countPlural=one": "archivo",
@@ -249,8 +259,13 @@
       "search": "Buscar notas...",
       "noteCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "Añade notas",
             "countPlural=one": "# nota",
@@ -312,8 +327,13 @@
     "mail": {
       "replies": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "respuestas",
             "countPlural=one": "# respuesta",
@@ -452,7 +472,9 @@
         "selectDefaultEmail": "Seleccionar correo predeterminado",
         "defaultEmailDescription": "Este correo electrónico se utilizará como dirección predeterminada 'De' al redactar nuevos correos",
         "autoRead": "Lectura automática",
-        "autoReadDescription": "Marcar automáticamente los correos electrónicos como leídos cuando haces clic en ellos."
+        "autoReadDescription": "Marcar automáticamente los correos electrónicos como leídos cuando haces clic en ellos.",
+        "animations": "Animaciones",
+        "animationsDescription": "Habilitar animaciones fluidas al cambiar entre correos electrónicos"
       },
       "connections": {
         "title": "Conexiones de correo",

@@ -7,16 +7,16 @@ import {
   SuperSearchEmail,
   WelcomeEmail,
 } from './react-emails/email-sequences';
-import { createAuthMiddleware, phoneNumber, jwt, bearer, mcp } from 'better-auth/plugins';
+import { createAuthMiddleware, jwt, bearer, mcp } from 'better-auth/plugins';
 import { type Account, betterAuth, type BetterAuthOptions } from 'better-auth';
 import { getBrowserTimezone, isValidTimezone } from './timezones';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { getSocialProviders } from './auth-providers';
-import { redis, resend, twilio } from './services';
+import { redis, resend } from './services';
 import { getContext } from 'hono/context-storage';
 import { dubAnalytics } from '@dub/better-auth';
 import { defaultUserSettings } from './schemas';
-import { disableBrainFunction } from './brain';
+import { disableBrainFunction, enableBrainFunction } from './brain';
 import { APIError } from 'better-auth/api';
 import { getZeroDB } from './server-utils';
 import { type EProviders } from '../types';
@@ -138,39 +138,30 @@ const connectionHandlerHook = async (account: Account) => {
   if (env.GOOGLE_S_ACCOUNT && env.GOOGLE_S_ACCOUNT !== '{}') {
     // Direct processing instead of queue (for free plan)
     await enableBrainFunction({
-      connectionId: result.id,
-      providerId: account.providerId,
+      id: result.id,
+      providerId: account.providerId as EProviders,
     });
   }
 };
 
 export const createAuth = () => {
-  const twilioClient = twilio();
   const dub = new Dub();
 
+  const plugins = [
+    dubAnalytics({
+      dubClient: dub,
+    }),
+    mcp({
+      loginPage: env.VITE_PUBLIC_APP_URL + '/login',
+    }),
+    jwt(),
+    bearer(),
+  ];
+
+
+
   return betterAuth({
-    plugins: [
-      dubAnalytics({
-        dubClient: dub,
-      }),
-      mcp({
-        loginPage: env.VITE_PUBLIC_APP_URL + '/login',
-      }),
-      jwt(),
-      bearer(),
-      phoneNumber({
-        sendOTP: async ({ code, phoneNumber }) => {
-          await twilioClient.messages
-            .send(phoneNumber, `Your verification code is: ${code}, do not share it with anyone.`)
-            .catch((error) => {
-              console.error('Failed to send OTP', error);
-              throw new APIError('INTERNAL_SERVER_ERROR', {
-                message: `Failed to send OTP, ${error.message}`,
-              });
-            });
-        },
-      }),
-    ],
+    plugins,
     user: {
       deleteUser: {
         enabled: true,
@@ -316,6 +307,10 @@ export const createAuth = () => {
 const createAuthConfig = () => {
   const cache = redis();
   const { db } = createDb(env.HYPERDRIVE.connectionString);
+  
+  // Clean the baseURL to remove any spaces
+  const cleanBaseURL = env.VITE_PUBLIC_BACKEND_URL?.replace(/\s/g, '') || '';
+  
   return {
     database: drizzleAdapter(db, { provider: 'pg' }),
     secondaryStorage: {
@@ -341,7 +336,7 @@ const createAuthConfig = () => {
         domain: env.COOKIE_DOMAIN,
       },
     },
-    baseURL: env.VITE_PUBLIC_BACKEND_URL,
+    baseURL: cleanBaseURL,
     trustedOrigins: [
       'https://app.0.email',
       'https://sapi.0.email',
@@ -349,7 +344,7 @@ const createAuthConfig = () => {
       'https://0.email',
       'https://zero.prabhatravib.workers.dev',
       'https://infflow.prabhatravib.workers.dev',
-      'https://zero-api-production.prabhatravib.workers.dev',
+      'https://infflow-api-production.prabhatravib.workers.dev',
       'http://localhost:3000',
     ],
     session: {

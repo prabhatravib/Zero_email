@@ -165,8 +165,13 @@
       "attachments": "附件",
       "attachmentCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "附件",
             "countPlural=one": "个附件",
@@ -176,8 +181,13 @@
       ],
       "fileCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "文件",
             "countPlural=one": "个文件",
@@ -249,8 +259,13 @@
       "search": "搜索笔记...",
       "noteCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "添加笔记",
             "countPlural=one": "# 条笔记",
@@ -312,8 +327,13 @@
     "mail": {
       "replies": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "回复",
             "countPlural=one": "# 条回复",
@@ -452,7 +472,9 @@
         "selectDefaultEmail": "选择默认邮箱",
         "defaultEmailDescription": "此邮箱将作为撰写新邮件时的默认\"发件人\"地址",
         "autoRead": "自动阅读",
-        "autoReadDescription": "点击邮件时自动将其标记为已读。"
+        "autoReadDescription": "点击邮件时自动将其标记为已读。",
+        "animations": "动画",
+        "animationsDescription": "在电子邮件之间切换时启用流畅的动画"
       },
       "connections": {
         "title": "邮箱连接",

@@ -165,8 +165,13 @@
       "attachments": "Ekler",
       "attachmentCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "ekler",
             "countPlural=one": "ek",
@@ -176,8 +181,13 @@
       ],
       "fileCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "dosyalar",
             "countPlural=one": "dosya",
@@ -249,8 +259,13 @@
       "search": "Notlarda ara...",
       "noteCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "Not ekle",
             "countPlural=one": "# not",
@@ -312,8 +327,13 @@
     "mail": {
       "replies": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "cevaplar",
             "countPlural=one": "# yanıt",
@@ -452,7 +472,9 @@
         "selectDefaultEmail": "Varsayılan e-postayı seç",
         "defaultEmailDescription": "Bu e-posta, yeni e-postalar oluştururken varsayılan 'Kimden' adresi olarak kullanılacaktır",
         "autoRead": "Otomatik Okuma",
-        "autoReadDescription": "E-postalara tıkladığınızda otomatik olarak okundu olarak işaretlenir."
+        "autoReadDescription": "E-postalara tıkladığınızda otomatik olarak okundu olarak işaretlenir.",
+        "animations": "Animasyonlar",
+        "animationsDescription": "E-postalar arasında geçiş yaparken akıcı animasyonları etkinleştirin"
       },
       "connections": {
         "title": "E-posta Bağlantıları",

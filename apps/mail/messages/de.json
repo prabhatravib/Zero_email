@@ -165,8 +165,13 @@
       "attachments": "Anhänge",
       "attachmentCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "Anhänge",
             "countPlural=one": "Anhang",
@@ -176,8 +181,13 @@
       ],
       "fileCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "Dateien",
             "countPlural=one": "Datei",
@@ -249,8 +259,13 @@
       "search": "Notizen durchsuchen...",
       "noteCount": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "Füge Notizen hinzu",
             "countPlural=one": "# Notiz",
@@ -312,8 +327,13 @@
     "mail": {
       "replies": [
         {
-          "declarations": ["input count", "local countPlural = count: plural"],
-          "selectors": ["countPlural"],
+          "declarations": [
+            "input count",
+            "local countPlural = count: plural"
+          ],
+          "selectors": [
+            "countPlural"
+          ],
           "match": {
             "countPlural=0": "Antworten",
             "countPlural=one": "# Antwort",
@@ -452,7 +472,9 @@
         "selectDefaultEmail": "Standard-E-Mail auswählen",
         "defaultEmailDescription": "Diese E-Mail wird als Standard-Absenderadresse beim Verfassen neuer E-Mails verwendet",
         "autoRead": "Auto-Lesen",
-        "autoReadDescription": "E-Mails automatisch als gelesen markieren, wenn du sie anklickst."
+        "autoReadDescription": "E-Mails automatisch als gelesen markieren, wenn du sie anklickst.",
+        "animations": "Animationen",
+        "animationsDescription": "Aktivieren Sie flüssige Animationen beim Wechseln zwischen E-Mails"
       },
       "connections": {
         "title": "E-Mail Verbindungen",
