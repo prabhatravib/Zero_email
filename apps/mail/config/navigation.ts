@@ -57,13 +57,6 @@ export const navigationConfig: Record<string, NavConfig> = {
             shortcut: 'g + i',
           },
           {
-            id: 'inbox-recent',
-            title: 'Inbox (50)',
-            url: '/mail/inbox?recent=50',
-            icon: Inbox,
-            shortcut: 'g + r',
-          },
-          {
             id: 'drafts',
             title: m['navigation.sidebar.drafts'](),
             url: '/mail/draft',

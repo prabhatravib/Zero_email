@@ -44,7 +44,7 @@ import { clearBulkSelectionAtom } from './use-mail';
 import AISidebar from '@/components/ui/ai-sidebar';
 import { useThreads } from '@/hooks/use-threads';
 // import { useBilling } from '@/hooks/use-billing';
-import AIToggleButton from '../ai-toggle-button';
+
 import { useIsMobile } from '@/hooks/use-mobile';
 // import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -59,6 +59,8 @@ import { cn } from '@/lib/utils';
 import { m } from '@/paraglide/messages';
 import { useQueryState } from 'nuqs';
 import { useAtom } from 'jotai';
+import { EmailGroups, type EmailGroup } from './email-groups';
+import { useEmailGroups } from '@/hooks/use-email-groups';
 // import { toast } from 'sonner';
 
 // interface ITag {
@@ -391,6 +393,16 @@ export function MailLayout() {
   const { data: activeConnection } = useActiveConnection();
   const { activeFilters, clearAllFilters } = useCommandPalette();
   const [, setIsCommandPaletteOpen] = useQueryState('isCommandPaletteOpen');
+  
+  // Email groups state
+  const [selectedGroupId, setSelectedGroupId] = useQueryState('selectedGroupId');
+  const { emailGroups, totalEmails, totalGroups, isLoading: emailGroupsLoading, isFetching: emailGroupsFetching } = useEmailGroups();
+
+  // Handle group selection
+  const handleGroupSelect = (groupId: string | null) => {
+    setSelectedGroupId(groupId);
+    // No navigation needed - the filtering will be handled by the email list
+  };
 
   useEffect(() => {
     if (prevFolderRef.current !== folder && mail.bulkSelected.length > 0) {
@@ -461,7 +473,19 @@ export function MailLayout() {
   return (
     <TooltipProvider delayDuration={0}>
       <PricingDialog />
-      <div className="rounded-inherit relative z-[5] flex p-0 md:mr-0.5 md:mt-1">
+      <div className="rounded-inherit relative z-[5] flex flex-col p-0 md:mr-0.5 md:mt-1">
+        {/* Email Groups Section */}
+        <div className="h-64 mb-2">
+          <EmailGroups
+            groups={emailGroups}
+            selectedGroupId={selectedGroupId}
+            onGroupSelect={handleGroupSelect}
+            totalGroups={totalGroups}
+            totalEmails={totalEmails}
+          />
+        </div>
+        
+        {/* Main Mail Interface */}
         <ResizablePanelGroup
           direction="horizontal"
           autoSaveId="mail-panel-layout"
@@ -622,7 +646,6 @@ export function MailLayout() {
           )}
 
           {activeConnection?.id ? <AISidebar /> : null}
-          {activeConnection?.id ? <AIToggleButton /> : null}
         </ResizablePanelGroup>
       </div>
     </TooltipProvider>

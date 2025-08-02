@@ -20,6 +20,7 @@ export const useThreads = () => {
   const trpc = useTRPC();
   const { labels } = useSearchLabels();
   const [recent] = useQueryState('recent');
+  const [selectedGroupId] = useQueryState('selectedGroupId');
 
   // Determine maxResults based on recent parameter
   const maxResults = recent === '50' ? 50 : undefined;
@@ -52,13 +53,27 @@ export const useThreads = () => {
   // Flatten threads from all pages and sort by receivedOn date (newest first)
 
   const threads = useMemo(() => {
-    return threadsQuery.data
+    let filteredThreads = threadsQuery.data
       ? threadsQuery.data.pages
           .flatMap((e) => e.threads)
           .filter(Boolean)
           .filter((e) => !isInQueue(`thread:${e.id}`))
       : [];
-  }, [threadsQuery.data, threadsQuery.dataUpdatedAt, isInQueue, backgroundQueue]);
+
+    // Apply group filtering
+    if (selectedGroupId === 'fubo') {
+      // FUBO group shows zero emails
+      filteredThreads = [];
+    } else if (selectedGroupId === 'others') {
+      // Others group shows all emails (no additional filtering needed)
+      // filteredThreads remains as is
+    } else {
+      // No group selected or null - show all emails
+      // filteredThreads remains as is
+    }
+
+    return filteredThreads;
+  }, [threadsQuery.data, threadsQuery.dataUpdatedAt, isInQueue, backgroundQueue, selectedGroupId]);
 
   const isEmpty = useMemo(() => threads.length === 0, [threads]);
   const isReachingEnd =
