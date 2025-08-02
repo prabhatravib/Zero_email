@@ -291,9 +291,24 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
 
   // Add the missing sql method
   private sql(strings: TemplateStringsArray, ...values: any[]) {
-    // Fallback to empty array since database is not available
-    console.log('Database not available, returning empty result for sql');
-    return [];
+    if (!env.DB) {
+      console.log('Database not available, returning mock result for sql');
+      return [{ 'COUNT(*)': 0 }];
+    }
+    
+    try {
+      // Execute the SQL query with prepared statements
+      const query = strings.reduce((result, str, i) => {
+        return result + str + (values[i] !== undefined ? '?' : '');
+      }, '');
+      
+      const stmt = env.DB.prepare(query);
+      const result = stmt.bind(...values).all();
+      return result.results || [];
+    } catch (error) {
+      console.error('SQL execution error:', error);
+      return [{ 'COUNT(*)': 0 }];
+    }
   }
 
   getAllSubjects() {
@@ -1465,9 +1480,24 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
   }
 
   async getThreadFromDB(id: string, includeDrafts: boolean = false): Promise<IGetThreadResponse> {
-    // Always fall back to driver since database is not properly configured
-    console.log('Database not available, falling back to driver for getThreadFromDB');
-    return await this.getWithRetry(id);
+    if (!env.DB) {
+      console.log('Database not available, falling back to driver for getThreadFromDB');
+      return await this.getWithRetry(id);
+    }
+    
+    try {
+      const result = this.sql`SELECT * FROM threads WHERE thread_id = ${id}`;
+      if (result.length === 0) {
+        throw new Error(`Thread ${id} not found in database`);
+      }
+      
+      // For now, fall back to driver since we need to implement full thread data retrieval
+      console.log('Thread found in database, but falling back to driver for full data');
+      return await this.getWithRetry(id);
+    } catch (error) {
+      console.error('Database error in getThreadFromDB:', error);
+      return await this.getWithRetry(id);
+    }
   }
 
   async unsnoozeThreadsHandler(payload: ISnoozeBatch) {

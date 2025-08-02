@@ -13,7 +13,7 @@ export function ClientProviders({ children }: PropsWithChildren) {
   const { data } = useSettings();
   useKeyboardLayout();
 
-  const theme = data?.settings.colorTheme || 'system';
+  const theme = data?.settings.colorTheme || 'light';
 
   return (
     <NuqsAdapter>

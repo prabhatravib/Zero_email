@@ -299,7 +299,7 @@ const ThreadAttachments = ({ attachments }: { attachments: Attachment[] }) => {
           <button
             key={`${attachment.attachmentId}-${attachment.filename}`}
             onClick={() => handleDownload(attachment)}
-            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-[#F0F0F0] dark:bg-[#262626] dark:hover:bg-[#303030]"
+            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-[#e1f0ff]"
           >
             <span className="text-muted-foreground">{getFileIcon(attachment.filename)}</span>
             <span className="max-w-[200px] truncate" title={attachment.filename}>
@@ -328,7 +328,7 @@ const AiSummary = () => {
 
   return (
     <div
-      className="mt-2 max-w-3xl rounded-xl border border-[#8B5CF6] bg-white px-4 py-2 dark:bg-[#252525]"
+      className="mt-2 max-w-3xl rounded-xl border border-[#8B5CF6] bg-white px-4 py-2"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex cursor-pointer items-center" onClick={handleToggle}>
@@ -358,11 +358,11 @@ const ActionButton = ({ onClick, icon, text, shortcut }: ActionButtonProps) => {
   return (
     <button
       onClick={onClick}
-      className="inline-flex h-7 items-center justify-center gap-1 overflow-hidden rounded-md border bg-white px-1.5 dark:border-none dark:bg-[#313131]"
+      className="inline-flex h-7 items-center justify-center gap-1 overflow-hidden rounded-md border bg-white px-1.5 border-[#b8d4f0]"
     >
       {icon}
       <div className="flex items-center justify-center gap-2.5 pl-0.5 pr-1">
-        <div className="justify-start text-sm leading-none text-black dark:text-white">{text}</div>
+        <div className="justify-start text-sm leading-none text-[#2c5aa0]">{text}</div>
       </div>
       {shortcut && (
         <kbd
@@ -1257,10 +1257,10 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
           <div className={cn('px-4', index === 0 && 'border-b py-4')}>
             {index === 0 && (
               <>
-                <span className="inline-flex items-center gap-2 font-medium text-black dark:text-white">
+                <span className="inline-flex items-center gap-2 font-medium text-[#2c5aa0]">
                   <span>
                     {emailData.subject}{' '}
-                    <span className="text-muted-foreground dark:text-[#8C8C8C]">
+                    <span className="text-[#5a7ba8]">
                       {totalEmails && totalEmails > 1 && `[${totalEmails}]`}
                     </span>
                   </span>
@@ -1271,13 +1271,13 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
                     <MailDisplayLabels labels={emailData?.tags.map((t) => t.name) || []} />
                   ) : null}
                   {emailData?.tags?.length ? (
-                    <div className="bg-iconLight dark:bg-iconDark/20 relative h-3 w-0.5 rounded-full" />
+                    <div className="bg-[#b8d4f0] relative h-3 w-0.5 rounded-full" />
                   ) : null}
                   <RenderLabels labels={threadLabels} />
                   {threadLabels.length ? (
-                    <div className="bg-iconLight dark:bg-iconDark/20 relative h-3 w-0.5 rounded-full" />
+                    <div className="bg-[#b8d4f0] relative h-3 w-0.5 rounded-full" />
                   ) : null}
-                  <div className="text-muted-foreground flex items-center gap-2 text-sm dark:text-[#8C8C8C]">
+                  <div className="text-[#5a7ba8] flex items-center gap-2 text-sm">
                     {(() => {
                       if (people.length <= 2) {
                         return people.map(renderPerson);
@@ -1355,7 +1355,7 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
                           <Popover open={openDetailsPopover} onOpenChange={handlePopoverChange}>
                             <PopoverTrigger asChild>
                               <button
-                                className="hover:bg-iconLight/10 dark:hover:bg-iconDark/20 flex items-center gap-2 rounded-md p-2"
+                                className="hover:bg-[#e1f0ff] flex items-center gap-2 rounded-md p-2"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   e.preventDefault();
@@ -1363,7 +1363,7 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
                                 }}
                                 ref={triggerRef}
                               >
-                                <p className="text-muted-foreground text-xs underline dark:text-[#8C8C8C]">
+                                <p className="text-[#5a7ba8] text-xs underline">
                                   {m['common.mailDisplay.details']()}
                                 </p>
                               </button>
@@ -1481,7 +1481,7 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
                         </div>
 
                         <div className="flex items-center justify-center">
-                          <div className="text-muted-foreground mr-2 flex flex-col !flex-nowrap items-end text-sm font-medium dark:text-[#8C8C8C]">
+                          <div className="text-[#5a7ba8] mr-2 flex flex-col !flex-nowrap items-end text-sm font-medium">
                             <time className="whitespace-nowrap">
                               {emailData?.receivedOn ? formatDate(emailData.receivedOn) : ''}
                             </time>
@@ -1500,12 +1500,12 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
                                   e.stopPropagation();
                                   e.preventDefault();
                                 }}
-                                className="inline-flex h-7 w-7 items-center justify-center gap-1 overflow-hidden rounded-md bg-white focus:outline-none focus:ring-0 dark:bg-[#313131]"
+                                className="inline-flex h-7 w-7 items-center justify-center gap-1 overflow-hidden rounded-md bg-white focus:outline-none focus:ring-0 border-[#b8d4f0]"
                               >
                                 <ThreeDots className="fill-iconLight dark:fill-iconDark" />
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-white dark:bg-[#313131]">
+                            <DropdownMenuContent align="end" className="bg-white">
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.preventDefault();
@@ -1543,7 +1543,7 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
                       </div>
                       <div className="flex justify-between">
                         <div className="flex gap-1">
-                          <p className="text-muted-foreground text-sm font-medium dark:text-[#8C8C8C]">
+                          <p className="text-[#5a7ba8] text-sm font-medium">
                             {m['common.mailDisplay.to']()}:{' '}
                             {(() => {
                               // Combine to and cc recipients
@@ -1578,7 +1578,7 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
                             })()}
                           </p>
                           {(emailData?.bcc?.length || 0) > 0 && (
-                            <p className="text-muted-foreground text-sm font-medium dark:text-[#8C8C8C]">
+                            <p className="text-[#5a7ba8] text-sm font-medium">
                               Bcc:{' '}
                               {emailData?.bcc?.map((recipient, index) => (
                                 <span key={recipient.email}>
@@ -1675,14 +1675,14 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
                         className="flex"
                       >
                         <button
-                          className="flex cursor-pointer items-center gap-1 rounded-[5px] bg-[#FAFAFA] px-1.5 py-1 text-sm font-medium hover:bg-[#F0F0F0] dark:bg-[#262626] dark:hover:bg-[#303030]"
+                          className="flex cursor-pointer items-center gap-1 rounded-[5px] bg-[#e1f0ff] px-1.5 py-1 text-sm font-medium hover:bg-[#b8d4f0]"
                           onClick={() => openAttachment(attachment)}
                         >
                           {getFileIcon(attachment.filename)}
-                          <span className="max-w-[15ch] truncate text-sm text-black dark:text-white">
+                          <span className="max-w-[15ch] truncate text-sm text-[#2c5aa0]">
                             {attachment.filename}
                           </span>{' '}
-                          <span className="text-muted-foreground whitespace-nowrap text-sm dark:text-[#929292]">
+                          <span className="text-[#5a7ba8] whitespace-nowrap text-sm">
                             {formatFileSize(attachment.size)}
                           </span>
                         </button>
@@ -1690,10 +1690,10 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
                           onClick={() => downloadAttachment(attachment)}
                           className="flex cursor-pointer items-center gap-1 rounded-[5px] px-1.5 py-1 text-sm"
                         >
-                          <HardDriveDownload className="text-muted-foreground dark:text-muted-foreground h-4 w-4 fill-[#FAFAFA] dark:fill-[#262626]" />
+                          <HardDriveDownload className="text-[#5a7ba8] h-4 w-4 fill-[#e1f0ff]" />
                         </button>
                         {index < (messageAttachments?.length || 0) - 1 && (
-                          <div className="m-auto h-2 w-[1px] bg-[#E0E0E0] dark:bg-[#424242]" />
+                          <div className="m-auto h-2 w-[1px] bg-[#b8d4f0]" />
                         )}
                       </div>
                     ))}
@@ -1707,7 +1707,7 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
                       setMode('reply');
                       setActiveReplyId(emailData.id);
                     }}
-                    icon={<Reply className="fill-muted-foreground dark:fill-[#9B9B9B]" />}
+                    icon={<Reply className="fill-[#5a7ba8]" />}
                     text={m['common.mail.reply']()}
                     shortcut={isLastEmail ? 'r' : undefined}
                   />
@@ -1718,7 +1718,7 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
                       setMode('replyAll');
                       setActiveReplyId(emailData.id);
                     }}
-                    icon={<ReplyAll className="fill-muted-foreground dark:fill-[#9B9B9B]" />}
+                    icon={<ReplyAll className="fill-[#5a7ba8]" />}
                     text={m['common.mail.replyAll']()}
                     shortcut={isLastEmail ? 'a' : undefined}
                   />
@@ -1729,7 +1729,7 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
                       setMode('forward');
                       setActiveReplyId(emailData.id);
                     }}
-                    icon={<Forward className="fill-muted-foreground dark:fill-[#9B9B9B]" />}
+                    icon={<Forward className="fill-[#5a7ba8]" />}
                     text={m['common.mail.forward']()}
                     shortcut={isLastEmail ? 'f' : undefined}
                   />

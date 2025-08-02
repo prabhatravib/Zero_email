@@ -12,14 +12,21 @@
     }
   ],
   "env": {
-    "local": {
-      "hyperdrive": [
-        {
-          "binding": "HYPERDRIVE",
-          "id": "57834ddb6716440496c8836f6d99bc9a",
-          "localConnectionString": "postgresql://postgres:postgres@127.0.0.1:5432/zerodotemail",
-        },
-      ],
+          "local": {
+        "d1_databases": [
+          {
+            "binding": "DB",
+            "database_name": "zero-email-local",
+            "database_id": "local"
+          }
+        ],
+        "hyperdrive": [
+          {
+            "binding": "HYPERDRIVE",
+            "id": "57834ddb6716440496c8836f6d99bc9a",
+            "localConnectionString": "postgresql://postgres:postgres@127.0.0.1:5432/zerodotemail",
+          },
+        ],
       "ai": {
         "binding": "AI",
       },

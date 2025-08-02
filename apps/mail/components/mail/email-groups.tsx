@@ -42,33 +42,20 @@ export function EmailGroups({
             <h1 className="text-xl font-semibold mb-1 text-[#2c5aa0]">Email Groups</h1>
             <p className="text-sm text-[#5a7ba8]">Your emails organized by topic</p>
           </div>
-          <div className="flex items-center gap-6 text-sm">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-[#2c5aa0]">{totalGroups}</div>
-              <div className="text-[#5a7ba8]">Groups</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-[#2c5aa0]">{totalEmails}</div>
-              <div className="text-[#5a7ba8]">Emails</div>
-            </div>
-          </div>
+          {selectedGroupId && (
+            <button 
+              onClick={() => onGroupSelect(null)} 
+              className="text-sm transition-colors hover:opacity-80 text-[#4a8dd9]"
+            >
+              View all mails
+            </button>
+          )}
         </div>
       </div>
 
       {/* Group Panels */}
       <div className="flex-1 p-6 overflow-hidden">
         <div className="max-w-7xl mx-auto h-full">
-                     <div className="flex items-center justify-between mb-4">
-             <h2 className="text-lg font-medium text-[#2c5aa0]">Groups</h2>
-             {selectedGroupId && (
-               <button 
-                 onClick={() => onGroupSelect(null)} 
-                 className="text-sm transition-colors hover:opacity-80 text-[#4a8dd9]"
-               >
-                 View all mails
-               </button>
-             )}
-           </div>
           
           <div className="h-full overflow-x-auto overflow-y-hidden">
             <div className="flex gap-4 h-full pb-6">
