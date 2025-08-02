@@ -40,12 +40,23 @@ export const useThreads = () => {
         refetchOnMount: true,
         refetchIntervalInBackground: true,
         retry: (failureCount, error) => {
+          console.debug('[useThreads] Query failed, attempt:', failureCount, 'error:', error);
           // Retry up to 3 times for network errors, but not for 500 errors
-          if (failureCount >= 3) return false;
-          if (error?.message?.includes('500')) return false;
+          if (failureCount >= 3) {
+            console.warn('[useThreads] Max retries reached, stopping');
+            return false;
+          }
+          if (error?.message?.includes('500') || error?.message?.includes('Internal Server Error')) {
+            console.warn('[useThreads] Server error detected, not retrying');
+            return false;
+          }
+          console.debug('[useThreads] Retrying query');
           return true;
         },
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+        onError: (error) => {
+          console.error('[useThreads] Query error:', error);
+        },
       },
     ),
   );
@@ -53,12 +64,23 @@ export const useThreads = () => {
   // Flatten threads from all pages and sort by receivedOn date (newest first)
 
   const threads = useMemo(() => {
-    let filteredThreads = threadsQuery.data
-      ? threadsQuery.data.pages
-          .flatMap((e) => e.threads)
-          .filter(Boolean)
-          .filter((e) => !isInQueue(`thread:${e.id}`))
-      : [];
+    // Ensure we have valid data before processing
+    if (!threadsQuery.data || !Array.isArray(threadsQuery.data.pages)) {
+      console.debug('[useThreads] No valid data available, returning empty array');
+      return [];
+    }
+
+    let filteredThreads = threadsQuery.data.pages
+      .flatMap((e) => {
+        // Ensure each page has a valid threads array
+        if (!e || !Array.isArray(e.threads)) {
+          console.warn('[useThreads] Invalid page data:', e);
+          return [];
+        }
+        return e.threads;
+      })
+      .filter(Boolean)
+      .filter((e) => !isInQueue(`thread:${e.id}`));
 
     // Apply group filtering
     if (selectedGroupId === 'fubo') {

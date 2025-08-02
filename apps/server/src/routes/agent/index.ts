@@ -669,17 +669,33 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
   public async setupAuth() {
     if (this.name === 'general') return;
     if (!this.driver) {
-      const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
-      const _connection = await db.query.connection.findFirst({
-        where: eq(connection.id, this.name),
-      });
-      if (_connection) this.driver = connectionToDriver(_connection);
-      this.ctx.waitUntil(conn.end());
-      const threadCount = await this.getThreadCount();
-      if (threadCount < maxCount) {
-        this.ctx.waitUntil(this.syncThreads('inbox'));
-        this.ctx.waitUntil(this.syncThreads('sent'));
-        this.ctx.waitUntil(this.syncThreads('spam'));
+      try {
+        console.debug('[setupAuth] Setting up auth for connection:', this.name);
+        const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
+        const _connection = await db.query.connection.findFirst({
+          where: eq(connection.id, this.name),
+        });
+        
+        if (_connection) {
+          console.debug('[setupAuth] Connection found, creating driver');
+          this.driver = connectionToDriver(_connection);
+          console.debug('[setupAuth] Driver created successfully');
+        } else {
+          console.error('[setupAuth] No connection found for ID:', this.name);
+          throw new Error(`No connection found for ID: ${this.name}`);
+        }
+        
+        this.ctx.waitUntil(conn.end());
+        
+        const threadCount = await this.getThreadCount();
+        if (threadCount < maxCount) {
+          this.ctx.waitUntil(this.syncThreads('inbox'));
+          this.ctx.waitUntil(this.syncThreads('sent'));
+          this.ctx.waitUntil(this.syncThreads('spam'));
+        }
+      } catch (error) {
+        console.error('[setupAuth] Error during setup:', error);
+        throw error;
       }
     }
   }
@@ -691,7 +707,8 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
     pageToken?: string;
   }): Promise<IGetThreadsResponse> {
     if (!this.driver) {
-      throw new Error('No driver available');
+      console.error('[rawListThreads] No driver available for connection:', this.name);
+      throw new Error(`No driver available for connection: ${this.name}. Please check your connection setup.`);
     }
     return await this.driver.list(params);
   }
