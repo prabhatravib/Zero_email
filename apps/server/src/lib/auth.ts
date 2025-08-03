@@ -90,8 +90,26 @@ const scheduleCampaign = (userInfo: { address: string; name: string }) =>
   });
 
 const connectionHandlerHook = async (account: Account) => {
+  console.log('Connection handler hook called with account:', {
+    providerId: account.providerId,
+    userId: account.userId,
+    hasAccessToken: !!account.accessToken,
+    hasRefreshToken: !!account.refreshToken,
+    accessTokenExpiresAt: account.accessTokenExpiresAt,
+    scope: account.scope,
+  });
+  
   if (!account.accessToken || !account.refreshToken) {
-    console.error('Missing Access/Refresh Tokens', { account });
+    console.error('Missing Access/Refresh Tokens', { 
+      account: {
+        providerId: account.providerId,
+        userId: account.userId,
+        hasAccessToken: !!account.accessToken,
+        hasRefreshToken: !!account.refreshToken,
+        accessTokenExpiresAt: account.accessTokenExpiresAt,
+        scope: account.scope,
+      }
+    });
     throw new APIError('EXPECTATION_FAILED', { message: 'Missing Access/Refresh Tokens' });
   }
 
@@ -145,12 +163,18 @@ const connectionHandlerHook = async (account: Account) => {
 };
 
 export const createAuth = () => {
-  const dub = new Dub();
-
+  console.log('Creating auth configuration...');
+  console.log('Environment variables:', {
+    NODE_ENV: env.NODE_ENV,
+    VITE_PUBLIC_BACKEND_URL: env.VITE_PUBLIC_BACKEND_URL,
+    COOKIE_DOMAIN: env.COOKIE_DOMAIN,
+    BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET ? 'SET' : 'NOT_SET',
+    GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID ? 'SET' : 'NOT_SET',
+    GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT_SET',
+  });
+  
+  // Initialize plugins without Dub analytics for now
   const plugins = [
-    dubAnalytics({
-      dubClient: dub,
-    }),
     mcp({
       loginPage: env.VITE_PUBLIC_APP_URL + '/login',
     }),
@@ -160,6 +184,7 @@ export const createAuth = () => {
 
 
 
+  console.log('Creating better-auth instance...');
   return betterAuth({
     plugins,
     user: {
@@ -305,14 +330,38 @@ export const createAuth = () => {
 };
 
 const createAuthConfig = () => {
+  console.log('Creating auth config...');
   const cache = redis();
-  const { db } = createDb(env.HYPERDRIVE.connectionString);
+  // Use D1 database instead of Hyperdrive for better-auth
+  let db;
+  try {
+    console.log('Creating database connection...');
+    const dbResult = createDb();
+    db = dbResult.db;
+    console.log('Database connection created successfully');
+  } catch (error) {
+    console.error('Error creating database connection:', error);
+    throw new Error('Failed to initialize database connection');
+  }
   
   // Clean the baseURL to remove any spaces
   const cleanBaseURL = env.VITE_PUBLIC_BACKEND_URL?.replace(/\s/g, '') || '';
   
+  // Validate required environment variables
+  if (!env.BETTER_AUTH_SECRET) {
+    throw new Error('BETTER_AUTH_SECRET is required');
+  }
+  
+  if (!env.VITE_PUBLIC_BACKEND_URL) {
+    throw new Error('VITE_PUBLIC_BACKEND_URL is required');
+  }
+  
+  if (!env.COOKIE_DOMAIN) {
+    throw new Error('COOKIE_DOMAIN is required');
+  }
+  
   return {
-    database: drizzleAdapter(db, { provider: 'pg' }),
+    database: drizzleAdapter(db, { provider: 'sqlite' }),
     secondaryStorage: {
       get: async (key: string) => {
         const value = await cache.get(key);
@@ -355,7 +404,17 @@ const createAuthConfig = () => {
       expiresIn: 60 * 60 * 24 * 30, // 30 days
       updateAge: 60 * 60 * 24 * 3, // 1 day (every 1 day the session expiration is updated)
     },
-    socialProviders: getSocialProviders(env as unknown as Record<string, string>),
+    socialProviders: (() => {
+      try {
+        console.log('Configuring social providers...');
+        const providers = getSocialProviders(env as unknown as Record<string, string>);
+        console.log('Social providers configured:', Object.keys(providers));
+        return providers;
+      } catch (error) {
+        console.error('Error configuring social providers:', error);
+        throw error;
+      }
+    })(),
     account: {
       accountLinking: {
         enabled: true,

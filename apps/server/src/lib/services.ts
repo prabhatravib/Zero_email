@@ -15,8 +15,8 @@ export const redis = () => {
   
   return {
     get: async (key: string) => memoryStore.get(key),
-    set: async (key: string, value: string, options?: { ex?: number }) => {
-      memoryStore.set(key, value);
+    set: async (key: string, value: string | number, options?: { ex?: number }) => {
+      memoryStore.set(key, value.toString());
       if (options?.ex) {
         setTimeout(() => memoryStore.delete(key), options.ex * 1000);
       }
@@ -25,7 +25,8 @@ export const redis = () => {
     evalsha: async (script: string, keys: string[], args: string[]) => {
       // Simple fallback for evalsha - just return the first key's value
       // This is used by @upstash/ratelimit for rate limiting
-      return memoryStore.get(keys[0]) || null;
+      const val = memoryStore.get(keys[0]);
+      return typeof val === 'number' ? val.toString() : val || null;
     },
     // Additional methods that might be needed
     exists: async (key: string) => memoryStore.has(key) ? 1 : 0,

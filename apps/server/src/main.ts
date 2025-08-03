@@ -1,9 +1,4 @@
-import {
-  createUpdatedMatrixFromNewEmail,
-  initializeStyleMatrixFromEmail,
-  type EmailMatrix,
-  type WritingStyleMatrix,
-} from './services/writing-style-service';
+
 import {
   account,
   connection,
@@ -12,8 +7,7 @@ import {
   user,
   userHotkeys,
   userSettings,
-  writingStyleMatrix,
-} from './db/schema';
+} from './db/schema-d1';
 import { env, DurableObject, RpcTarget, WorkerEntrypoint } from 'cloudflare:workers';
 import { EProviders, type ISubscribeBatch, type IThreadBatch } from './types';
 import { oAuthDiscoveryMetadata } from 'better-auth/plugins';
@@ -154,15 +148,7 @@ export class DbRpcDO extends RpcTarget {
     return await this.mainDo.findConnectionById(connectionId);
   }
 
-  async syncUserMatrix(connectionId: string, emailStyleMatrix: EmailMatrix) {
-    return await this.mainDo.syncUserMatrix(connectionId, emailStyleMatrix);
-  }
 
-  async findWritingStyleMatrix(
-    connectionId: string,
-  ): Promise<typeof writingStyleMatrix.$inferSelect | undefined> {
-    return await this.mainDo.findWritingStyleMatrix(connectionId);
-  }
 
   async deleteActiveConnection(connectionId: string) {
     return await this.mainDo.deleteActiveConnection(this.userId, connectionId);
@@ -181,7 +167,8 @@ class ZeroDB extends DurableObject<Env> {
 
   constructor(state: DurableObjectState, env: Env) {
     super(state, env);
-    this.db = createDb(env.HYPERDRIVE.connectionString).db;
+    // Use D1 database instead of Hyperdrive
+    this.db = createDb().db;
   }
 
   async setMetaData(userId: string) {
@@ -432,58 +419,9 @@ class ZeroDB extends DurableObject<Env> {
     });
   }
 
-  async syncUserMatrix(connectionId: string, emailStyleMatrix: EmailMatrix) {
-    await this.db.transaction(async (tx) => {
-      const [existingMatrix] = await tx
-        .select({
-          numMessages: writingStyleMatrix.numMessages,
-          style: writingStyleMatrix.style,
-        })
-        .from(writingStyleMatrix)
-        .where(eq(writingStyleMatrix.connectionId, connectionId));
 
-      if (existingMatrix) {
-        const newStyle = createUpdatedMatrixFromNewEmail(
-          existingMatrix.numMessages,
-          existingMatrix.style as WritingStyleMatrix,
-          emailStyleMatrix,
-        );
 
-        await tx
-          .update(writingStyleMatrix)
-          .set({
-            numMessages: existingMatrix.numMessages + 1,
-            style: newStyle,
-          })
-          .where(eq(writingStyleMatrix.connectionId, connectionId));
-      } else {
-        const newStyle = initializeStyleMatrixFromEmail(emailStyleMatrix);
 
-        await tx
-          .insert(writingStyleMatrix)
-          .values({
-            connectionId,
-            numMessages: 1,
-            style: newStyle,
-          })
-          .onConflictDoNothing();
-      }
-    });
-  }
-
-  async findWritingStyleMatrix(
-    connectionId: string,
-  ): Promise<typeof writingStyleMatrix.$inferSelect | undefined> {
-    return await this.db.query.writingStyleMatrix.findFirst({
-      where: eq(writingStyleMatrix.connectionId, connectionId),
-      columns: {
-        numMessages: true,
-        style: true,
-        updatedAt: true,
-        connectionId: true,
-      },
-    });
-  }
 
   async deleteActiveConnection(userId: string, connectionId: string) {
     return await this.db
@@ -776,12 +714,11 @@ export default class Entry extends WorkerEntrypoint<Env> {
   }
   async scheduled() {
     console.log('[SCHEDULED] Checking for expired subscriptions...');
-    const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
+    const { db } = createDb();
     const allAccounts = await db.query.connection.findMany({
       where: (fields, { isNotNull, and }) =>
         and(isNotNull(fields.accessToken), isNotNull(fields.refreshToken)),
     });
-    await conn.end();
     console.log('[SCHEDULED] allAccounts', allAccounts.length);
     const now = new Date();
     const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);

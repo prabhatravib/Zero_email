@@ -3,7 +3,7 @@ import {
   IGetThreadsResponseSchema,
   type IGetThreadsResponse,
 } from '../../lib/driver/types';
-import { updateWritingStyleMatrix } from '../../services/writing-style-service';
+
 import { activeDriverProcedure, router, privateProcedure } from '../trpc';
 import { processEmailHtml } from '../../lib/email-processor';
 import { defaultPageSize, FOLDERS } from '../../lib/utils';
@@ -417,15 +417,7 @@ export const mailRouter = router({
       const agent = await getZeroAgent(activeConnection.id);
       const { draftId, ...mail } = input;
 
-      const afterTask = async () => {
-        try {
-          console.warn('Saving writing style matrix...');
-          await updateWritingStyleMatrix(activeConnection.id, input.message);
-          console.warn('Saved writing style matrix.');
-        } catch (error) {
-          console.error('Failed to save writing style matrix', error);
-        }
-      };
+
 
       if (draftId) {
         await agent.sendDraft(draftId, mail);
@@ -433,7 +425,7 @@ export const mailRouter = router({
         await agent.create(input);
       }
 
-      ctx.c.executionCtx.waitUntil(afterTask());
+
       return { success: true };
     }),
   delete: activeDriverProcedure

@@ -1,13 +1,28 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres, { type Sql } from 'postgres';
-import * as schema from './schema';
+import { drizzle } from 'drizzle-orm/d1';
+import { drizzle as drizzleHyperdrive } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import { env } from 'cloudflare:workers';
+import * as schema from './schema-d1';
 
-const createDrizzle = (conn: Sql) => drizzle(conn, { schema });
-
-export const createDb = (url: string) => {
-  const conn = postgres(url);
-  const db = createDrizzle(conn);
-  return { db, conn };
+export const createDb = (connectionString?: string) => {
+  if (connectionString) {
+    const client = postgres(connectionString);
+    return {
+      db: drizzleHyperdrive(client, { schema }),
+      conn: client,
+    };
+  }
+  
+  // Use D1 database from environment
+  const d1 = env.DB;
+  if (!d1) {
+    throw new Error('D1 database binding not found. Make sure DB is configured in wrangler.jsonc');
+  }
+  
+  return {
+    db: drizzle(d1, { schema }),
+    conn: null,
+  };
 };
 
-export type DB = ReturnType<typeof createDrizzle>;
+export type DB = ReturnType<typeof drizzle<typeof schema>>;

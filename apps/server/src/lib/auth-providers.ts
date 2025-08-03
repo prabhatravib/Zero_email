@@ -45,8 +45,9 @@ export const authProviders = (env: Record<string, string>): ProviderConfig[] => 
       { name: 'GOOGLE_CLIENT_SECRET', source: 'Google Cloud Console' },
     ],
     config: {
-      prompt: 'select_account', // Only show account selection, not consent
+      prompt: 'consent', // Request consent to ensure refresh token is issued
       accessType: 'offline',
+      includeGrantedScopes: true, // Include all granted scopes in the response
       scope: [
         'https://mail.google.com/',
         'https://www.googleapis.com/auth/gmail.modify',
