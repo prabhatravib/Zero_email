@@ -1,13 +1,8 @@
-<p align="center">
-  <picture>
-    <source srcset="apps/mail/public/white-icon.svg" media="(prefers-color-scheme: dark)">
-    <img src="apps/mail/public/black-icon.svg" alt="Zero Logo" width="64" style="background-color: #000; padding: 10px;"/>
-  </picture>
-</p>
+
 
 # Zero
 
-An Open-Source Gmail Alternative for the Future of Email
+This is a fork of Zero, An Open-Source Gmail Alternative for the Future of Email
 
 ## What is Zero?
 
