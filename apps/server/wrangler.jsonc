@@ -123,7 +123,7 @@
     "AUTUMN_SECRET_KEY": "dummy",
     "MICROSOFT_CLIENT_ID": "your_microsoft_client_id_here",
     "MICROSOFT_CLIENT_SECRET": "your_microsoft_client_secret_here",
-    "OPENAI_API_KEY": "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",
+    "OPENAI_API_KEY": "your_openai_api_key_here",
     "ELEVENLABS_API_KEY": "1234567890",
     "VOICE_SECRET": "1234567890",
     "USE_OPENAI": "true",
