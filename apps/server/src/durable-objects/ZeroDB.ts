@@ -209,12 +209,86 @@ export class ZeroDB extends DurableObject<Env> {
     updatingInfo: {
       expiresAt: Date;
       scope: string;
-      accessToken?: string;
-      refreshToken?: string;
+      accessToken: string;
+      refreshToken: string;
       name?: string;
       picture?: string;
     },
   ) {
+    // Handle potential RPC serialization issues by ensuring all values are properly typed
+    // Also handle base64 encoded tokens
+    let accessToken = String(updatingInfo.accessToken || '');
+    let refreshToken = String(updatingInfo.refreshToken || '');
+    
+    // Check if tokens are base64 encoded and decode them
+    try {
+      if (accessToken && !accessToken.startsWith('ya29.') && !accessToken.startsWith('1//')) {
+        // Try to decode as base64
+        const decodedAccessToken = atob(accessToken);
+        if (decodedAccessToken && decodedAccessToken.length > 10) {
+          accessToken = decodedAccessToken;
+          console.log('Decoded base64 access token successfully');
+        }
+      }
+      
+      if (refreshToken && !refreshToken.startsWith('1//')) {
+        // Try to decode as base64
+        const decodedRefreshToken = atob(refreshToken);
+        if (decodedRefreshToken && decodedRefreshToken.length > 10) {
+          refreshToken = decodedRefreshToken;
+          console.log('Decoded base64 refresh token successfully');
+        }
+      }
+    } catch (decodeError) {
+      console.log('Token decoding failed, using original tokens:', decodeError);
+    }
+    
+    const sanitizedUpdatingInfo = {
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      scope: String(updatingInfo.scope || ''),
+      expiresAt: updatingInfo.expiresAt instanceof Date ? updatingInfo.expiresAt : new Date(updatingInfo.expiresAt || Date.now() + 3600000),
+      name: String(updatingInfo.name || ''),
+      picture: String(updatingInfo.picture || ''),
+    };
+    // Debug: Log what we received from the RPC call
+    console.log('ZeroDB received parameters:', {
+      providerId,
+      email,
+      userId,
+      updatingInfo: {
+        accessToken: sanitizedUpdatingInfo.accessToken ? `${sanitizedUpdatingInfo.accessToken.substring(0, 10)}...` : 'NULL',
+        refreshToken: sanitizedUpdatingInfo.refreshToken ? `${sanitizedUpdatingInfo.refreshToken.substring(0, 10)}...` : 'NULL',
+        scope: sanitizedUpdatingInfo.scope,
+        expiresAt: sanitizedUpdatingInfo.expiresAt,
+        name: sanitizedUpdatingInfo.name,
+        picture: sanitizedUpdatingInfo.picture,
+      }
+    });
+    
+    // Additional debugging for RPC serialization issues
+    console.log('RPC parameter types:', {
+      providerIdType: typeof providerId,
+      emailType: typeof email,
+      userIdType: typeof userId,
+      updatingInfoType: typeof updatingInfo,
+      accessTokenType: typeof sanitizedUpdatingInfo.accessToken,
+      refreshTokenType: typeof sanitizedUpdatingInfo.refreshToken,
+      scopeType: typeof sanitizedUpdatingInfo.scope,
+      expiresAtType: typeof sanitizedUpdatingInfo.expiresAt,
+    });
+    
+    // Additional debugging for token values
+    console.log('Token debugging:', {
+      accessTokenType: typeof sanitizedUpdatingInfo.accessToken,
+      accessTokenIsUndefined: sanitizedUpdatingInfo.accessToken === undefined,
+      accessTokenIsNull: sanitizedUpdatingInfo.accessToken === null,
+      accessTokenLength: sanitizedUpdatingInfo.accessToken?.length,
+      refreshTokenType: typeof sanitizedUpdatingInfo.refreshToken,
+      refreshTokenIsUndefined: sanitizedUpdatingInfo.refreshToken === undefined,
+      refreshTokenIsNull: sanitizedUpdatingInfo.refreshToken === null,
+      refreshTokenLength: sanitizedUpdatingInfo.refreshToken?.length,
+    });
     if (!this.db) {
       // Fallback to Hyperdrive
       const { db } = createDb(env.HYPERDRIVE.connectionString);
@@ -225,30 +299,115 @@ export class ZeroDB extends DurableObject<Env> {
           id: crypto.randomUUID(),
           email,
           userId,
-          accessToken: updatingInfo.accessToken,
-          refreshToken: updatingInfo.refreshToken,
-          expiresAt: updatingInfo.expiresAt,
-          scope: updatingInfo.scope,
-          name: updatingInfo.name,
-          picture: updatingInfo.picture,
+          accessToken: sanitizedUpdatingInfo.accessToken,
+          refreshToken: sanitizedUpdatingInfo.refreshToken,
+          expiresAt: sanitizedUpdatingInfo.expiresAt,
+          scope: sanitizedUpdatingInfo.scope,
+          name: sanitizedUpdatingInfo.name,
+          picture: sanitizedUpdatingInfo.picture,
           createdAt: new Date(),
           updatedAt: new Date(),
         })
         .onConflictDoUpdate({
           target: [connection.email, connection.userId],
           set: {
-            accessToken: updatingInfo.accessToken,
-            refreshToken: updatingInfo.refreshToken,
-            expiresAt: updatingInfo.expiresAt,
-            scope: updatingInfo.scope,
-            name: updatingInfo.name,
-            picture: updatingInfo.picture,
+            accessToken: sanitizedUpdatingInfo.accessToken,
+            refreshToken: sanitizedUpdatingInfo.refreshToken,
+            expiresAt: sanitizedUpdatingInfo.expiresAt,
+            scope: sanitizedUpdatingInfo.scope,
+            name: sanitizedUpdatingInfo.name,
+            picture: sanitizedUpdatingInfo.picture,
             updatedAt: new Date(),
           },
         });
     }
 
+    // Ensure expiresAt is a proper Date object (RPC serialization might convert it to string)
+    const expiresAt = sanitizedUpdatingInfo.expiresAt instanceof Date 
+      ? sanitizedUpdatingInfo.expiresAt 
+      : new Date(sanitizedUpdatingInfo.expiresAt || Date.now() + 3600000);
+
     const connectionId = crypto.randomUUID();
+    
+    // Debug: Log the values being inserted
+    console.log('Database insert debug:', {
+      connectionId,
+      userId,
+      providerId,
+      email,
+      accessToken: sanitizedUpdatingInfo.accessToken || null,
+      refreshToken: sanitizedUpdatingInfo.refreshToken || null,
+      expiresAt: expiresAt.toISOString(),
+      scope: sanitizedUpdatingInfo.scope,
+      name: sanitizedUpdatingInfo.name || null,
+      picture: sanitizedUpdatingInfo.picture || null,
+    });
+    
+    // Additional debug for scope field
+    console.log('Scope field debug:', {
+      scopeValue: sanitizedUpdatingInfo.scope,
+      scopeType: typeof sanitizedUpdatingInfo.scope,
+      scopeIsUndefined: sanitizedUpdatingInfo.scope === undefined,
+      scopeIsNull: sanitizedUpdatingInfo.scope === null,
+      scopeLength: sanitizedUpdatingInfo.scope?.length,
+    });
+    
+    // First, let's check what tables exist
+    try {
+      const allTables = await this.sql('SELECT name FROM sqlite_master WHERE type="table"');
+      const tables = await allTables.all();
+      console.log('All tables in database:', tables);
+      
+      const tableCheck = await this.sql('SELECT name FROM sqlite_master WHERE type="table" AND name="mail0_connection"');
+      const tableExists = await tableCheck.first();
+      console.log('Table exists check:', tableExists);
+      
+      if (!tableExists) {
+        console.error('Table mail0_connection does not exist!');
+        throw new Error('Table mail0_connection does not exist');
+      }
+    } catch (error) {
+      console.error('Error checking table existence:', error);
+      throw error;
+    }
+    
+    // Ensure scope is not undefined
+    const scopeValue = sanitizedUpdatingInfo.scope || '';
+    
+    // Validate tokens before insertion
+    if (!sanitizedUpdatingInfo.accessToken || sanitizedUpdatingInfo.accessToken === '') {
+      console.error('Access token is empty, cannot create connection');
+      console.error('Token debugging details:', {
+        accessToken: sanitizedUpdatingInfo.accessToken,
+        accessTokenType: typeof sanitizedUpdatingInfo.accessToken,
+        accessTokenLength: sanitizedUpdatingInfo.accessToken?.length,
+        refreshToken: sanitizedUpdatingInfo.refreshToken,
+        refreshTokenType: typeof sanitizedUpdatingInfo.refreshToken,
+        refreshTokenLength: sanitizedUpdatingInfo.refreshToken?.length,
+      });
+      throw new Error('Access token is required for connection creation');
+    }
+    
+    if (!sanitizedUpdatingInfo.refreshToken || sanitizedUpdatingInfo.refreshToken === '') {
+      console.error('Refresh token is empty, cannot create connection');
+      console.error('Token debugging details:', {
+        accessToken: sanitizedUpdatingInfo.accessToken,
+        accessTokenType: typeof sanitizedUpdatingInfo.accessToken,
+        accessTokenLength: sanitizedUpdatingInfo.accessToken?.length,
+        refreshToken: sanitizedUpdatingInfo.refreshToken,
+        refreshTokenType: typeof sanitizedUpdatingInfo.refreshToken,
+        refreshTokenLength: sanitizedUpdatingInfo.refreshToken?.length,
+      });
+      throw new Error('Refresh token is required for connection creation');
+    }
+    
+    console.log('Inserting connection with tokens:', {
+      connectionId,
+      accessToken: sanitizedUpdatingInfo.accessToken ? 'SET' : 'NULL',
+      refreshToken: sanitizedUpdatingInfo.refreshToken ? 'SET' : 'NULL',
+      scope: scopeValue,
+    });
+    
     await this.sql(
       `INSERT OR REPLACE INTO mail0_connection 
        (id, user_id, provider_id, email, access_token, refresh_token, expires_at, scope, name, picture, created_at, updated_at)
@@ -258,12 +417,12 @@ export class ZeroDB extends DurableObject<Env> {
         userId,
         providerId,
         email,
-        updatingInfo.accessToken || null,
-        updatingInfo.refreshToken || null,
-        updatingInfo.expiresAt.toISOString(),
-        updatingInfo.scope,
-        updatingInfo.name || null,
-        updatingInfo.picture || null,
+        sanitizedUpdatingInfo.accessToken,
+        sanitizedUpdatingInfo.refreshToken,
+        expiresAt.toISOString(),
+        scopeValue,
+        sanitizedUpdatingInfo.name || null,
+        sanitizedUpdatingInfo.picture || null,
       ]
     );
 
@@ -433,8 +592,8 @@ export class DbRpcDO extends RpcTarget {
     updatingInfo: {
       expiresAt: Date;
       scope: string;
-      accessToken?: string;
-      refreshToken?: string;
+      accessToken: string;
+      refreshToken: string;
       name?: string;
       picture?: string;
     },

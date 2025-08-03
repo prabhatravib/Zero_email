@@ -10,7 +10,7 @@ import {
   type LoaderFunctionArgs,
   type MetaFunction,
 } from 'react-router';
-import { Analytics as DubAnalytics } from '@dub/analytics/react';
+
 import { ServerProviders } from '@/providers/server-providers';
 import { ClientProviders } from '@/providers/client-providers';
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
@@ -84,11 +84,7 @@ export function Layout({ children }: PropsWithChildren) {
       <body className="antialiased">
         <ServerProviders connectionId={connectionId}>
           <ClientProviders>{children}</ClientProviders>
-          <DubAnalytics
-            domainsConfig={{
-              refer: 'mail0.com',
-            }}
-          />
+
         </ServerProviders>
         <ScrollRestoration />
         <Scripts />

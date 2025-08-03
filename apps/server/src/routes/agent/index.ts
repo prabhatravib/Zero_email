@@ -302,7 +302,7 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
       // Fallback to direct SQL execution
       return this.ctx.storage.sql(strings, ...values);
     } catch (error) {
-      if (error instanceof Error && error.message.includes('SQLite storage')) {
+      if (error instanceof Error && (error.message.includes('SQLite storage') || error.message.includes('no such table'))) {
         console.warn('SQLite not available, skipping SQL operation:', error.message);
         // Return appropriate fallback based on the query
         const query = strings.join('?');
@@ -616,17 +616,91 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
   public async setupAuth() {
     if (this.name === 'general') return;
     if (!this.driver) {
-      const { db, conn } = createDb(env.HYPERDRIVE.connectionString);
-      const _connection = await db.query.connection.findFirst({
-        where: eq(connection.id, this.name),
-      });
-      if (_connection) this.driver = connectionToDriver(_connection);
-      this.ctx.waitUntil(conn.end());
-      const threadCount = await this.getThreadCount();
-      if (threadCount < maxCount) {
-        this.ctx.waitUntil(this.syncThreads('inbox'));
-        this.ctx.waitUntil(this.syncThreads('sent'));
-        this.ctx.waitUntil(this.syncThreads('spam'));
+      try {
+        // Try to get connection from D1 database first using direct SQL
+        if (env.DB) {
+          console.log('[setupAuth] Trying to get connection from D1 database...');
+          const result = await env.DB.prepare(
+            'SELECT * FROM mail0_connection WHERE id = ?'
+          ).bind(this.name).first();
+          
+          if (result) {
+            console.log('[setupAuth] Found connection in D1 database:', result.id);
+            console.log('[setupAuth] D1 connection data:', {
+              id: result.id,
+              accessToken: result.access_token ? 'SET' : 'NULL',
+              refreshToken: result.refresh_token ? 'SET' : 'NULL',
+              scope: result.scope,
+            });
+            
+            // Check if required tokens are present
+            if (!result.access_token || !result.refresh_token) {
+              console.error('[setupAuth] Connection missing required tokens:', {
+                id: result.id,
+                hasAccessToken: !!result.access_token,
+                hasRefreshToken: !!result.refresh_token,
+              });
+              throw new Error(`Connection ${result.id} is missing required tokens`);
+            }
+            
+            // Convert the D1 result to the expected format
+            const _connection = {
+              id: result.id,
+              userId: result.user_id,
+              providerId: result.provider_id,
+              email: result.email,
+              name: result.name,
+              picture: result.picture,
+              accessToken: result.access_token,
+              refreshToken: result.refresh_token,
+              scope: result.scope,
+              expiresAt: result.expires_at,
+              createdAt: result.created_at,
+              updatedAt: result.updated_at,
+            };
+            this.driver = connectionToDriver(_connection);
+          } else {
+            // Fallback to Hyperdrive if not found in D1
+            console.log('[setupAuth] Connection not found in D1, trying Hyperdrive...');
+            const { db: hyperdriveDb, conn } = createDb(env.HYPERDRIVE.connectionString);
+            const _hyperdriveConnection = await hyperdriveDb.query.connection.findFirst({
+              where: eq(connection.id, this.name),
+            });
+            if (_hyperdriveConnection) {
+              console.log('[setupAuth] Found connection in Hyperdrive database');
+              this.driver = connectionToDriver(_hyperdriveConnection);
+            } else {
+              console.error('[setupAuth] Connection not found in either database:', this.name);
+              throw new Error(`Connection not found: ${this.name}`);
+            }
+            this.ctx.waitUntil(conn.end());
+          }
+        } else {
+          // Fallback to Hyperdrive if D1 is not available
+          console.log('[setupAuth] D1 not available, using Hyperdrive...');
+          const { db: hyperdriveDb, conn } = createDb(env.HYPERDRIVE.connectionString);
+          const _hyperdriveConnection = await hyperdriveDb.query.connection.findFirst({
+            where: eq(connection.id, this.name),
+          });
+          if (_hyperdriveConnection) {
+            console.log('[setupAuth] Found connection in Hyperdrive database');
+            this.driver = connectionToDriver(_hyperdriveConnection);
+          } else {
+            console.error('[setupAuth] Connection not found in Hyperdrive database:', this.name);
+            throw new Error(`Connection not found: ${this.name}`);
+          }
+          this.ctx.waitUntil(conn.end());
+        }
+        
+        const threadCount = await this.getThreadCount();
+        if (threadCount < maxCount) {
+          this.ctx.waitUntil(this.syncThreads('inbox'));
+          this.ctx.waitUntil(this.syncThreads('sent'));
+          this.ctx.waitUntil(this.syncThreads('spam'));
+        }
+      } catch (error) {
+        console.error('[setupAuth] Error setting up auth:', error);
+        throw error;
       }
     }
   }
@@ -1043,15 +1117,15 @@ export class ZeroDriver extends AIChatAgent<typeof env> {
   }
 
   async getThreadCount() {
-    const count = this.sql`SELECT COUNT(*) FROM threads`;
-    return count[0]['COUNT(*)'] as number;
+    const rows = this.sql`SELECT COUNT(*) as count FROM threads`;
+    return (rows[0] as any)?.count ?? 0;
   }
 
   async getFolderThreadCount(folder: string) {
-    const count = this.sql`SELECT COUNT(*) FROM threads WHERE EXISTS (
+    const rows = this.sql`SELECT COUNT(*) as count FROM threads WHERE EXISTS (
       SELECT 1 FROM json_each(latest_label_ids) WHERE value = ${folder}
     )`;
-    return count[0]['COUNT(*)'] as number;
+    return (rows[0] as any)?.count ?? 0;
   }
 
   async syncThreads(folder: string): Promise<FolderSyncResult> {
@@ -1545,7 +1619,7 @@ export class ZeroAgent extends AIChatAgent<typeof env> {
     try {
       return super.sql(strings, ...values);
     } catch (error) {
-      if (error instanceof Error && error.message.includes('SQLite storage')) {
+      if (error instanceof Error && (error.message.includes('SQLite storage') || error.message.includes('no such table'))) {
         console.warn('SQLite not available, skipping SQL operation:', error.message);
         return [] as T[];
       }

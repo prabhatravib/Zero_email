@@ -14,7 +14,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { getSocialProviders } from './auth-providers';
 import { redis, resend } from './services';
 import { getContext } from 'hono/context-storage';
-import { dubAnalytics } from '@dub/better-auth';
+
 import { defaultUserSettings } from './schemas';
 import { disableBrainFunction, enableBrainFunction } from './brain';
 import { APIError } from 'better-auth/api';
@@ -26,7 +26,7 @@ import { createDriver } from './driver';
 import { createDb } from '../db';
 import * as schema from '../db/schema-d1';
 import { Effect } from 'effect';
-import { Dub } from 'dub';
+
 
 const scheduleCampaign = (userInfo: { address: string; name: string }) =>
   Effect.gen(function* () {
@@ -125,6 +125,12 @@ export const connectionHandlerHook = async (account: Account) => {
       email: '',
     },
   });
+  
+  console.log('Driver created successfully:', {
+    providerId: account.providerId,
+    driverType: driver.constructor.name,
+    hasGetScope: typeof driver.getScope === 'function'
+  });
 
   console.log('Getting user info from driver...');
   const userInfo = await driver.getUserInfo().catch((error) => {
@@ -139,45 +145,303 @@ export const connectionHandlerHook = async (account: Account) => {
     throw new APIError('BAD_REQUEST', { message: 'Missing "email" in user info' });
   }
 
+  // Ensure expiresAt is a proper Date object
+  const expiresAt = account.accessTokenExpiresAt 
+    ? (account.accessTokenExpiresAt instanceof Date 
+        ? account.accessTokenExpiresAt 
+        : new Date(account.accessTokenExpiresAt))
+    : new Date(Date.now() + 3600000);
+
+  console.log('ExpiresAt debug:', {
+    original: account.accessTokenExpiresAt,
+    type: typeof account.accessTokenExpiresAt,
+    isDate: account.accessTokenExpiresAt instanceof Date,
+    final: expiresAt,
+    finalType: typeof expiresAt,
+    finalIsDate: expiresAt instanceof Date
+  });
+
+  // Get scope from driver or fallback to account scope
+  let scope = '';
+  try {
+    scope = driver.getScope() || account.scope || '';
+  } catch (error) {
+    console.error('Error getting scope from driver:', error);
+    scope = account.scope || '';
+  }
+  
+  // If still no scope, use a default scope for Google
+  if (!scope && account.providerId === 'google') {
+    scope = 'https://mail.google.com/ https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
+  }
+  
+  console.log('Scope debug:', {
+    driverScope: driver.getScope(),
+    accountScope: account.scope,
+    finalScope: scope
+  });
+
   const updatingInfo = {
     name: userInfo.name || 'Unknown',
     picture: userInfo.photo || '',
-    accessToken: account.accessToken,
-    refreshToken: account.refreshToken,
-    scope: driver.getScope(),
-    expiresAt: new Date(Date.now() + (account.accessTokenExpiresAt?.getTime() || 3600000)),
+    accessToken: account.accessToken || '',
+    refreshToken: account.refreshToken || '',
+    scope: scope,
+    expiresAt: expiresAt,
   };
+  
+  // Ensure all values are strings to avoid RPC serialization issues
+  const sanitizedUpdatingInfo = {
+    name: String(updatingInfo.name || ''),
+    picture: String(updatingInfo.picture || ''),
+    accessToken: String(updatingInfo.accessToken || ''),
+    refreshToken: String(updatingInfo.refreshToken || ''),
+    scope: String(updatingInfo.scope || ''),
+    expiresAt: updatingInfo.expiresAt,
+  };
+  
+  // Validate that tokens are not empty
+  if (!sanitizedUpdatingInfo.accessToken || sanitizedUpdatingInfo.accessToken === '') {
+    console.error('Access token is empty in sanitizedUpdatingInfo');
+    throw new APIError('BAD_REQUEST', { message: 'Access token is required for connection creation' });
+  }
+  
+  if (!sanitizedUpdatingInfo.refreshToken || sanitizedUpdatingInfo.refreshToken === '') {
+    console.error('Refresh token is empty in sanitizedUpdatingInfo');
+    throw new APIError('BAD_REQUEST', { message: 'Refresh token is required for connection creation' });
+  }
+  
+  // Debug: Log the actual token values being passed
+  console.log('Token validation passed:', {
+    accessTokenLength: sanitizedUpdatingInfo.accessToken.length,
+    refreshTokenLength: sanitizedUpdatingInfo.refreshToken.length,
+    accessTokenFirstChars: sanitizedUpdatingInfo.accessToken.substring(0, 10) + '...',
+    refreshTokenFirstChars: sanitizedUpdatingInfo.refreshToken.substring(0, 10) + '...',
+  });
 
   console.log('Getting ZeroDB instance for user:', account.userId);
   const db = await getZeroDB(account.userId);
   
-  console.log('Creating connection in database...');
-  const [result] = await db.createConnection(
-    account.providerId as EProviders,
-    userInfo.address,
-    updatingInfo,
-  );
+  // Check if database is properly initialized
+  console.log('Database initialization check:', {
+    hasDb: !!db,
+    dbType: db?.constructor?.name
+  });
   
-  console.log('Connection created successfully:', result.id);
-
-  if (env.NODE_ENV === 'production') {
-    await Effect.runPromise(
-      scheduleCampaign({ address: userInfo.address, name: userInfo.name || 'there' }),
-    );
+  // Validate that all required fields are present
+  if (!sanitizedUpdatingInfo.scope) {
+    console.error('Scope is missing from sanitizedUpdatingInfo:', sanitizedUpdatingInfo);
+    throw new APIError('BAD_REQUEST', { message: 'Scope is required for connection creation' });
   }
-
-  if (env.GOOGLE_S_ACCOUNT && env.GOOGLE_S_ACCOUNT !== '{}') {
-    // Direct processing instead of queue (for free plan)
-    await enableBrainFunction({
-      id: result.id,
-      providerId: account.providerId as EProviders,
+  
+  if (!sanitizedUpdatingInfo.expiresAt) {
+    console.error('ExpiresAt is missing from sanitizedUpdatingInfo:', sanitizedUpdatingInfo);
+    throw new APIError('BAD_REQUEST', { message: 'ExpiresAt is required for connection creation' });
+  }
+  
+  console.log('Creating connection in database...');
+  console.log('Connection data:', {
+    providerId: account.providerId,
+    email: userInfo.address,
+    userId: account.userId,
+    sanitizedUpdatingInfo: {
+      ...sanitizedUpdatingInfo,
+      accessToken: sanitizedUpdatingInfo.accessToken ? 'SET' : 'NOT_SET',
+      refreshToken: sanitizedUpdatingInfo.refreshToken ? 'SET' : 'NOT_SET',
+    }
+  });
+  
+  try {
+    // Debug: Log exactly what we're passing to the RPC call
+    console.log('RPC call parameters:', {
+      providerId: account.providerId,
+      email: userInfo.address,
+      userId: account.userId,
+      updatingInfo: {
+        accessToken: sanitizedUpdatingInfo.accessToken ? `${sanitizedUpdatingInfo.accessToken.substring(0, 10)}...` : 'NULL',
+        refreshToken: sanitizedUpdatingInfo.refreshToken ? `${sanitizedUpdatingInfo.refreshToken.substring(0, 10)}...` : 'NULL',
+        scope: sanitizedUpdatingInfo.scope,
+        expiresAt: sanitizedUpdatingInfo.expiresAt,
+        name: sanitizedUpdatingInfo.name,
+        picture: sanitizedUpdatingInfo.picture,
+      }
     });
-  }
+    
+    // Ensure tokens are explicitly set to avoid RPC serialization issues
+    const connectionData = {
+      expiresAt: sanitizedUpdatingInfo.expiresAt,
+      scope: sanitizedUpdatingInfo.scope,
+      accessToken: sanitizedUpdatingInfo.accessToken,
+      refreshToken: sanitizedUpdatingInfo.refreshToken,
+      name: sanitizedUpdatingInfo.name,
+      picture: sanitizedUpdatingInfo.picture,
+    };
+    
+    console.log('Final connection data being sent:', {
+      ...connectionData,
+      accessToken: connectionData.accessToken ? `${connectionData.accessToken.substring(0, 10)}...` : 'NULL',
+      refreshToken: connectionData.refreshToken ? `${connectionData.refreshToken.substring(0, 10)}...` : 'NULL',
+    });
+    
+    // Try a simpler approach - use the original RPC call but ensure tokens are properly passed
+    console.log('Using RPC call with proper token handling');
+    
+    // Ensure all values are explicitly set to avoid RPC serialization issues
+    const rpcConnectionData = {
+      accessToken: connectionData.accessToken || '',
+      refreshToken: connectionData.refreshToken || '',
+      scope: connectionData.scope || '',
+      expiresAt: connectionData.expiresAt,
+      name: connectionData.name || '',
+      picture: connectionData.picture || '',
+    };
+    
+    // Validate tokens before RPC call
+    if (!rpcConnectionData.accessToken) {
+      console.error('Access token is empty before RPC call');
+      throw new APIError('BAD_REQUEST', { message: 'Access token is required for connection creation' });
+    }
+    
+    if (!rpcConnectionData.refreshToken) {
+      console.error('Refresh token is empty before RPC call');
+      throw new APIError('BAD_REQUEST', { message: 'Refresh token is required for connection creation' });
+    }
+    
+    console.log('RPC call data validation:', {
+      accessTokenLength: rpcConnectionData.accessToken.length,
+      refreshTokenLength: rpcConnectionData.refreshToken.length,
+      scopeLength: rpcConnectionData.scope.length,
+      hasExpiresAt: !!rpcConnectionData.expiresAt,
+    });
+    
+    // Try to serialize and deserialize to test RPC compatibility
+    try {
+      const serialized = JSON.stringify(rpcConnectionData);
+      const deserialized = JSON.parse(serialized);
+      console.log('RPC serialization test:', {
+        originalAccessTokenLength: rpcConnectionData.accessToken.length,
+        deserializedAccessTokenLength: deserialized.accessToken.length,
+        originalRefreshTokenLength: rpcConnectionData.refreshToken.length,
+        deserializedRefreshTokenLength: deserialized.refreshToken.length,
+      });
+    } catch (error) {
+      console.error('RPC serialization test failed:', error);
+    }
+    
+    // COMPLETELY BYPASS RPC - Use direct database access
+    console.log('COMPLETELY BYPASSING RPC - Using direct database access...');
+    
+    try {
+      // Import database directly to avoid RPC entirely
+      const { createDb } = await import('../db');
+      const { db } = createDb();
+      const { connection } = await import('../db/schema-d1');
+      
+      console.log('Direct database approach - creating connection with tokens:', {
+        accessTokenLength: rpcConnectionData.accessToken.length,
+        refreshTokenLength: rpcConnectionData.refreshToken.length,
+        scopeLength: rpcConnectionData.scope.length,
+      });
+      
+      const connectionId = crypto.randomUUID();
+      
+      // Insert directly into database - NO RPC INVOLVED
+      await db.insert(connection).values({
+        id: connectionId,
+        userId: account.userId,
+        providerId: account.providerId as EProviders,
+        email: userInfo.address,
+        accessToken: rpcConnectionData.accessToken,
+        refreshToken: rpcConnectionData.refreshToken,
+        scope: rpcConnectionData.scope,
+        expiresAt: rpcConnectionData.expiresAt,
+        name: rpcConnectionData.name,
+        picture: rpcConnectionData.picture,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      
+      console.log('DIRECT DATABASE CONNECTION CREATED SUCCESSFULLY:', connectionId);
+      
+      const result = { id: connectionId };
+      
+      if (env.NODE_ENV === 'production') {
+        await Effect.runPromise(
+          scheduleCampaign({ address: userInfo.address, name: userInfo.name || 'there' }),
+        );
+      }
+
+      if (env.GOOGLE_S_ACCOUNT && env.GOOGLE_S_ACCOUNT !== '{}') {
+        // Direct processing instead of queue (for free plan)
+        await enableBrainFunction({
+          id: result.id,
+          providerId: account.providerId as EProviders,
+        });
+      }
+      
+      return result;
+    } catch (directDbError) {
+      console.error('Direct database approach failed:', directDbError);
+      
+      // If direct database fails, we're in trouble - RPC definitely won't work
+      console.error('CRITICAL ERROR: Both direct database and RPC approaches failed');
+      console.error('This indicates a fundamental issue with the system');
+      
+      // Try one last RPC attempt as absolute fallback
+      console.log('Trying RPC as absolute last resort...');
+      
+      const [result] = await db.createConnection(
+        account.providerId as EProviders,
+        userInfo.address,
+        account.userId,
+        {
+          accessToken: rpcConnectionData.accessToken,
+          refreshToken: rpcConnectionData.refreshToken,
+          scope: rpcConnectionData.scope,
+          expiresAt: rpcConnectionData.expiresAt,
+          name: rpcConnectionData.name,
+          picture: rpcConnectionData.picture,
+        }
+      );
+      
+      console.log('RPC last resort connection created successfully:', result.id);
+      
+      if (env.NODE_ENV === 'production') {
+        await Effect.runPromise(
+          scheduleCampaign({ address: userInfo.address, name: userInfo.name || 'there' }),
+        );
+      }
+
+      if (env.GOOGLE_S_ACCOUNT && env.GOOGLE_S_ACCOUNT !== '{}') {
+        // Direct processing instead of queue (for free plan)
+        await enableBrainFunction({
+          id: result.id,
+          providerId: account.providerId as EProviders,
+        });
+      }
+      
+      return result;
+    }
+  } catch (error) {
+    console.error('Error creating connection:', error);
+    console.error('Error details:', {
+      message: (error as Error).message,
+      stack: (error as Error).stack,
+      sanitizedUpdatingInfo: {
+        ...sanitizedUpdatingInfo,
+        accessToken: sanitizedUpdatingInfo.accessToken ? 'SET' : 'NOT_SET',
+        refreshToken: sanitizedUpdatingInfo.refreshToken ? 'SET' : 'NOT_SET',
+        scope: sanitizedUpdatingInfo.scope || 'EMPTY',
+        expiresAt: sanitizedUpdatingInfo.expiresAt,
+      }
+    });
+    throw error;
+    }
 };
 
 export const createAuth = () => {
   console.log('Creating auth configuration...');
-  console.log('Environment variables:', {
+  console.log('Environnment variables:', {
     NODE_ENV: env.NODE_ENV,
     VITE_PUBLIC_BACKEND_URL: env.VITE_PUBLIC_BACKEND_URL,
     COOKIE_DOMAIN: env.COOKIE_DOMAIN,

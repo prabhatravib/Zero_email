@@ -51,6 +51,10 @@ export class DbRpcDO extends RpcTarget {
     return await this.mainDo.findUser(this.userId);
   }
 
+  async findUserSettings(): Promise<typeof userSettings.$inferSelect | undefined> {
+    return await this.mainDo.findUserSettings(this.userId);
+  }
+
   async findUserConnection(
     connectionId: string,
   ): Promise<typeof connection.$inferSelect | undefined> {
@@ -111,10 +115,6 @@ export class DbRpcDO extends RpcTarget {
     return await this.mainDo.deleteUser(this.userId);
   }
 
-  async findUserSettings(): Promise<typeof userSettings.$inferSelect | undefined> {
-    return await this.mainDo.findUserSettings(this.userId);
-  }
-
   async findUserHotkeys(): Promise<(typeof userHotkeys.$inferSelect)[]> {
     return await this.mainDo.findUserHotkeys(this.userId);
   }
@@ -134,12 +134,17 @@ export class DbRpcDO extends RpcTarget {
   async createConnection(
     providerId: EProviders,
     email: string,
+    userId: string,
     updatingInfo: {
       expiresAt: Date;
       scope: string;
+      accessToken: string;
+      refreshToken: string;
+      name?: string;
+      picture?: string;
     },
   ): Promise<{ id: string }[]> {
-    return await this.mainDo.createConnection(providerId, email, this.userId, updatingInfo);
+    return await this.mainDo.createConnection(providerId, email, userId, updatingInfo);
   }
 
   async findConnectionById(
@@ -384,6 +389,10 @@ class ZeroDB extends DurableObject<Env> {
     updatingInfo: {
       expiresAt: Date;
       scope: string;
+      accessToken: string;
+      refreshToken: string;
+      name?: string;
+      picture?: string;
     },
   ): Promise<{ id: string }[]> {
     return await this.db

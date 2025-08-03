@@ -5,6 +5,12 @@
   "compatibility_date": "2025-05-01",
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/main.ts",
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true
+    }
+  },
   "d1_databases": [
     {
       "binding": "DB",
@@ -249,7 +255,10 @@
       ],
 
       "observability": {
-        "enabled": true
+        "enabled": true,
+        "logs": {
+          "enabled": true
+        }
       },
       "triggers": {
         "crons": ["*/1 * * * *"],
@@ -407,7 +416,10 @@
         },
       ],
       "observability": {
-        "enabled": true
+        "enabled": true,
+        "logs": {
+          "enabled": true
+        }
       },
       "hyperdrive": [
         {
@@ -487,7 +499,10 @@
         },
       ],
       "observability": {
-        "enabled": true
+        "enabled": true,
+        "logs": {
+          "enabled": true
+        }
       },
       "hyperdrive": [
         {
