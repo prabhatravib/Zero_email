@@ -1,10 +1,11 @@
 import { getContext } from 'hono/context-storage';
-import { connection } from '../db/schema';
+import { connection } from '../db/schema-d1';
 import type { HonoContext } from '../ctx';
 import { env } from 'cloudflare:workers';
 import { createDriver } from './driver';
 import { eq } from 'drizzle-orm';
 import { createDb } from '../db';
+import { EProviders } from '../types';
 
 export const getZeroDB = async (userId: string) => {
   const stub = env.ZERO_DB.get(env.ZERO_DB.idFromName(userId));

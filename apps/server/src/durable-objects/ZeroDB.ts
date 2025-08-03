@@ -9,7 +9,7 @@ import {
   userHotkeys,
   userSettings,
   writingStyleMatrix,
-} from '../db/schema';
+} from '../db/schema-d1';
 import { createDb } from '../db';
 import { eq, and, desc, asc, inArray } from 'drizzle-orm';
 import { EProviders } from '../types';
@@ -34,64 +34,64 @@ export class ZeroDB extends DurableObject<Env> {
     return new DbRpcDO(this, userId);
   }
 
-  private async createTables() {
-    if (!this.db) return;
+  // private async createTables() {
+  //   if (!this.db) return;
     
-    try {
-      // Create tables if they don't exist
-      await this.db.prepare(`
-        CREATE TABLE IF NOT EXISTS users (
-          id TEXT PRIMARY KEY,
-          email TEXT UNIQUE NOT NULL,
-          name TEXT,
-          image TEXT,
-          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `).run();
+  //   try {
+  //     // Create tables if they don't exist
+  //     await this.db.prepare(`
+  //       CREATE TABLE IF NOT EXISTS users (
+  //         id TEXT PRIMARY KEY,
+  //         email TEXT UNIQUE NOT NULL,
+  //         name TEXT,
+  //         image TEXT,
+  //         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  //         updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+  //       )
+  //     `).run();
 
-      await this.db.prepare(`
-        CREATE TABLE IF NOT EXISTS connections (
-          id TEXT PRIMARY KEY,
-          userId TEXT NOT NULL,
-          providerId TEXT NOT NULL,
-          email TEXT NOT NULL,
-          accessToken TEXT,
-          refreshToken TEXT,
-          expiresAt DATETIME,
-          scope TEXT,
-          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (userId) REFERENCES users(id)
-        )
-      `).run();
+  //     await this.db.prepare(`
+  //       CREATE TABLE IF NOT EXISTS connections (
+  //         id TEXT PRIMARY KEY,
+  //         userId TEXT NOT NULL,
+  //         providerId TEXT NOT NULL,
+  //         email TEXT NOT NULL,
+  //         accessToken TEXT,
+  //         refreshToken TEXT,
+  //         expiresAt DATETIME,
+  //         scope TEXT,
+  //         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  //         updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  //         FOREIGN KEY (userId) REFERENCES users(id)
+  //       )
+  //     `).run();
 
-      await this.db.prepare(`
-        CREATE TABLE IF NOT EXISTS threads (
-          id TEXT PRIMARY KEY,
-          connectionId TEXT NOT NULL,
-          threadId TEXT NOT NULL,
-          data TEXT NOT NULL,
-          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `).run();
+  //     await this.db.prepare(`
+  //       CREATE TABLE IF NOT EXISTS threads (
+  //         id TEXT PRIMARY KEY,
+  //         connectionId TEXT NOT NULL,
+  //         threadId TEXT NOT NULL,
+  //         data TEXT NOT NULL,
+  //         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  //         updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+  //       )
+  //     `).run();
 
-      await this.db.prepare(`
-        CREATE TABLE IF NOT EXISTS sessions (
-          id TEXT PRIMARY KEY,
-          userId TEXT NOT NULL,
-          data TEXT NOT NULL,
-          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (userId) REFERENCES users(id)
-        )
-      `).run();
+  //     await this.db.prepare(`
+  //       CREATE TABLE IF NOT EXISTS sessions (
+  //         id TEXT PRIMARY KEY,
+  //         userId TEXT NOT NULL,
+  //         data TEXT NOT NULL,
+  //         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  //         FOREIGN KEY (userId) REFERENCES users(id)
+  //       )
+  //     `).run();
 
-      console.log('[ZeroDB] Tables created successfully');
-    } catch (error) {
-      console.error('[ZeroDB] Error creating tables:', error);
-    }
-  }
+  //     console.log('[ZeroDB] Tables created successfully');
+  //   } catch (error) {
+  //     console.error('[ZeroDB] Error creating tables:', error);
+  //   }
+  // }
 
   private async sql(query: string, params: any[] = []) {
     if (!this.db) {
@@ -111,7 +111,7 @@ export class ZeroDB extends DurableObject<Env> {
       });
     }
 
-    const result = await this.sql('SELECT * FROM users WHERE id = ?', [userId]);
+    const result = await this.sql('SELECT * FROM mail0_user WHERE id = ?', [userId]);
     const userData = await result.first();
     return userData || undefined;
   }
@@ -126,7 +126,7 @@ export class ZeroDB extends DurableObject<Env> {
     }
 
     const result = await this.sql(
-      'SELECT * FROM connections WHERE id = ? AND userId = ?',
+      'SELECT * FROM mail0_connection WHERE id = ? AND userId = ?',
       [connectionId, userId]
     );
     const connectionData = await result.first();
@@ -149,7 +149,7 @@ export class ZeroDB extends DurableObject<Env> {
     if (fields.length === 0) return;
 
     const setClause = fields.map(field => `${field} = ?`).join(', ');
-    const query = `UPDATE users SET ${setClause}, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`;
+          const query = `UPDATE mail0_user SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
     
     await this.sql(query, [...values, userId]);
   }
@@ -164,7 +164,7 @@ export class ZeroDB extends DurableObject<Env> {
     }
 
     await this.sql(
-      'DELETE FROM connections WHERE id = ? AND userId = ?',
+      'DELETE FROM mail0_connection WHERE id = ? AND userId = ?',
       [connectionId, userId]
     );
   }
@@ -179,7 +179,7 @@ export class ZeroDB extends DurableObject<Env> {
     }
 
     const result = await this.sql(
-      'SELECT * FROM connections WHERE userId = ? ORDER BY createdAt ASC LIMIT 1',
+      'SELECT * FROM mail0_connection WHERE user_id = ? ORDER BY created_at ASC LIMIT 1',
       [userId]
     );
     const connectionData = await result.first();
@@ -196,7 +196,7 @@ export class ZeroDB extends DurableObject<Env> {
     }
 
     const result = await this.sql(
-      'SELECT * FROM connections WHERE userId = ? ORDER BY createdAt ASC',
+      'SELECT * FROM mail0_connection WHERE user_id = ? ORDER BY created_at ASC',
       [userId]
     );
     return await result.all();
@@ -209,6 +209,10 @@ export class ZeroDB extends DurableObject<Env> {
     updatingInfo: {
       expiresAt: Date;
       scope: string;
+      accessToken?: string;
+      refreshToken?: string;
+      name?: string;
+      picture?: string;
     },
   ) {
     if (!this.db) {
@@ -217,18 +221,28 @@ export class ZeroDB extends DurableObject<Env> {
       return await db
         .insert(connection)
         .values({
-          ...updatingInfo,
           providerId,
           id: crypto.randomUUID(),
           email,
           userId,
+          accessToken: updatingInfo.accessToken,
+          refreshToken: updatingInfo.refreshToken,
+          expiresAt: updatingInfo.expiresAt,
+          scope: updatingInfo.scope,
+          name: updatingInfo.name,
+          picture: updatingInfo.picture,
           createdAt: new Date(),
           updatedAt: new Date(),
         })
         .onConflictDoUpdate({
           target: [connection.email, connection.userId],
           set: {
-            ...updatingInfo,
+            accessToken: updatingInfo.accessToken,
+            refreshToken: updatingInfo.refreshToken,
+            expiresAt: updatingInfo.expiresAt,
+            scope: updatingInfo.scope,
+            name: updatingInfo.name,
+            picture: updatingInfo.picture,
             updatedAt: new Date(),
           },
         });
@@ -236,9 +250,9 @@ export class ZeroDB extends DurableObject<Env> {
 
     const connectionId = crypto.randomUUID();
     await this.sql(
-      `INSERT OR REPLACE INTO connections 
-       (id, userId, providerId, email, accessToken, refreshToken, expiresAt, scope, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      `INSERT OR REPLACE INTO mail0_connection 
+       (id, user_id, provider_id, email, access_token, refresh_token, expires_at, scope, name, picture, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       [
         connectionId,
         userId,
@@ -248,6 +262,8 @@ export class ZeroDB extends DurableObject<Env> {
         updatingInfo.refreshToken || null,
         updatingInfo.expiresAt.toISOString(),
         updatingInfo.scope,
+        updatingInfo.name || null,
+        updatingInfo.picture || null,
       ]
     );
 
@@ -273,7 +289,7 @@ export class ZeroDB extends DurableObject<Env> {
     if (fields.length === 0) return;
 
     const setClause = fields.map(field => `${field} = ?`).join(', ');
-    const query = `UPDATE connections SET ${setClause}, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`;
+          const query = `UPDATE mail0_connection SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
     
     await this.sql(query, [...values, connectionId]);
   }
@@ -287,7 +303,7 @@ export class ZeroDB extends DurableObject<Env> {
     }
 
     await this.sql(
-      `INSERT OR REPLACE INTO threads (id, connectionId, threadId, data, createdAt, updatedAt)
+      `INSERT OR REPLACE INTO threads (id, connection_id, thread_id, data, created_at, updated_at)
        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       [crypto.randomUUID(), connectionId, threadId, JSON.stringify(data)]
     );
@@ -300,7 +316,7 @@ export class ZeroDB extends DurableObject<Env> {
     }
 
     const result = await this.sql(
-      'SELECT data FROM threads WHERE connectionId = ? AND threadId = ?',
+      'SELECT data FROM threads WHERE connection_id = ? AND thread_id = ?',
       [connectionId, threadId]
     );
     const threadData = await result.first();
@@ -319,7 +335,7 @@ export class ZeroDB extends DurableObject<Env> {
     }
 
     const result = await this.sql(
-      'SELECT data FROM threads WHERE connectionId = ? ORDER BY updatedAt DESC LIMIT ? OFFSET ?',
+      'SELECT data FROM threads WHERE connection_id = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?',
       [connectionId, limit, offset]
     );
     const threads = await result.all();
@@ -334,7 +350,7 @@ export class ZeroDB extends DurableObject<Env> {
     }
 
     await this.sql(
-      'DELETE FROM threads WHERE connectionId = ? AND threadId = ?',
+      'DELETE FROM threads WHERE connection_id = ? AND thread_id = ?',
       [connectionId, threadId]
     );
   }
@@ -347,7 +363,7 @@ export class ZeroDB extends DurableObject<Env> {
     }
 
     const result = await this.sql(
-      'SELECT COUNT(*) as count FROM threads WHERE connectionId = ?',
+      'SELECT COUNT(*) as count FROM threads WHERE connection_id = ?',
       [connectionId]
     );
     const countData = await result.first();
@@ -369,7 +385,7 @@ export class ZeroDB extends DurableObject<Env> {
     }
 
     const result = await this.sql(
-      'SELECT COUNT(*) as count FROM threads WHERE connectionId = ? AND json_extract(data, "$.folder") = ?',
+      'SELECT COUNT(*) as count FROM threads WHERE connection_id = ? AND json_extract(data, "$.folder") = ?',
       [connectionId, folder]
     );
     const countData = await result.first();
@@ -417,6 +433,10 @@ export class DbRpcDO extends RpcTarget {
     updatingInfo: {
       expiresAt: Date;
       scope: string;
+      accessToken?: string;
+      refreshToken?: string;
+      name?: string;
+      picture?: string;
     },
   ): Promise<{ id: string }[]> {
     return await this.mainDo.createConnection(providerId, email, this.userId, updatingInfo);

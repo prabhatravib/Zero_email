@@ -2,7 +2,7 @@ import { BaseSubscriptionFactory, type SubscriptionData } from './base-subscript
 import { c, getNotificationsUrl } from '../../lib/utils';
 import { resetConnection } from '../server-utils';
 import jwt from '@tsndr/cloudflare-worker-jwt';
-import { connection } from '../../db/schema';
+import { connection } from '../../db/schema-d1';
 import { env } from 'cloudflare:workers';
 import { EProviders } from '../../types';
 

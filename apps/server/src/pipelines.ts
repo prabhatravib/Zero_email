@@ -21,7 +21,7 @@ import { bulkDeleteKeys } from './lib/bulk-delete';
 import { getZeroAgent } from './lib/server-utils';
 import { type gmail_v1 } from '@googleapis/gmail';
 import { Effect, Console, Logger } from 'effect';
-import { connection } from './db/schema';
+import { connection } from './db/schema-d1';
 import { EProviders } from './types';
 import { EPrompts } from './types';
 import { eq } from 'drizzle-orm';

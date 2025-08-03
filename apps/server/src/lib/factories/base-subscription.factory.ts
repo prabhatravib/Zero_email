@@ -1,6 +1,6 @@
 import { defaultLabels, EProviders, } from '../../types';
 
-import { connection } from '../../db/schema';
+import { connection } from '../../db/schema-d1';
 
 
 import { env } from 'cloudflare:workers';

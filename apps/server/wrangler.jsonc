@@ -123,7 +123,7 @@
     "AUTUMN_SECRET_KEY": "dummy",
     "MICROSOFT_CLIENT_ID": "your_microsoft_client_id_here",
     "MICROSOFT_CLIENT_SECRET": "your_microsoft_client_secret_here",
-    "OPENAI_API_KEY": "your_openai_api_key_here",
+    "OPENAI_API_KEY": "sk-proj-dummy-key-for-poc-testing",
     "ELEVENLABS_API_KEY": "1234567890",
     "VOICE_SECRET": "1234567890",
     "USE_OPENAI": "true",
@@ -131,19 +131,8 @@
     "CLOUDFLARE_ACCOUNT_ID": "5d42835376e52c0332f76de9f9877fc8",
     "DATABASE_URL": "postgresql://postgres:postgres@localhost:5432/zerodotemail"
   },
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_classes": [
-        "ZeroAgent",
-        "ZeroMCP",
-        "ZeroDB",
-        "ZeroDriver",
-        "ThinkingMCP",
-        "WorkflowRunner"
-      ]
-    }
-  ],
+  // Removed migrations to avoid conflicts with existing Durable Objects
+  // The code now handles SQLite unavailability gracefully
   "env": {
     "local": {
       "migrations_dir": "src/db/migrations",
@@ -536,12 +525,8 @@
         ],
       },
       // Queues removed for free plan compatibility
-      "migrations": [
-        {
-          "tag": "v1",
-          "new_sqlite_classes": ["ZeroAgent", "ZeroMCP", "ZeroDB", "ZeroDriver", "ThinkingMCP", "WorkflowRunner"],
-        },
-      ],
+      // Removed migrations to avoid conflicts with existing Durable Objects
+      // The code now handles SQLite unavailability gracefully
       "migrations_dir": "src/db/migrations",
       "vars": {
         "NODE_ENV": "production",

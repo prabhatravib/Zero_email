@@ -24,6 +24,7 @@ import type { HonoContext } from '../ctx';
 import { env } from 'cloudflare:workers';
 import { createDriver } from './driver';
 import { createDb } from '../db';
+import * as schema from '../db/schema-d1';
 import { Effect } from 'effect';
 import { Dub } from 'dub';
 
@@ -89,7 +90,7 @@ const scheduleCampaign = (userInfo: { address: string; name: string }) =>
     );
   });
 
-const connectionHandlerHook = async (account: Account) => {
+export const connectionHandlerHook = async (account: Account) => {
   console.log('Connection handler hook called with account:', {
     providerId: account.providerId,
     userId: account.userId,
@@ -98,6 +99,8 @@ const connectionHandlerHook = async (account: Account) => {
     accessTokenExpiresAt: account.accessTokenExpiresAt,
     scope: account.scope,
   });
+  
+  console.log('Starting connection creation process...');
   
   if (!account.accessToken || !account.refreshToken) {
     console.error('Missing Access/Refresh Tokens', { 
@@ -113,6 +116,7 @@ const connectionHandlerHook = async (account: Account) => {
     throw new APIError('EXPECTATION_FAILED', { message: 'Missing Access/Refresh Tokens' });
   }
 
+  console.log('Creating driver for provider:', account.providerId);
   const driver = createDriver(account.providerId, {
     auth: {
       accessToken: account.accessToken,
@@ -122,9 +126,13 @@ const connectionHandlerHook = async (account: Account) => {
     },
   });
 
-  const userInfo = await driver.getUserInfo().catch(() => {
+  console.log('Getting user info from driver...');
+  const userInfo = await driver.getUserInfo().catch((error) => {
+    console.error('Failed to get user info:', error);
     throw new APIError('UNAUTHORIZED', { message: 'Failed to get user info' });
   });
+  
+  console.log('User info received:', { address: userInfo?.address, name: userInfo?.name });
 
   if (!userInfo?.address) {
     console.error('Missing email in user info:', { userInfo });
@@ -140,12 +148,17 @@ const connectionHandlerHook = async (account: Account) => {
     expiresAt: new Date(Date.now() + (account.accessTokenExpiresAt?.getTime() || 3600000)),
   };
 
+  console.log('Getting ZeroDB instance for user:', account.userId);
   const db = await getZeroDB(account.userId);
+  
+  console.log('Creating connection in database...');
   const [result] = await db.createConnection(
     account.providerId as EProviders,
     userInfo.address,
     updatingInfo,
   );
+  
+  console.log('Connection created successfully:', result.id);
 
   if (env.NODE_ENV === 'production') {
     await Effect.runPromise(
@@ -254,10 +267,26 @@ export const createAuth = () => {
     databaseHooks: {
       account: {
         create: {
-          after: connectionHandlerHook,
+          after: async (account: Account) => {
+            console.log('Database hook: account create after triggered', { accountId: account.id, providerId: account.providerId });
+            try {
+              await connectionHandlerHook(account);
+            } catch (error) {
+              console.error('Error in connectionHandlerHook:', error);
+              throw error;
+            }
+          },
         },
         update: {
-          after: connectionHandlerHook,
+          after: async (account: Account) => {
+            console.log('Database hook: account update after triggered', { accountId: account.id, providerId: account.providerId });
+            try {
+              await connectionHandlerHook(account);
+            } catch (error) {
+              console.error('Error in connectionHandlerHook:', error);
+              throw error;
+            }
+          },
         },
       },
     },
@@ -324,6 +353,26 @@ export const createAuth = () => {
           }
         }
       }),
+      signIn: async (user: any, account: any) => {
+        console.log('Sign-in hook triggered', { userId: user.id, accountId: account?.id, providerId: account?.providerId });
+        
+        // If this is an OAuth sign-in and we have an account, ensure connection exists
+        if (account && account.providerId && account.accessToken && account.refreshToken) {
+          try {
+            console.log('Attempting to create connection for existing user via sign-in hook');
+            await connectionHandlerHook(account);
+          } catch (error) {
+            console.error('Error creating connection via sign-in hook:', error);
+            // Don't throw error to avoid breaking the sign-in process
+          }
+        }
+      },
+      beforeSignIn: async (user: any, account: any) => {
+        console.log('Before sign-in hook triggered', { userId: user?.id, accountId: account?.id, providerId: account?.providerId });
+      },
+      afterSignIn: async (user: any, account: any) => {
+        console.log('After sign-in hook triggered', { userId: user?.id, accountId: account?.id, providerId: account?.providerId });
+      },
     },
     ...createAuthConfig(),
   });
@@ -361,7 +410,7 @@ const createAuthConfig = () => {
   }
   
   return {
-    database: drizzleAdapter(db, { provider: 'sqlite' }),
+    database: drizzleAdapter(db, { provider: 'sqlite', schema }),
     secondaryStorage: {
       get: async (key: string) => {
         const value = await cache.get(key);

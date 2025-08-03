@@ -1,5 +1,5 @@
 import { getZeroDB } from './server-utils';
-import { note } from '../db/schema';
+import { note } from '../db/schema-d1';
 
 export class NotesManager {
   constructor() {}

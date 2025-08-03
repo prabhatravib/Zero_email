@@ -1,7 +1,7 @@
 import type { IGetThreadResponse } from '../lib/driver/types';
 import { workflowFunctions } from './workflow-functions';
 import { shouldGenerateDraft } from './index';
-import { connection } from '../db/schema';
+import { connection } from '../db/schema-d1';
 
 export type WorkflowContext = {
   connectionId: string;

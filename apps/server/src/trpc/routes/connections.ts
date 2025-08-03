@@ -59,14 +59,24 @@ export const connectionsRouter = router({
     }),
   getDefault: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.sessionUser) return null;
-    const connection = await getActiveConnection();
-    return {
-      id: connection.id,
-      email: connection.email,
-      name: connection.name,
-      picture: connection.picture,
-      createdAt: connection.createdAt,
-      providerId: connection.providerId,
-    };
+    
+    try {
+      const connection = await getActiveConnection();
+      return {
+        id: connection.id,
+        email: connection.email,
+        name: connection.name,
+        picture: connection.picture,
+        createdAt: connection.createdAt,
+        providerId: connection.providerId,
+      };
+    } catch (error) {
+      // If no connections exist, return null instead of throwing
+      if (error instanceof Error && error.message.includes('No connections found for user')) {
+        return null;
+      }
+      throw error;
+    }
   }),
+
 });

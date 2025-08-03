@@ -1,6 +1,6 @@
 import { mapToObj, pipe, entries, sortBy, take, fromEntries } from 'remeda';
 
-import { writingStyleMatrix } from '../db/schema';
+import { writingStyleMatrix } from '../db/schema-d1';
 
 
 import { env } from 'cloudflare:workers';

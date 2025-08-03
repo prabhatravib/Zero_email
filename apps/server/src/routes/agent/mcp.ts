@@ -17,7 +17,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getCurrentDateContext } from '../../lib/prompts';
 import { getZeroAgent } from '../../lib/server-utils';
-import { connection } from '../../db/schema';
+import { connection } from '../../db/schema-d1';
 import { FOLDERS } from '../../lib/utils';
 import { env } from 'cloudflare:workers';
 import { eq, and } from 'drizzle-orm';

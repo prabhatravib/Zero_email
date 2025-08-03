@@ -1,10 +1,10 @@
 import { type Config } from 'drizzle-kit';
 
 export default {
-  schema: './src/db/schema.ts',
-  dialect: 'postgresql',
+  schema: './src/db/schema-d1.ts',
+  dialect: 'sqlite',
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    url: 'file:./dev.db',
   },
   out: './src/db/migrations',
   tablesFilter: ['mail0_*'],

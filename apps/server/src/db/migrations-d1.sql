@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS mail0_session (
   updated_at INTEGER NOT NULL,
   ip_address TEXT,
   user_agent TEXT,
-  user_id TEXT NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES mail0_user(id) ON DELETE CASCADE
+  userId TEXT NOT NULL,
+  FOREIGN KEY (userId) REFERENCES mail0_user(id) ON DELETE CASCADE
 );
 
 -- Accounts table
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS mail0_account (
   id TEXT PRIMARY KEY NOT NULL,
   account_id TEXT NOT NULL,
   provider_id TEXT NOT NULL,
-  user_id TEXT NOT NULL,
+  userId TEXT NOT NULL,
   access_token TEXT,
   refresh_token TEXT,
   id_token TEXT,
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS mail0_account (
   password TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES mail0_user(id) ON DELETE CASCADE
+  FOREIGN KEY (userId) REFERENCES mail0_user(id) ON DELETE CASCADE
 );
 
 -- Connections table
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS mail0_connection (
   id TEXT PRIMARY KEY NOT NULL,
   provider_id TEXT NOT NULL,
   email TEXT NOT NULL,
-  user_id TEXT NOT NULL,
+  userId TEXT NOT NULL,
   name TEXT,
   picture TEXT,
   access_token TEXT,
@@ -61,40 +61,40 @@ CREATE TABLE IF NOT EXISTS mail0_connection (
   expires_at INTEGER,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES mail0_user(id) ON DELETE CASCADE
+  FOREIGN KEY (userId) REFERENCES mail0_user(id) ON DELETE CASCADE
 );
 
 -- User settings table
 CREATE TABLE IF NOT EXISTS mail0_user_settings (
   id TEXT PRIMARY KEY NOT NULL,
-  user_id TEXT NOT NULL,
+  userId TEXT NOT NULL,
   settings TEXT NOT NULL, -- JSON blob
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES mail0_user(id) ON DELETE CASCADE
+  FOREIGN KEY (userId) REFERENCES mail0_user(id) ON DELETE CASCADE
 );
 
 -- User hotkeys table
 CREATE TABLE IF NOT EXISTS mail0_user_hotkeys (
   id TEXT PRIMARY KEY NOT NULL,
-  user_id TEXT NOT NULL,
+  userId TEXT NOT NULL,
   shortcuts TEXT NOT NULL, -- JSON blob
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES mail0_user(id) ON DELETE CASCADE
+  FOREIGN KEY (userId) REFERENCES mail0_user(id) ON DELETE CASCADE
 );
 
 -- Notes table
 CREATE TABLE IF NOT EXISTS mail0_note (
   id TEXT PRIMARY KEY NOT NULL,
-  user_id TEXT NOT NULL,
+  userId TEXT NOT NULL,
   thread_id TEXT NOT NULL,
   content TEXT NOT NULL,
   "order" INTEGER NOT NULL,
   is_pinned INTEGER DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES mail0_user(id) ON DELETE CASCADE
+  FOREIGN KEY (userId) REFERENCES mail0_user(id) ON DELETE CASCADE
 );
 
 -- Writing style matrix table
@@ -190,21 +190,21 @@ CREATE TABLE IF NOT EXISTS mail0_oauth_consent (
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_user_email ON mail0_user(email);
-CREATE INDEX IF NOT EXISTS idx_session_user_id ON mail0_session(user_id);
+CREATE INDEX IF NOT EXISTS idx_session_user_id ON mail0_session(userId);
 CREATE INDEX IF NOT EXISTS idx_session_token ON mail0_session(token);
 CREATE INDEX IF NOT EXISTS idx_session_expires_at ON mail0_session(expires_at);
-CREATE INDEX IF NOT EXISTS idx_account_user_id ON mail0_account(user_id);
-CREATE INDEX IF NOT EXISTS idx_account_provider_user_id ON mail0_account(provider_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_account_user_id ON mail0_account(userId);
+CREATE INDEX IF NOT EXISTS idx_account_provider_user_id ON mail0_account(provider_id, userId);
 CREATE INDEX IF NOT EXISTS idx_account_expires_at ON mail0_account(access_token_expires_at);
-CREATE INDEX IF NOT EXISTS idx_connection_user_id ON mail0_connection(user_id);
+CREATE INDEX IF NOT EXISTS idx_connection_user_id ON mail0_connection(userId);
 CREATE INDEX IF NOT EXISTS idx_connection_email ON mail0_connection(email);
 CREATE INDEX IF NOT EXISTS idx_connection_expires_at ON mail0_connection(expires_at);
 CREATE INDEX IF NOT EXISTS idx_connection_provider_id ON mail0_connection(provider_id);
-CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON mail0_user_settings(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_hotkeys_user_id ON mail0_user_hotkeys(user_id);
-CREATE INDEX IF NOT EXISTS idx_note_user_id ON mail0_note(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON mail0_user_settings(userId);
+CREATE INDEX IF NOT EXISTS idx_user_hotkeys_user_id ON mail0_user_hotkeys(userId);
+CREATE INDEX IF NOT EXISTS idx_note_user_id ON mail0_note(userId);
 CREATE INDEX IF NOT EXISTS idx_note_thread_id ON mail0_note(thread_id);
-CREATE INDEX IF NOT EXISTS idx_note_user_thread ON mail0_note(user_id, thread_id);
+CREATE INDEX IF NOT EXISTS idx_note_user_thread ON mail0_note(userId, thread_id);
 CREATE INDEX IF NOT EXISTS idx_note_is_pinned ON mail0_note(is_pinned);
 CREATE INDEX IF NOT EXISTS idx_writing_style_matrix_connection_id ON mail0_writing_style_matrix(connection_id);
 CREATE INDEX IF NOT EXISTS idx_summary_connection_id ON mail0_summary(connection_id);
