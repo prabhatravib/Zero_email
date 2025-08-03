@@ -28,7 +28,7 @@ export function Navigation() {
             }
           }}
         >
-          Get Started
+          Login with Google
         </Button>
       </nav>
     </header>

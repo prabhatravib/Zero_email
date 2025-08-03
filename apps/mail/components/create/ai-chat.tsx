@@ -220,7 +220,7 @@ export function AIChat({
   }, [status, scrollToBottom]);
 
   const editor = useComposeEditor({
-    placeholder: 'Ask Zero to do anything...',
+    placeholder: 'Ask for anything...',
     onLengthChange: () => setInput(editor.getText()),
     onKeydown(event) {
       if (event.key === '0' && event.metaKey) {
@@ -264,7 +264,7 @@ export function AIChat({
             className="absolute inset-0 flex flex-col items-center justify-center"
           >
             <TextShimmer className="text-center text-xl font-medium">
-              Upgrade to Zero Pro for unlimited AI chat
+              Upgrade
             </TextShimmer>
             <Button className="mt-2 h-8 w-52">Start 7 day free trial</Button>
             </div>

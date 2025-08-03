@@ -1,7 +1,7 @@
 {
-  "name": "Infllow Email",
-  "short_name": "Infllow",
-  "description": "Infllow Email - the first open source email app that puts your privacy and safety first.",
+  "name": "Infflow Email",
+  "short_name": "Infflow",
+  "description": "Infflow Email - the first open source email app that puts your privacy and safety first.",
   "scope": "/",
   "start_url": "/mail/inbox",
   "display": "standalone",

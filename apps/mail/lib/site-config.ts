@@ -1,6 +1,6 @@
-const TITLE = 'Infllow Email';
+const TITLE = 'Infflow Email';
 const DESCRIPTION =
-  'Experience email the way you want with Infllow Email - the first open source email app that puts your privacy and safety first.';
+  'Experience email the way you want with Infflow Email - the first open source email app that puts your privacy and safety first.';
 
 export const siteConfig = {
   title: TITLE,
@@ -8,7 +8,7 @@ export const siteConfig = {
   icons: {
     icon: '/favicon.ico',
   },
-  applicationName: 'Infllow Email',
+  applicationName: 'Infflow Email',
   creator: '@nizzyabi @bruvimtired @ripgrim @needleXO @dakdevs @mrgsub',
   openGraph: {
     title: TITLE,

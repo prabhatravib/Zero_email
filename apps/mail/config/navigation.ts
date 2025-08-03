@@ -13,7 +13,6 @@ import {
   Sheet,
   Plane2,
   LockIcon,
-  Clock,
 } from '@/components/icons/icons';
 import { MessageSquareIcon } from 'lucide-react';
 import { m } from '@/paraglide/messages';
@@ -47,7 +46,7 @@ export const navigationConfig: Record<string, NavConfig> = {
     path: '/mail',
     sections: [
       {
-        title: 'Core',
+        title: '',
         items: [
           {
             id: 'inbox',
@@ -70,24 +69,12 @@ export const navigationConfig: Record<string, NavConfig> = {
             icon: Plane2,
             shortcut: 'g + t',
           },
-        ],
-      },
-      {
-        title: 'Management',
-        items: [
           {
             id: 'archive',
             title: m['navigation.sidebar.archive'](),
             url: '/mail/archive',
             icon: Archive,
             shortcut: 'g + a',
-          },
-          {
-            id: 'snoozed',
-            title: m['navigation.sidebar.snoozed'](),
-            url: '/mail/snoozed',
-            icon: Clock,
-            shortcut: 'g + z',
           },
           {
             id: 'spam',

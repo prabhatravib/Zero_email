@@ -43,14 +43,12 @@ export function EmailGroups({
             <p className="text-sm text-[#5a7ba8]">Your emails organized by topic</p>
           </div>
           <div className="flex items-center gap-6 text-sm">
-            {selectedGroupId && (
-              <button 
-                onClick={() => onGroupSelect(null)} 
-                className="text-sm transition-colors hover:opacity-80 text-[#4a8dd9]"
-              >
-                View all mails
-              </button>
-            )}
+            <button 
+              onClick={() => onGroupSelect(null)} 
+              className="text-sm transition-colors hover:opacity-80 text-[#4a8dd9]"
+            >
+              View all mails
+            </button>
           </div>
         </div>
       </div>

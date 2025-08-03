@@ -25,7 +25,7 @@ export default function HomeContent() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="text-center text-6xl font-medium md:text-8xl"
         >
-          Infllow Email
+          Infflow Email
         </motion.h1>
         
         <motion.div
@@ -53,7 +53,7 @@ export default function HomeContent() {
                 }
               }}
             >
-              Get Started
+              Login with Google
             </Button>
           </div>
           

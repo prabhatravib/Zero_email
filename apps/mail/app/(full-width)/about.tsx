@@ -59,7 +59,7 @@ const sections = [
     title: 'Our Mission',
     content: (
       <p>
-        Zero is an AI-powered email client that manages your inbox, so you don't have to. We help
+        is an AI-powered email client that manages your inbox, so you don't have to. We help
         busy professionals unclutter their inboxes, prioritize important messages, summarize
         conversations, complete tasks, and even chat with their inbox — letting them spend less time
         managing email and more time getting things done.
@@ -70,7 +70,7 @@ const sections = [
     title: 'Why We Started',
     content: (
       <p>
-        We started Zero because we were frustrated that email — the most-used communication tool in
+        We started  because we were frustrated that email — the most-used communication tool in
         the world — hasn't meaningfully evolved in decades. Despite countless new apps, none
         actually solve the real problem: helping you finish what you intend to do. We realized the
         real solution isn't just a new interface — it's AI acting like a true assistant inside your

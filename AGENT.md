@@ -1,6 +1,6 @@
-# Agent Configuration for Zero Email
+# Agent Configuration for Email
 
-Zero is an open-source AI email solution built with a modern TypeScript/Next.js stack in a monorepo setup.
+this is an open-source AI email solution built with a modern TypeScript/Next.js stack in a monorepo setup.
 
 ## Project Structure
 
