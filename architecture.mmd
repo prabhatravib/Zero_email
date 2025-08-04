@@ -1,0 +1,128 @@
+graph TB
+
+    subgraph "Frontend (apps/mail)"
+        subgraph "UI Layer"
+            HTML[index.html]
+            CSS["Tailwind CSS"]
+            UI[shadcn/ui Components]
+            ROUTER[React Router]
+        end
+
+        subgraph "JavaScript Core"
+            MAIN["main.tsx<br/>App Entry"]
+            APP["App.tsx<br/>Root Component"]
+            STATE["State Management"]
+            CONFIG["Config/Env"]
+        end
+
+        subgraph "tRPC Client"
+            TRPC_CLIENT["tRPC Client"]
+            QUERIES["mail.listThreads, labels.list, etc."]
+        end
+    end
+
+    subgraph "Backend (apps/api)"
+        subgraph "Cloudflare Worker (Hono.js)"
+            SERVER["server.ts<br/>Hono.js Entry"]
+            TRPC_ROUTER["tRPC Router"]
+            MIDDLEWARE["middleware.ts<br/>Auth/CORS"]
+        end
+
+        subgraph "OAuth & Auth"
+            OAUTH["auth.ts<br/>OAuth Handler"]
+            SESSION["Session Storage"]
+            JWT["JWT Token"]
+        end
+
+        subgraph "Gmail Integration"
+            GMAIL_API["Gmail API Client"]
+            EMAIL_FETCH["Fetch Emails/Threads"]
+        end
+
+        subgraph "Database Layer"
+            DB["Cloudflare D1/PostgreSQL"]
+            MIGRATIONS["DB Migrations"]
+        end
+
+        subgraph "Cloudflare Services"
+            KV["KV Namespaces"]
+            DURABLE["Durable Objects"]
+            R2["R2 Bucket Storage"]
+        end
+    end
+
+    subgraph "Shared Packages"
+        UTIL["Utilities"]
+        TYPES["Shared Types"]
+        SDK["Shared SDK"]
+    end
+
+    subgraph "External Services"
+        GOOGLE_OAUTH["Google OAuth"]
+        GMAIL_API_EXT["Google Gmail API"]
+    end
+
+    %% Frontend Initialization
+    HTML --> MAIN
+    MAIN --> APP
+    APP --> ROUTER
+    APP --> UI
+    APP --> CSS
+    APP --> STATE
+    APP --> CONFIG
+
+    %% Frontend API Communication
+    APP --> TRPC_CLIENT
+    TRPC_CLIENT --> QUERIES
+
+    %% Frontend-Backend tRPC Communication
+    TRPC_CLIENT -.->|HTTP POST| TRPC_ROUTER
+
+    %% Backend Server & Middleware
+    SERVER --> TRPC_ROUTER
+    TRPC_ROUTER --> MIDDLEWARE
+
+    %% OAuth/Auth Flow
+    TRPC_ROUTER --> OAUTH
+    OAUTH --> GOOGLE_OAUTH
+    OAUTH --> SESSION
+    OAUTH --> JWT
+
+    %% Backend Gmail Integration
+    TRPC_ROUTER --> GMAIL_API
+    GMAIL_API --> GMAIL_API_EXT
+    GMAIL_API --> EMAIL_FETCH
+
+    %% Backend Database Operations
+    TRPC_ROUTER --> DB
+    DB --> MIGRATIONS
+
+    %% Backend Cloudflare Storage
+    SERVER --> KV
+    SERVER --> DURABLE
+    SERVER --> R2
+
+    %% Shared Code
+    TRPC_CLIENT --> TYPES
+    TRPC_ROUTER --> TYPES
+    APP --> UTIL
+    SERVER --> UTIL
+    SERVER --> SDK
+    APP --> SDK
+
+    %% External Integrations
+    EMAIL_FETCH -.->|HTTP| GMAIL_API_EXT
+    OAUTH -.->|OAuth Redirect| GOOGLE_OAUTH
+
+    %% Class Definitions
+    classDef frontend fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef backend fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef external fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef shared fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    classDef cloudflare fill:#e0f2f1,stroke:#00695c,stroke-width:2px
+
+    class HTML,CSS,UI,ROUTER,MAIN,APP,STATE,CONFIG,TRPC_CLIENT,QUERIES frontend
+    class SERVER,TRPC_ROUTER,MIDDLEWARE,OAUTH,SESSION,JWT,GMAIL_API,EMAIL_FETCH,DB,MIGRATIONS backend
+    class KV,DURABLE,R2 cloudflare
+    class GOOGLE_OAUTH,GMAIL_API_EXT external
+    class UTIL,TYPES,SDK shared
