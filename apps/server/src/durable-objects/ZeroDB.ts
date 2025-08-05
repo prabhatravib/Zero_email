@@ -116,6 +116,67 @@ export class ZeroDB extends DurableObject<Env> {
     return userData || undefined;
   }
 
+  async findUserSettings(userId: string) {
+    if (!this.db) {
+      // Fallback to Hyperdrive
+      const { db } = createDb(env.HYPERDRIVE.connectionString);
+      return await db.query.userSettings.findFirst({
+        where: eq(userSettings.userId, userId),
+      });
+    }
+
+    const result = await this.sql('SELECT * FROM mail0_user_settings WHERE user_id = ?', [userId]);
+    const settingsData = await result.first();
+    return settingsData || undefined;
+  }
+
+  async insertUserSettings(userId: string, settings: any) {
+    if (!this.db) {
+      // Fallback to Hyperdrive
+      const { db } = createDb(env.HYPERDRIVE.connectionString);
+      return await db.insert(userSettings).values({
+        id: crypto.randomUUID(),
+        userId,
+        settings,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
+
+    await this.sql(
+      'INSERT INTO mail0_user_settings (id, user_id, settings, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+      [crypto.randomUUID(), userId, JSON.stringify(settings)]
+    );
+  }
+
+  async updateUserSettings(userId: string, settings: any) {
+    if (!this.db) {
+      // Fallback to Hyperdrive
+      const { db } = createDb(env.HYPERDRIVE.connectionString);
+      return await db
+        .insert(userSettings)
+        .values({
+          id: crypto.randomUUID(),
+          userId,
+          settings,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: userSettings.userId,
+          set: {
+            settings,
+            updatedAt: new Date(),
+          },
+        });
+    }
+
+    await this.sql(
+      'INSERT OR REPLACE INTO mail0_user_settings (id, user_id, settings, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+      [crypto.randomUUID(), userId, JSON.stringify(settings)]
+    );
+  }
+
   async findUserConnection(userId: string, connectionId: string) {
     if (!this.db) {
       // Fallback to Hyperdrive
@@ -562,6 +623,18 @@ export class DbRpcDO extends RpcTarget {
 
   async findUser(): Promise<typeof user.$inferSelect | undefined> {
     return await this.mainDo.findUser(this.userId);
+  }
+
+  async findUserSettings(): Promise<typeof userSettings.$inferSelect | undefined> {
+    return await this.mainDo.findUserSettings(this.userId);
+  }
+
+  async insertUserSettings(settings: any) {
+    return await this.mainDo.insertUserSettings(this.userId, settings);
+  }
+
+  async updateUserSettings(settings: any) {
+    return await this.mainDo.updateUserSettings(this.userId, settings);
   }
 
   async findUserConnection(

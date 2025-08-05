@@ -35,6 +35,7 @@ import { Autumn } from 'autumn-js';
 import { appRouter } from './trpc';
 import { cors } from 'hono/cors';
 import { Hono } from 'hono';
+import emailHandlerRouter from './routes/email-handler';
 
 const SENTRY_HOST = 'o4509328786915328.ingest.us.sentry.io';
 const SENTRY_PROJECT_IDS = new Set(['4509328795303936']);
@@ -324,9 +325,19 @@ class ZeroDB extends DurableObject<Env> {
   }
 
   async findUserSettings(userId: string): Promise<typeof userSettings.$inferSelect | undefined> {
-    return await this.db.query.userSettings.findFirst({
-      where: eq(userSettings.userId, userId),
-    });
+    if (!this.db) {
+      console.error('Database not initialized in findUserSettings');
+      return undefined;
+    }
+    
+    try {
+      return await this.db.query.userSettings.findFirst({
+        where: eq(userSettings.userId, userId),
+      });
+    } catch (error) {
+      console.error('Error in findUserSettings:', error);
+      return undefined;
+    }
   }
 
   async findUserHotkeys(userId: string): Promise<(typeof userHotkeys.$inferSelect)[]> {
@@ -492,6 +503,7 @@ const api = new Hono<HonoContext>()
   .route('/ai', aiRouter)
   .route('/autumn', autumnApi)
   .route('/public', publicRouter)
+  .route('/email-handler', emailHandlerRouter)
   .on(['GET', 'POST', 'OPTIONS'], '/auth/*', (c) => {
     return c.var.auth.handler(c.req.raw);
   })

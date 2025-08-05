@@ -2,6 +2,10 @@ import { MoonIcon } from '@/components/icons/animated/moon';
 import { SunIcon } from '@/components/icons/animated/sun';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
+import { useSettings } from '@/hooks/use-settings';
+import { useTRPC } from '@/providers/query-provider';
+import { useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 interface ThemeToggleProps {
   className?: string;
@@ -11,6 +15,9 @@ interface ThemeToggleProps {
 export function ThemeToggle({ className = '', showLabel = false }: ThemeToggleProps) {
   const [isRendered, setIsRendered] = useState(false);
   const { theme, resolvedTheme, setTheme } = useTheme();
+  const { data: settingsData, refetch } = useSettings();
+  const trpc = useTRPC();
+  const { mutateAsync: saveUserSettings } = useMutation(trpc.settings.save.mutationOptions());
 
   useEffect(() => setIsRendered(true), []);
 
@@ -19,6 +26,20 @@ export function ThemeToggle({ className = '', showLabel = false }: ThemeTogglePr
 
     function update() {
       setTheme(newTheme);
+    }
+
+    // Save to server if we have settings data
+    if (settingsData?.settings) {
+      try {
+        await saveUserSettings({
+          ...settingsData.settings,
+          colorTheme: newTheme,
+        });
+        await refetch();
+      } catch (error) {
+        console.error('Failed to save theme to server:', error);
+        toast.error('Failed to save theme preference');
+      }
     }
 
     if (document.startViewTransition && newTheme !== resolvedTheme) {

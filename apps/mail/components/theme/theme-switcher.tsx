@@ -10,6 +10,11 @@ import { useEffect, useState } from 'react';
 import { m } from '@/paraglide/messages';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
+import { useSettings } from '@/hooks/use-settings';
+import { useTRPC } from '@/providers/query-provider';
+import { useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
+
 interface ModeToggleProps {
   className?: string;
 }
@@ -23,6 +28,9 @@ export function ModeToggle({ className }: ModeToggleProps) {
   }, []);
 
   const { theme, systemTheme, resolvedTheme, setTheme } = useTheme();
+  const { data: settingsData, refetch } = useSettings();
+  const trpc = useTRPC();
+  const { mutateAsync: saveUserSettings } = useMutation(trpc.settings.save.mutationOptions());
 
   async function handleThemeChange(newTheme: string) {
     let nextResolvedTheme = newTheme;
@@ -33,6 +41,20 @@ export function ModeToggle({ className }: ModeToggleProps) {
 
     function update() {
       setTheme(newTheme);
+    }
+
+    // Save to server if we have settings data
+    if (settingsData?.settings) {
+      try {
+        await saveUserSettings({
+          ...settingsData.settings,
+          colorTheme: newTheme,
+        });
+        await refetch();
+      } catch (error) {
+        console.error('Failed to save theme to server:', error);
+        toast.error('Failed to save theme preference');
+      }
     }
 
     if (document.startViewTransition && nextResolvedTheme !== resolvedTheme) {

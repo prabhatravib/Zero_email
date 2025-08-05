@@ -105,6 +105,18 @@ export const note = createTable('note', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+export const threads = createTable('threads', {
+  id: text('id').primaryKey(),
+  connectionId: text('connection_id')
+    .notNull()
+    .references(() => connection.id, { onDelete: 'cascade' }),
+  threadId: text('thread_id').notNull(),
+  data: blob('data', { mode: 'json' }).notNull(),
+  categories: blob('categories', { mode: 'json' }).$type<string[]>(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 
 
 export const summary = createTable('summary', {

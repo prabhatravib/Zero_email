@@ -108,7 +108,7 @@
       },
     ],
   },
-  "vars": {
+    "vars": {
     "NODE_ENV": "production",
     "COOKIE_DOMAIN": "prabhatravib.workers.dev",
     "CORS_ALLOW_ORIGIN": "https://infflow.prabhatravib.workers.dev",

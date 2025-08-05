@@ -112,7 +112,7 @@ export function NavUser() {
   };
 
   const otherConnections = useMemo(() => {
-    if (!data || !activeAccount) return [];
+    if (!data?.connections || !activeAccount) return [];
     return data.connections.filter((connection) => connection.id !== activeAccount?.id);
   }, [data, activeAccount]);
 

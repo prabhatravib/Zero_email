@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
 import { useForm } from 'react-hook-form';
 import { m } from '@/paraglide/messages';
 import { useTheme } from 'next-themes';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import * as z from 'zod';
 
@@ -47,6 +47,15 @@ export default function AppearancePage() {
       colorTheme: data?.settings.colorTheme || (theme as Theme),
     },
   });
+
+  // Reset form when settings data changes
+  useEffect(() => {
+    if (data?.settings?.colorTheme) {
+      form.reset({
+        colorTheme: data.settings.colorTheme as Theme,
+      });
+    }
+  }, [data?.settings?.colorTheme, form]);
 
   async function handleThemeChange(newTheme: string) {
     let nextResolvedTheme = newTheme;
@@ -78,7 +87,7 @@ export default function AppearancePage() {
           colorTheme: values.colorTheme as Theme,
         }),
         {
-          success: m['common.settings.saved'](),
+          success: m['common.settings.saved']() + ' - ' + m['common.themes.' + values.colorTheme as 'dark' | 'light' | 'system'](),
           error: m['common.settings.failedToSave'](),
           finally: async () => {
             await refetch();

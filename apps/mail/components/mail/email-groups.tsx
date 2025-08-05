@@ -24,6 +24,10 @@ interface EmailGroupsProps {
   onGroupSelect: (groupId: string | null) => void;
   totalGroups: number;
   totalEmails: number;
+  onCategorizeEmails?: () => Promise<void>;
+  isCategorizing?: boolean;
+  categorizationComplete?: boolean;
+  pendingResults?: Map<string, string[]> | null;
 }
 
 export function EmailGroups({
@@ -31,8 +35,20 @@ export function EmailGroups({
   selectedGroupId,
   onGroupSelect,
   totalGroups,
-  totalEmails
+  totalEmails,
+  onCategorizeEmails,
+  isCategorizing,
+  categorizationComplete,
+  pendingResults
 }: EmailGroupsProps) {
+  // Debug logging for spinner state
+  console.log('🎯 EmailGroups spinner state:', {
+    isCategorizing,
+    categorizationComplete,
+    pendingResults: pendingResults?.size || 0,
+    shouldShowSpinner: isCategorizing || (pendingResults && !categorizationComplete)
+  });
+
   return (
     <div className="h-full flex flex-col bg-[#f8fbff]">
       {/* Summary Statistics */}
@@ -43,6 +59,24 @@ export function EmailGroups({
             <p className="text-sm text-[#5a7ba8]">Your emails organized by topic</p>
           </div>
           <div className="flex items-center gap-6 text-sm">
+            {onCategorizeEmails && (
+              <button 
+                onClick={onCategorizeEmails}
+                disabled={isCategorizing}
+                className={`text-sm transition-colors hover:opacity-80 px-3 py-1 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed ${
+                  categorizationComplete 
+                    ? 'text-green-600 bg-green-50 border-green-200 hover:bg-green-100' 
+                    : 'text-[#4a8dd9] bg-[#f0f7ff] border-[#b8d4f0] hover:bg-[#e1f0ff]'
+                }`}
+              >
+                {isCategorizing 
+                  ? 'Categorizing...' 
+                  : categorizationComplete 
+                    ? 'Categorization Complete' 
+                    : 'Categorize emails'
+                }
+              </button>
+            )}
             <button 
               onClick={() => onGroupSelect(null)} 
               className="text-sm transition-colors hover:opacity-80 text-[#4a8dd9]"
@@ -67,7 +101,8 @@ export function EmailGroups({
                     "flex-shrink-0 w-72 h-40 rounded-xl border cursor-pointer transition-all duration-200",
                     selectedGroupId === group.id 
                       ? "shadow-lg ring-2 ring-[#4a8dd9]" 
-                      : "hover:shadow-md"
+                      : "hover:shadow-md",
+                    (isCategorizing || (pendingResults && !categorizationComplete)) && "opacity-75"
                   )}
                   style={{
                     borderColor: selectedGroupId === group.id ? "#4a8dd9" : "#b8d4f0",
@@ -83,10 +118,22 @@ export function EmailGroups({
                         <h3 className="font-medium text-base mb-2 line-clamp-1 text-[#2c5aa0]">
                           {group.name}
                         </h3>
-                        <p className="text-sm text-[#5a7ba8]">
+                        <p className={cn(
+                          "text-sm text-[#5a7ba8]",
+                          (isCategorizing || (pendingResults && !categorizationComplete)) && "animate-pulse"
+                        )}>
                           {group.count} emails
+                          {(isCategorizing || (pendingResults && !categorizationComplete)) && (
+                            <span className="ml-1 text-xs text-[#4a8dd9]">(updating...)</span>
+                          )}
                         </p>
                       </div>
+                      {/* Categorization spinner */}
+                      {(isCategorizing || (pendingResults && !categorizationComplete)) && (
+                        <div className="ml-2">
+                          <div className="w-5 h-5 border-2 border-[#4a8dd9] border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -121,5 +168,9 @@ export const createEmailGroups = (groups: EmailGroup[]) => {
     onGroupSelect={() => {}}
     totalGroups={groups.length}
     totalEmails={groups.reduce((sum, group) => sum + group.count, 0)}
+    onCategorizeEmails={undefined}
+    isCategorizing={false}
+    categorizationComplete={false}
+    pendingResults={null}
   />;
 }; 

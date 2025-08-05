@@ -10,8 +10,13 @@ export function useSettings() {
     trpc.settings.get.queryOptions(void 0, {
       enabled: !!session?.user.id,
       staleTime: Infinity,
+      retry: 3,
+      retryDelay: 1000,
     }),
   );
+
+  // Debug logging
+  console.log('useSettings: session:', session?.user.id, 'settings:', settingsQuery.data?.settings, 'error:', settingsQuery.error, 'isLoading:', settingsQuery.isLoading);
 
   return settingsQuery;
 }
