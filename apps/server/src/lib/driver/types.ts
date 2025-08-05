@@ -118,7 +118,16 @@ export interface MailManager {
 }
 
 export interface IGetThreadsResponse {
-  threads: { id: string; historyId: string | null; $raw?: unknown }[];
+  threads: { 
+    id: string; 
+    historyId: string | null; 
+    $raw?: unknown;
+    emailContent: {
+      subject: string;
+      body: string;
+      from: string;
+    };
+  }[];
   nextPageToken: string | null;
 }
 
@@ -128,6 +137,11 @@ export const IGetThreadsResponseSchema = z.object({
       id: z.string(),
       historyId: z.string().nullable(),
       $raw: z.unknown().optional(),
+      emailContent: z.object({
+        subject: z.string(),
+        body: z.string(),
+        from: z.string(),
+      }),
     }),
   ),
   nextPageToken: z.string().nullable(),

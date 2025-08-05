@@ -27,7 +27,8 @@ interface EmailGroupsProps {
   onCategorizeEmails?: () => Promise<void>;
   isCategorizing?: boolean;
   categorizationComplete?: boolean;
-  pendingResults?: Map<string, string[]> | null;
+  processedEmails?: number;
+  totalEmailsToProcess?: number;
 }
 
 export function EmailGroups({
@@ -39,14 +40,16 @@ export function EmailGroups({
   onCategorizeEmails,
   isCategorizing,
   categorizationComplete,
-  pendingResults
+  processedEmails,
+  totalEmailsToProcess
 }: EmailGroupsProps) {
   // Debug logging for spinner state
   console.log('🎯 EmailGroups spinner state:', {
     isCategorizing,
     categorizationComplete,
-    pendingResults: pendingResults?.size || 0,
-    shouldShowSpinner: isCategorizing || (pendingResults && !categorizationComplete)
+    processedEmails,
+    totalEmailsToProcess,
+    shouldShowSpinner: isCategorizing || (processedEmails && totalEmailsToProcess && processedEmails < totalEmailsToProcess)
   });
 
   return (
@@ -70,7 +73,7 @@ export function EmailGroups({
                 }`}
               >
                 {isCategorizing 
-                  ? 'Categorizing...' 
+                  ? `Categorizing... ${processedEmails}/${totalEmailsToProcess}` 
                   : categorizationComplete 
                     ? 'Categorization Complete' 
                     : 'Categorize emails'
@@ -102,7 +105,7 @@ export function EmailGroups({
                     selectedGroupId === group.id 
                       ? "shadow-lg ring-2 ring-[#4a8dd9]" 
                       : "hover:shadow-md",
-                    (isCategorizing || (pendingResults && !categorizationComplete)) && "opacity-75"
+                    (isCategorizing || (processedEmails && totalEmailsToProcess && processedEmails < totalEmailsToProcess)) && "opacity-75"
                   )}
                   style={{
                     borderColor: selectedGroupId === group.id ? "#4a8dd9" : "#b8d4f0",
@@ -120,16 +123,16 @@ export function EmailGroups({
                         </h3>
                         <p className={cn(
                           "text-sm text-[#5a7ba8]",
-                          (isCategorizing || (pendingResults && !categorizationComplete)) && "animate-pulse"
+                          (isCategorizing || (processedEmails && totalEmailsToProcess && processedEmails < totalEmailsToProcess)) && "animate-pulse"
                         )}>
                           {group.count} emails
-                          {(isCategorizing || (pendingResults && !categorizationComplete)) && (
+                          {(isCategorizing || (processedEmails && totalEmailsToProcess && processedEmails < totalEmailsToProcess)) && (
                             <span className="ml-1 text-xs text-[#4a8dd9]">(updating...)</span>
                           )}
                         </p>
                       </div>
                       {/* Categorization spinner */}
-                      {(isCategorizing || (pendingResults && !categorizationComplete)) && (
+                      {(isCategorizing || (processedEmails && totalEmailsToProcess && processedEmails < totalEmailsToProcess)) && (
                         <div className="ml-2">
                           <div className="w-5 h-5 border-2 border-[#4a8dd9] border-t-transparent rounded-full animate-spin"></div>
                         </div>
@@ -171,6 +174,7 @@ export const createEmailGroups = (groups: EmailGroup[]) => {
     onCategorizeEmails={undefined}
     isCategorizing={false}
     categorizationComplete={false}
-    pendingResults={null}
+    processedEmails={0}
+    totalEmailsToProcess={0}
   />;
 }; 

@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect, useRef } from 'react';
 import { useThreads } from './use-threads';
 import { useQueryState } from 'nuqs';
 import type { EmailGroup, Email } from '@/components/mail/email-groups';
@@ -10,7 +10,7 @@ import { useSession } from '@/lib/auth-client';
 import { useAtom, useAtomValue } from 'jotai';
 import { useParams } from 'react-router';
 import { backgroundQueueAtom, isThreadInBackgroundQueueAtom } from '@/store/backgroundQueue';
-import { useCategorizationWorker } from './use-categorization-worker';
+import { useEmailCategorization } from './use-email-categorization';
 
 export const useEmailGroups = () => {
   const { folder } = useParams<{ folder: string }>();
@@ -21,11 +21,18 @@ export const useEmailGroups = () => {
   const { labels } = useSearchLabels();
   const [recent] = useQueryState('recent');
   const [selectedGroupId] = useQueryState('selectedGroupId');
+  const autoStartedRef = useRef(false);
 
-  // Use the same Web Worker for categorization (silent background)
+  // Use the new categorization hook
   const { 
-    results: categorizationResults 
-  } = useCategorizationWorker();
+    results: categorizationResults,
+    isCategorizing,
+    categorizationComplete,
+    totalEmailsToProcess,
+    processedEmails,
+    categorizeEmails,
+    categorizeSingleEmail
+  } = useEmailCategorization();
 
   // Use the same query directly to avoid circular dependency
   const maxResults = recent === '50' ? 50 : undefined;
@@ -65,8 +72,19 @@ export const useEmailGroups = () => {
       : [];
   }, [threadsQuery.data, threadsQuery.dataUpdatedAt, isInQueue, backgroundQueue]);
 
-  // Get categorization functions from the worker
-  const { categorizeEmails, isCategorizing, categorizationComplete, pendingResults } = useCategorizationWorker();
+  // Auto-start categorization when new threads are loaded
+  useEffect(() => {
+    if (allThreads.length > 0 && !isCategorizing && !categorizationComplete && !autoStartedRef.current) {
+      console.log('🔄 Auto-starting categorization for', allThreads.length, 'threads');
+      autoStartedRef.current = true;
+      // Make categorization non-blocking - don't let it break email loading
+      triggerCategorization().catch(error => {
+        console.warn('⚠️ Categorization failed but continuing with email loading:', error);
+        // Reset the flag so it can try again later
+        autoStartedRef.current = false;
+      });
+    }
+  }, [allThreads.length, isCategorizing, categorizationComplete]);
 
   // Manual categorization function
   const triggerCategorization = useCallback(async () => {
@@ -81,64 +99,52 @@ export const useEmailGroups = () => {
 
       console.log('🚀 Triggering categorization for', uncategorizedThreads.length, 'emails');
       
-      // Fetch full thread data for each uncategorized thread
-      const emailDataPromises = uncategorizedThreads.map(async (thread) => {
-        try {
-          // Fetch full thread data to get actual email content
-          const response = await fetch(`/api/trpc/mail.get?input=${encodeURIComponent(JSON.stringify({ id: thread.id }))}`);
-          if (response.ok) {
-            const threadData = await response.json();
-            const messages = threadData.result?.data?.messages || [];
-            
-            // Use the first email (seed email) for categorization, not the latest
-            const seedMessage = messages[messages.length - 1] || messages[0]; // First email is usually at the end of the array
-            
-            console.log(`📧 Thread ${thread.id}: Using seed email for categorization:`, {
-              totalMessages: messages.length,
-              seedMessageSubject: seedMessage?.subject,
-              seedMessageFrom: seedMessage?.sender?.email,
-              seedMessageBodyPreview: seedMessage?.body?.substring(0, 100) || seedMessage?.snippet?.substring(0, 100)
-            });
-            
-            return {
-              id: thread.id,
-              subject: seedMessage?.subject || `Thread ${thread.id}`,
-              body: seedMessage?.body || seedMessage?.snippet || `Email content for thread ${thread.id}`,
-              from: seedMessage?.sender?.email || `sender@example.com`
-            };
-          } else {
-            console.error('Failed to fetch thread data for', thread.id, 'Response not ok:', response.status);
-            // Automatically categorize as "Others" when fetch fails
-            return {
-              id: thread.id,
-              subject: `Thread ${thread.id}`,
-              body: `Email content for thread ${thread.id}`,
-              from: `sender@example.com`,
-              autoCategorizeAsOthers: true
-            };
-          }
-        } catch (error) {
-          console.error('Failed to fetch thread data for', thread.id, error);
-          // Automatically categorize as "Others" when fetch fails
-          return {
-            id: thread.id,
-            subject: `Thread ${thread.id}`,
-            body: `Email content for thread ${thread.id}`,
-            from: `sender@example.com`,
-            autoCategorizeAsOthers: true
-          };
+      // Extract email content from threads
+      const emailData = uncategorizedThreads.map(thread => {
+        const threadWithContent = thread as any;
+        
+        // Add null checks for emailContent
+        if (!threadWithContent.emailContent) {
+          console.warn(`⚠️ Thread ${thread.id} has no emailContent, skipping categorization`);
+          return null;
         }
-      });
-
-      // Wait for all promises - no need to filter since we handle failures with auto-categorization
-      const emailData = await Promise.all(emailDataPromises);
+        
+        const { subject, body, from } = threadWithContent.emailContent;
+        
+        // Validate required fields
+        if (!subject || !body || !from) {
+          console.warn(`⚠️ Thread ${thread.id} has incomplete emailContent:`, {
+            hasSubject: !!subject,
+            hasBody: !!body,
+            hasFrom: !!from
+          });
+          return null;
+        }
+        
+        console.log(`📧 Thread ${thread.id}: Using email content:`, {
+          subject,
+          sender: from,
+          bodyPreview: body.substring(0, 200) + '...'
+        });
+        
+        return {
+          id: thread.id,
+          subject,
+          body,
+          from
+        };
+      }).filter((item): item is NonNullable<typeof item> => item !== null); // Remove null entries with proper typing
       
       if (emailData.length > 0) {
         return categorizeEmails(emailData).catch((error) => {
           console.error('❌ Categorization failed:', error);
-          // Silently handle errors
+          // Silently handle errors and return empty map to prevent blocking
+          return new Map();
         });
       }
+      
+      // Return empty map if no emails to categorize
+      return new Map();
     }
   }, [allThreads, categorizeEmails, categorizationResults]);
 
@@ -174,7 +180,13 @@ export const useEmailGroups = () => {
       totalThreads: allThreads.length,
       categorizationResultsSize: categorizationResults.size,
       sampleResults: Array.from(categorizationResults.entries()).slice(0, 3),
-      hasCategorizationResults: categorizationResults.size > 0
+      hasCategorizationResults: categorizationResults.size > 0,
+      allThreadIds: allThreads.map(t => t.id).slice(0, 5),
+      categorizationResultKeys: Array.from(categorizationResults.keys()).slice(0, 5),
+      isCategorizing,
+      categorizationComplete,
+      processedEmails,
+      totalEmailsToProcess
     });
 
     // Use AI categorization results if available, otherwise put all emails in "Others"
@@ -186,21 +198,17 @@ export const useEmailGroups = () => {
       if (aiCategories && aiCategories.length > 0) {
         console.log(`📊 Thread ${thread.id} has categories:`, aiCategories);
         // Use AI categorization results - check for exact matches
-        if (aiCategories.some(cat => cat.toLowerCase().includes('fubo'))) {
+        if (aiCategories.includes('Fubo')) {
           groupId = 'fubo';
           console.log(`✅ Thread ${thread.id} categorized as FUBO`);
-        } else if (aiCategories.some(cat => 
-          cat.toLowerCase().includes('jobs') || 
-          cat.toLowerCase().includes('employment') ||
-          cat.toLowerCase().includes('job')
-        )) {
+        } else if (aiCategories.includes('Jobs and Employment')) {
           groupId = 'jobs';
           console.log(`✅ Thread ${thread.id} categorized as Jobs`);
         } else {
           console.log(`📝 Thread ${thread.id} categorized as Others (categories: ${aiCategories.join(', ')})`);
         }
       } else {
-        console.log(`❓ Thread ${thread.id} has no categorization results`);
+        console.log(`❓ Thread ${thread.id} has no categorization results - this means AI returned empty array or failed`);
       }
       // If no categorization results, it stays as "others"
       
@@ -217,6 +225,16 @@ export const useEmailGroups = () => {
     const fuboEmails = categorizedEmails.filter(email => email.groupId === 'fubo');
     const jobsEmails = categorizedEmails.filter(email => email.groupId === 'jobs');
     const othersEmails = categorizedEmails.filter(email => email.groupId === 'others');
+
+    console.log('📊 Email Groups - Categorization Assignment:', {
+      totalEmails: categorizedEmails.length,
+      fuboCount: fuboEmails.length,
+      jobsCount: jobsEmails.length,
+      othersCount: othersEmails.length,
+      sampleFuboIds: fuboEmails.slice(0, 3).map(e => e.id),
+      sampleJobsIds: jobsEmails.slice(0, 3).map(e => e.id),
+      sampleOthersIds: othersEmails.slice(0, 3).map(e => e.id)
+    });
 
     const result = [
       {
@@ -251,7 +269,7 @@ export const useEmailGroups = () => {
     });
 
     return result;
-  }, [allThreads, categorizationResults]);
+  }, [allThreads, categorizationResults, isCategorizing, categorizationComplete, processedEmails, totalEmailsToProcess]);
 
   const totalEmails = emailGroups.reduce((sum, group) => sum + group.count, 0);
   const totalGroups = emailGroups.length;
@@ -266,6 +284,7 @@ export const useEmailGroups = () => {
     triggerCategorization,
     isCategorizing,
     categorizationComplete,
-    pendingResults
+    processedEmails,
+    totalEmailsToProcess
   };
 }; 

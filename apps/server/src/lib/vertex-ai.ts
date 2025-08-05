@@ -141,3 +141,40 @@ ${emailContent}`;
     return ["Others"];
   }
 } 
+
+export async function testCategorization(env: SAEnv) {
+  console.log('🧪 Testing AI categorization with sample emails...');
+  
+  const testEmails = [
+    {
+      name: 'Fubo Email',
+      content: `Subject: Your Fubo TV subscription renewal
+From: billing@fubo.tv
+Body: Dear customer, your Fubo TV subscription will renew on August 15th. You can manage your subscription in your account settings.`
+    },
+    {
+      name: 'Job Email', 
+      content: `Subject: Interview invitation for Software Engineer position
+From: hr@techcompany.com
+Body: We are pleased to invite you for an interview for the Software Engineer position. Please let us know your availability.`
+    },
+    {
+      name: 'Generic Email',
+      content: `Subject: Weekly newsletter
+From: newsletter@example.com
+Body: Here's your weekly newsletter with the latest updates and news.`
+    }
+  ];
+  
+  for (const testEmail of testEmails) {
+    console.log(`\n🧪 Testing: ${testEmail.name}`);
+    console.log(`Content: ${testEmail.content.substring(0, 100)}...`);
+    
+    try {
+      const categories = await categorizeEmail(testEmail.content, env);
+      console.log(`✅ Result: ${JSON.stringify(categories)}`);
+    } catch (error) {
+      console.log(`❌ Error: ${error}`);
+    }
+  }
+} 

@@ -42,6 +42,21 @@ export const mailRouter = router({
       const agent = await getZeroAgent(activeConnection.id);
       return await agent.getThread(input.id, true);
     }),
+  getBulk: activeDriverProcedure
+    .input(
+      z.object({
+        ids: z.array(z.string()),
+      }),
+    )
+    .output(z.array(IGetThreadResponseSchema))
+    .query(async ({ input, ctx }) => {
+      const { activeConnection } = ctx;
+      const agent = await getZeroAgent(activeConnection.id);
+      
+      // Fetch multiple threads in parallel
+      const threadPromises = input.ids.map(id => agent.getThread(id, true));
+      return await Promise.all(threadPromises);
+    }),
   count: activeDriverProcedure
     .output(
       z.array(
@@ -121,6 +136,63 @@ export const mailRouter = router({
           console.log('[listThreads] Created threadsPromise, awaiting result...');
           threadsResponse = await Promise.race([threadsPromise, timeoutPromise]);
           console.log('[listThreads] Promise resolved, threadsResponse:', threadsResponse);
+          
+          // Fetch email content for each thread in parallel for categorization
+          if (threadsResponse.threads && threadsResponse.threads.length > 0) {
+            console.log('[listThreads] Fetching email content for', threadsResponse.threads.length, 'threads');
+            
+            try {
+              const threadContentPromises = threadsResponse.threads.map(async (thread) => {
+                try {
+                  const threadData = await agent.getThread(thread.id, true);
+                  const messages = threadData.messages || [];
+                  const seedMessage = messages[0] || messages[messages.length - 1];
+                  
+                  if (seedMessage) {
+                    // Add email content to the thread object
+                    return {
+                      ...thread,
+                      emailContent: {
+                        subject: seedMessage.subject || `Thread ${thread.id}`,
+                        body: seedMessage.body || seedMessage.snippet || `Email content for thread ${thread.id}`,
+                        from: seedMessage.sender?.email || `sender@example.com`
+                      }
+                    };
+                  } else {
+                    // No messages found, provide fallback content
+                    console.warn(`[listThreads] No messages found for thread ${thread.id}, using fallback`);
+                    return {
+                      ...thread,
+                      emailContent: {
+                        subject: `Thread ${thread.id}`,
+                        body: `No email content available for thread ${thread.id}`,
+                        from: `sender@example.com`
+                      }
+                    };
+                  }
+                } catch (error) {
+                  console.warn(`[listThreads] Failed to fetch content for thread ${thread.id}:`, error);
+                  // Return thread with fallback content if fetch failed
+                  return {
+                    ...thread,
+                    emailContent: {
+                      subject: `Thread ${thread.id}`,
+                      body: `Failed to fetch email content for thread ${thread.id}`,
+                      from: `sender@example.com`
+                    }
+                  };
+                }
+              });
+              
+              const threadsWithContent = await Promise.all(threadContentPromises);
+              threadsResponse.threads = threadsWithContent;
+              
+              console.log('[listThreads] Successfully fetched email content for threads');
+            } catch (contentError) {
+              console.warn('[listThreads] Failed to fetch email content:', contentError);
+              // Continue with threads without content
+            }
+          }
         } catch (rawListError) {
           console.error('[listThreads] Error in rawListThreads call:', rawListError);
           console.error('[listThreads] Error stack:', rawListError.stack);
