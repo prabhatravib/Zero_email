@@ -9,6 +9,7 @@ import { useSession } from '@/lib/auth-client';
 import { useSettings } from '@/hooks/use-settings';
 import { useTheme } from 'next-themes';
 import { useMemo, useEffect, useCallback, useRef } from 'react';
+import { useCategorizationWorker } from './use-categorization-worker';
 import type { IGetThreadResponse } from '../../server/src/lib/driver/types';
 import useSearchLabels from './use-labels-search';
 
@@ -21,6 +22,14 @@ export const useThreads = () => {
   const { labels } = useSearchLabels();
   const [recent] = useQueryState('recent');
   const [selectedGroupId] = useQueryState('selectedGroupId');
+
+  // Use the same Web Worker for categorization (silent background)
+  const { 
+    results: categorizationResults,
+    categorizeEmails,
+    isCategorizing,
+    categorizationComplete
+  } = useCategorizationWorker();
 
   // Get threads data
   const maxResults = recent === '50' ? 50 : undefined;
@@ -60,16 +69,50 @@ export const useThreads = () => {
       : [];
   }, [threadsQuery.data, threadsQuery.dataUpdatedAt, isInQueue, backgroundQueue]);
 
+  // Manual categorization function - will be called by button click
+  const triggerCategorization = useCallback(async () => {
+    if (allThreads.length > 0) {
+      // Prepare email data with actual thread info for categorization
+      const emailData = allThreads
+        .filter(email => !categorizationResults.has(email.id))
+        .map(thread => ({
+          id: thread.id,
+          subject: `Thread ${thread.id}`, // Use thread ID as subject
+          body: `Email content for thread ${thread.id}`, // Use thread ID as body
+          from: `sender@example.com` // Use default sender
+        }));
+      
+      if (emailData.length > 0) {
+        // Manual categorization triggered by user
+        return categorizeEmails(emailData).catch(() => {
+          // Silently handle errors - don't show to user
+        });
+      }
+    }
+  }, [allThreads, categorizeEmails, categorizationResults]);
+
   // Filter threads based on selected group
   const threads = useMemo(() => {
     if (!selectedGroupId) {
       return allThreads; // Show all threads when no group is selected
     }
 
-    // For now, just return all threads since categorization is handled in use-email-groups
-    // The filtering will be done at a higher level
-    return allThreads;
-  }, [allThreads, selectedGroupId]);
+    return allThreads.filter(thread => {
+      const categories = categorizationResults.get(thread.id) || [];
+      
+      switch (selectedGroupId) {
+        case 'fubo':
+          return categories.includes('Fubo');
+        case 'jobs':
+          return categories.includes('Jobs and Employment');
+        case 'others':
+          // Show emails that are categorized as "Others" OR have no categorization yet
+          return categories.includes('Others') || categories.length === 0 || !categorizationResults.has(thread.id);
+        default:
+          return true;
+      }
+    });
+  }, [allThreads, selectedGroupId, categorizationResults]);
 
   const isEmpty = useMemo(() => threads.length === 0, [threads]);
   const isReachingEnd =
@@ -82,7 +125,7 @@ export const useThreads = () => {
     await threadsQuery.fetchNextPage();
   };
 
-  return [threadsQuery, threads, isReachingEnd, loadMore] as const;
+  return [threadsQuery, threads, isReachingEnd, loadMore, triggerCategorization, isCategorizing, categorizationComplete] as const;
 };
 
 export const useThread = (threadId: string | null) => {

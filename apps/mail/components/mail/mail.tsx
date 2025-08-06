@@ -396,7 +396,7 @@ export function MailLayout() {
   
   // Email groups state
   const [selectedGroupId, setSelectedGroupId] = useQueryState('selectedGroupId');
-  const { emailGroups, totalEmails, totalGroups, isLoading: emailGroupsLoading, isFetching: emailGroupsFetching, triggerCategorization, isCategorizing, categorizationComplete, processedEmails, totalEmailsToProcess } = useEmailGroups();
+  const { emailGroups, totalEmails, totalGroups, isLoading: emailGroupsLoading, isFetching: emailGroupsFetching, triggerCategorization, isCategorizing, categorizationComplete, pendingResults } = useEmailGroups();
 
   // Handle group selection
   const handleGroupSelect = (groupId: string | null) => {
@@ -485,8 +485,7 @@ export function MailLayout() {
             onCategorizeEmails={triggerCategorization}
             isCategorizing={isCategorizing}
             categorizationComplete={categorizationComplete}
-            processedEmails={processedEmails}
-            totalEmailsToProcess={totalEmailsToProcess}
+            pendingResults={pendingResults}
           />
         </div>
         

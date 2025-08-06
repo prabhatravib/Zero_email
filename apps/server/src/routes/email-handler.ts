@@ -133,22 +133,6 @@ const emailHandlerRouter = new Hono<HonoContext>()
       secretLength,
       message: hasSecret ? 'Secret is available' : 'Secret is not available'
     });
-  })
-  .get('/test-categorization', async (c) => {
-    try {
-      const { testCategorization } = await import('../lib/vertex-ai');
-      await testCategorization(c.env);
-      return c.json({ 
-        success: true, 
-        message: 'Test completed - check server logs'
-      });
-    } catch (error) {
-      console.error('Test categorization failed:', error);
-      return c.json({ 
-        success: false, 
-        error: error.message 
-      });
-    }
   });
 
 export default emailHandlerRouter; 
