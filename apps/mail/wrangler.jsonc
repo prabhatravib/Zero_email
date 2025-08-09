@@ -1,0 +1,43 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "infflow",
+  "compatibility_date": "2025-06-27",
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true
+    }
+  },
+  "assets": {
+    "directory": "./build/client/",
+    "not_found_handling": "single-page-application",
+    "html_handling": "force-trailing-slash",
+  },
+  "vars": {
+    "VITE_PUBLIC_BACKEND_URL": "https://infflow-api-production.prabhatravib.workers.dev",
+    "VITE_PUBLIC_APP_URL": "https://infflow.prabhatravib.workers.dev",
+  },
+  "env": {
+    "local": {
+      "name": "zero-local",
+      "vars": {
+        "VITE_PUBLIC_BACKEND_URL": "http://localhost:8787",
+        "VITE_PUBLIC_APP_URL": "http://localhost:3000",
+      },
+    },
+    "staging": {
+      "name": "zero-staging",
+      "vars": {
+        "VITE_PUBLIC_BACKEND_URL": "https://sapi.0.email",
+        "VITE_PUBLIC_APP_URL": "https://staging.0.email",
+      },
+    },
+    "production": {
+      "name": "infflow-production",
+      "vars": {
+        "VITE_PUBLIC_BACKEND_URL": "https://infflow-api-production.prabhatravib.workers.dev",
+        "VITE_PUBLIC_APP_URL": "https://infflow.prabhatravib.workers.dev",
+      },
+    },
+  },
+}
