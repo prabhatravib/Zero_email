@@ -266,7 +266,7 @@ export function AIChat({
             <TextShimmer className="text-center text-xl font-medium">
               Upgrade
             </TextShimmer>
-            <Button className="mt-2 h-8 w-52">Start 7 day free trial</Button>
+            <Button className="mt-2 h-8 w-52">Start 14 day free trial</Button>
             </div>
           ) : !messages.length ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center">

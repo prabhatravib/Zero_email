@@ -111,9 +111,9 @@
     "vars": {
     "NODE_ENV": "production",
     "COOKIE_DOMAIN": "prabhatravib.workers.dev",
-    "CORS_ALLOW_ORIGIN": "https://infflow.prabhatravib.workers.dev",
+    "CORS_ALLOW_ORIGIN": "https://infflow-email.prabhatravib.workers.dev",
     "VITE_PUBLIC_BACKEND_URL": "https://infflow-api-production.prabhatravib.workers.dev",
-    "VITE_PUBLIC_APP_URL": "https://infflow.prabhatravib.workers.dev",
+    "VITE_PUBLIC_APP_URL": "https://infflow-email.prabhatravib.workers.dev",
     "JWT_SECRET": "egwrgwrgndnznzgnfhnzxdgnnethzhnzhtyjtudi5e6u4u75tei6",
     "BETTER_AUTH_SECRET": "49d9590f973b565d9786857ff9b1c74a764a8fd33c832c2f3d08cd0768e55398",
     "DISABLE_CALLS": "true",
@@ -546,9 +546,9 @@
       "vars": {
         "NODE_ENV": "production",
         "COOKIE_DOMAIN": "prabhatravib.workers.dev",
-        "CORS_ALLOW_ORIGIN": "https://infflow.prabhatravib.workers.dev",
+        "CORS_ALLOW_ORIGIN": "https://infflow-email.prabhatravib.workers.dev",
         "VITE_PUBLIC_BACKEND_URL": "https://infflow-api-production.prabhatravib.workers.dev",
-        "VITE_PUBLIC_APP_URL": "https://infflow.prabhatravib.workers.dev",
+        "VITE_PUBLIC_APP_URL": "https://infflow-email.prabhatravib.workers.dev",
         "JWT_SECRET": "egwrgwrgndnznzgnfhnzxdgnnethzhnzhtyjtudi5e6u4u75tei6",
         "BETTER_AUTH_SECRET": "49d9590f973b565d9786857ff9b1c74a764a8fd33c832c2f3d08cd0768e55398",
         "DISABLE_CALLS": "true",

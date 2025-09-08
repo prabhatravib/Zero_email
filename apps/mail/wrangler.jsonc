@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "infflow",
+  "name": "infflow-email",
   "compatibility_date": "2025-06-27",
   "observability": {
     "enabled": true,

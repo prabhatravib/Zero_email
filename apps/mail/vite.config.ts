@@ -15,7 +15,7 @@ const ReactCompilerConfig = {
 export default defineConfig({
       define: {
       'import.meta.env.VITE_PUBLIC_BACKEND_URL': JSON.stringify('https://infflow-api-production.prabhatravib.workers.dev'),
-      'import.meta.env.VITE_PUBLIC_APP_URL': JSON.stringify('https://infflow.prabhatravib.workers.dev'),
+      'import.meta.env.VITE_PUBLIC_APP_URL': JSON.stringify('https://infflow-email.prabhatravib.workers.dev'),
   },
   plugins: [
     oxlintPlugin(),
@@ -26,7 +26,7 @@ export default defineConfig({
           name: 'zero-production',
           vars: {
               VITE_PUBLIC_BACKEND_URL: 'https://infflow-api-production.prabhatravib.workers.dev',
-              VITE_PUBLIC_APP_URL: 'https://infflow.prabhatravib.workers.dev',
+              VITE_PUBLIC_APP_URL: 'https://infflow-email.prabhatravib.workers.dev',
           },
         },
       },

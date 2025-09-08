@@ -280,7 +280,7 @@ export default function Comparision() {
               >
                 <div className="flex items-center justify-center">
                   <div className="justify-start text-center text-base font-semibold leading-none text-white/80">
-                    Start 7 day free trial
+                    Start 14 day free trial
                   </div>
                 </div>
               </button>
@@ -315,7 +315,7 @@ export default function Comparision() {
                     <PurpleThickCheck className="h-3 w-3" />
                   </div>
                   <div className="justify-center text-base font-normal leading-normal text-violet-400">
-                    Auto labeling
+                    Auto Grouping
                   </div>
                 </div>
               </div>
